@@ -16,6 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Primate Research - Market Analysis & Insights",
   description: "Primate Research provides real-time market analysis, research reports, and video content across equities, crypto, and macroeconomic trends. Helping investors understand how markets work.",
+  icons: {
+    icon: '/primate-logo.png',
+    shortcut: '/primate-logo.png',
+    apple: '/primate-logo.png',
+  },
 };
 
 export default function RootLayout({
