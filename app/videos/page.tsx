@@ -51,10 +51,30 @@ export default function VideosPage() {
 
   useEffect(() => {
     if (videoIds.length === 0) return;
-    fetch(`/api/youtube-stats?ids=${videoIds.join(',')}`)
-      .then((res) => res.json())
-      .then((data: Record<string, number | null>) => setViewCounts(data))
-      .catch(() => setViewCounts({}));
+    
+    const fetchViewCounts = async () => {
+      try {
+        const response = await fetch(`/api/youtube-stats?ids=${videoIds.join(',')}`);
+        if (!response.ok) {
+          console.warn('Failed to fetch YouTube stats:', response.status);
+          return;
+        }
+        const data: Record<string, number | null> = await response.json();
+        setViewCounts(data);
+      } catch (error) {
+        console.error('Error fetching YouTube view counts:', error);
+        // Don't set empty object, keep previous state or set nulls
+        setViewCounts((prev) => {
+          const newCounts: Record<string, number | null> = {};
+          videoIds.forEach((id) => {
+            newCounts[id] = prev[id] ?? null;
+          });
+          return newCounts;
+        });
+      }
+    };
+    
+    fetchViewCounts();
   }, [videoIds.join(',')]);
 
   const filtered = useMemo(() => {
@@ -62,21 +82,36 @@ export default function VideosPage() {
   }, [searchQuery]);
 
   const sorted = useMemo(() => {
-    const withViews = filtered.map((v) => ({
-      ...v,
-      videoId: getYouTubeVideoId(v.videoUrl),
-      dateNum: parseDate(v.date),
-      viewCount: v.videoUrl ? viewCounts[getYouTubeVideoId(v.videoUrl) ?? ''] ?? null : null,
-    }));
+    const withViews = filtered.map((v) => {
+      const videoId = getYouTubeVideoId(v.videoUrl);
+      return {
+        ...v,
+        videoId,
+        dateNum: parseDate(v.date),
+        viewCount: videoId ? (viewCounts[videoId] ?? null) : null,
+      };
+    });
     const order = [...withViews];
     if (sortBy === 'newest') {
       order.sort((a, b) => b.dateNum - a.dateNum);
     } else if (sortBy === 'oldest') {
       order.sort((a, b) => a.dateNum - b.dateNum);
     } else if (sortBy === 'most_views') {
-      order.sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
-    } else {
-      order.sort((a, b) => (a.viewCount ?? 0) - (b.viewCount ?? 0));
+      // Sort by view count descending, but put null values at the end
+      order.sort((a, b) => {
+        if (a.viewCount === null && b.viewCount === null) return 0;
+        if (a.viewCount === null) return 1; // null goes to end
+        if (b.viewCount === null) return -1; // null goes to end
+        return b.viewCount - a.viewCount; // higher views first
+      });
+    } else if (sortBy === 'least_views') {
+      // Sort by view count ascending, but put null values at the end
+      order.sort((a, b) => {
+        if (a.viewCount === null && b.viewCount === null) return 0;
+        if (a.viewCount === null) return 1; // null goes to end
+        if (b.viewCount === null) return -1; // null goes to end
+        return a.viewCount - b.viewCount; // lower views first
+      });
     }
     return order;
   }, [filtered, sortBy, viewCounts]);
