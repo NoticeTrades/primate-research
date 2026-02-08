@@ -12,7 +12,6 @@ import ProfilePicture from './components/ProfilePicture';
 import CursorGlow from './components/CursorGlow';
 import CursorHover from './components/CursorHover';
 import DiscordSign from './components/DiscordSign';
-import ChartBackground from './components/ChartBackground';
 
 export default function Home() {
   const [researchOpacity, setResearchOpacity] = useState(0);
@@ -124,7 +123,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black dark:bg-zinc-950 relative">
-      <ChartBackground />
       <CursorGlow />
       <CursorHover />
       <DiscordSign />
