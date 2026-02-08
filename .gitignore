@@ -35,5 +35,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# user data (sensitive)
-/data
+# user data (sensitive) - only ignore auth storage, not research/videos content
+data/users.json
