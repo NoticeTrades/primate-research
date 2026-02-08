@@ -74,20 +74,69 @@ body {
   animation: swing 1.5s ease-in-out infinite;
 }
 
-/* Neon sign flicker animation */
+/* Neon sign flicker animation - old sign on/off effect */
 @keyframes neon-flicker {
   0%, 100% {
     opacity: 1;
     text-shadow: 
-      0 0 10px rgba(59, 130, 246, 0.8), 
-      0 0 20px rgba(59, 130, 246, 0.6), 
-      0 0 30px rgba(59, 130, 246, 0.4);
+      0 0 10px rgba(255, 255, 255, 0.9), 
+      0 0 20px rgba(255, 255, 255, 0.7), 
+      0 0 30px rgba(255, 255, 255, 0.5);
   }
-  50% {
-    opacity: 0.9;
+  2% {
+    opacity: 0;
+    text-shadow: none;
+  }
+  4% {
+    opacity: 1;
     text-shadow: 
-      0 0 8px rgba(59, 130, 246, 0.7), 
-      0 0 16px rgba(59, 130, 246, 0.5), 
-      0 0 24px rgba(59, 130, 246, 0.3);
+      0 0 10px rgba(255, 255, 255, 0.9), 
+      0 0 20px rgba(255, 255, 255, 0.7), 
+      0 0 30px rgba(255, 255, 255, 0.5);
   }
+  6% {
+    opacity: 0;
+    text-shadow: none;
+  }
+  8% {
+    opacity: 1;
+    text-shadow: 
+      0 0 10px rgba(255, 255, 255, 0.9), 
+      0 0 20px rgba(255, 255, 255, 0.7), 
+      0 0 30px rgba(255, 255, 255, 0.5);
+  }
+  10% {
+    opacity: 0.3;
+    text-shadow: 
+      0 0 5px rgba(255, 255, 255, 0.3);
+  }
+  12% {
+    opacity: 1;
+    text-shadow: 
+      0 0 10px rgba(255, 255, 255, 0.9), 
+      0 0 20px rgba(255, 255, 255, 0.7), 
+      0 0 30px rgba(255, 255, 255, 0.5);
+  }
+  14% {
+    opacity: 0;
+    text-shadow: none;
+  }
+  16% {
+    opacity: 1;
+    text-shadow: 
+      0 0 10px rgba(255, 255, 255, 0.9), 
+      0 0 20px rgba(255, 255, 255, 0.7), 
+      0 0 30px rgba(255, 255, 255, 0.5);
+  }
+  18%, 100% {
+    opacity: 1;
+    text-shadow: 
+      0 0 10px rgba(255, 255, 255, 0.9), 
+      0 0 20px rgba(255, 255, 255, 0.7), 
+      0 0 30px rgba(255, 255, 255, 0.5);
+  }
+}
+
+.neon-flicker {
+  animation: neon-flicker 3s ease-in-out infinite;
 }

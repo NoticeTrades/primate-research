@@ -37,10 +37,9 @@ export default function DiscordSign() {
             
             {/* Text with neon glow effect */}
             <div className="relative z-10">
-              <div className="text-blue-400 font-bold text-xs tracking-wider uppercase text-center" 
+              <div className="text-white font-bold text-xs tracking-wider uppercase text-center neon-flicker" 
                    style={{
-                     textShadow: '0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.4)',
-                     animation: 'neon-flicker 2s ease-in-out infinite alternate'
+                     textShadow: '0 0 10px rgba(255, 255, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.7), 0 0 30px rgba(255, 255, 255, 0.5)'
                    }}>
                 Open
               </div>
