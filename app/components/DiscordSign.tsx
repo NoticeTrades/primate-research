@@ -17,124 +17,37 @@ export default function DiscordSign() {
         href="https://discord.com/invite/QGnUGdAt"
         target="_blank"
         rel="noopener noreferrer"
-        className="block cursor-pointer"
+        className="block cursor-pointer group"
       >
         <div 
-          className="relative sign-swing-container"
+          className="relative"
           style={{
             transformOrigin: 'top center',
-            animation: 'swing 1.5s ease-in-out infinite'
+            animation: 'swing 2s ease-in-out infinite'
           }}
         >
-          {/* Hanging vine */}
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-            <svg width="8" height="20" viewBox="0 0 8 20" className="text-green-700 dark:text-green-600">
-              <path
-                d="M 4 0 Q 2 5 4 10 Q 6 15 4 20"
-                stroke="currentColor"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 4 0 Q 6 5 4 10 Q 2 15 4 20"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                fill="none"
-                strokeLinecap="round"
-                opacity="0.6"
-              />
-            </svg>
-          </div>
-
-          {/* Jungle Sign Box with Blue */}
-          <div className="relative bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 dark:from-blue-500 dark:via-blue-400 dark:to-blue-600 rounded-sm shadow-2xl border border-blue-400 dark:border-blue-300 px-2.5 py-1.5 overflow-visible transition-all duration-300 hover:scale-110 hover:shadow-[0_4px_20px_rgba(59,130,246,0.5)]" 
-               style={{
-                 boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.4)',
-               }}>
-            {/* Vintage weathered texture overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black/10 rounded-sm pointer-events-none"></div>
-            <div className="absolute inset-0 opacity-10" style={{
-              backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px)',
-            }}></div>
+          {/* Clean, minimal sign design */}
+          <div className="relative bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 rounded-lg shadow-lg border border-blue-500/30 dark:border-blue-400/30 px-4 py-2.5 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 hover:border-blue-400 dark:hover:border-blue-300">
+            {/* Subtle inner glow */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent rounded-lg pointer-events-none"></div>
             
-            {/* Decorative vines on the sign */}
-            <div className="absolute -left-2 top-1/2 -translate-y-1/2 pointer-events-none">
-              <svg width="16" height="20" viewBox="0 0 16 20" className="text-green-600 dark:text-green-500 opacity-60">
-                <path
-                  d="M 0 10 Q 4 5 8 10 Q 12 15 16 10"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  fill="none"
-                  strokeLinecap="round"
-                />
-                {/* Small leaves */}
-                <circle cx="4" cy="8" r="1.5" fill="currentColor" />
-                <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-              </svg>
-            </div>
-            <div className="absolute -right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-              <svg width="16" height="20" viewBox="0 0 16 20" className="text-green-600 dark:text-green-500 opacity-60">
-                <path
-                  d="M 16 10 Q 12 5 8 10 Q 4 15 0 10"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  fill="none"
-                  strokeLinecap="round"
-                />
-                {/* Small leaves */}
-                <circle cx="12" cy="8" r="1.5" fill="currentColor" />
-                <circle cx="4" cy="12" r="1.5" fill="currentColor" />
-              </svg>
-            </div>
-            
-            {/* Subtle glow effect */}
-            <div className="absolute -inset-1 bg-blue-400/20 rounded-sm blur-sm animate-pulse opacity-30"></div>
-            
-            {/* Text with vintage style */}
-            <div className="relative z-10">
-              <div className="text-white font-bold text-[10px] tracking-widest flex flex-col items-center gap-0.5 drop-shadow-md" style={{ fontFamily: 'serif' }}>
-                <div className="flex items-center gap-1">
-                  {/* Small leaf decorations */}
-                  <svg width="6" height="6" viewBox="0 0 6 6" className="text-green-400 dark:text-green-300 opacity-80">
-                    <path d="M 3 1 Q 1 2 2 4 Q 3 5 3 3 Q 3 5 4 4 Q 5 2 3 1" fill="currentColor" />
-                  </svg>
-                  <span className="relative text-[11px] uppercase" style={{ 
-                    textShadow: '1px 1px 2px rgba(0,0,0,0.8), 0 0 4px rgba(59, 130, 246, 0.4)',
-                    letterSpacing: '0.1em'
-                  }}>
-                    FREE DISCORD
-                  </span>
-                  <svg width="6" height="6" viewBox="0 0 6 6" className="text-green-400 dark:text-green-300 opacity-80">
-                    <path d="M 3 1 Q 1 2 2 4 Q 3 5 3 3 Q 3 5 4 4 Q 5 2 3 1" fill="currentColor" />
-                  </svg>
-                </div>
-                <div className="text-[8px] text-blue-100/90 font-medium opacity-80" style={{ letterSpacing: '0.05em' }}>
-                  Click to Join
-                </div>
+            {/* Text content */}
+            <div className="relative z-10 flex flex-col items-center gap-1">
+              <div className="text-white font-semibold text-sm tracking-wide flex items-center gap-2">
+                <svg 
+                  width="16" 
+                  height="16" 
+                  viewBox="0 0 24 24" 
+                  fill="currentColor" 
+                  className="opacity-90"
+                >
+                  <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C2.601 6.7 2 9.175 2 11.639c0 2.23.479 4.403 1.409 6.456a.076.076 0 0 0 .08.051c1.577-.233 3.096-.835 4.5-1.73a.076.076 0 0 0 .041-.069 12.58 12.58 0 0 1-.632-1.104.077.077 0 0 0-.061-.051.078.078 0 0 0-.052.018c-1.134.513-2.36.876-3.667 1.105a.05.05 0 0 0-.03.03 19.9 19.9 0 0 0 5.619 0 .05.05 0 0 0-.021-.018 12.096 12.096 0 0 0-3.645-1.13.078.078 0 0 1-.061-.076c0-.114.003-.23.009-.345a12.285 12.285 0 0 0 3.644 1.116.076.076 0 0 0 .079-.04c.297-.57.651-1.103 1.062-1.59a.076.076 0 0 0-.041-.12 10.733 10.733 0 0 1-3.12-1.03.077.077 0 0 1-.008-.128 10.717 10.717 0 0 1 3.12-1.03.076.076 0 0 0 .05-.078c-.186-1.184-.47-2.31-.85-3.368a.077.077 0 0 0-.079-.05c-2.02.24-3.992.72-5.87 1.404a.07.07 0 0 1-.031-.028z"/>
+                </svg>
+                <span className="text-xs">Join Discord</span>
               </div>
-            </div>
-
-            {/* Jungle corner decorations (leaves instead of rivets) */}
-            <div className="absolute top-0.5 left-0.5 pointer-events-none">
-              <svg width="4" height="4" viewBox="0 0 4 4" className="text-green-500 dark:text-green-400 opacity-70">
-                <path d="M 2 1 Q 1 1.5 1.5 2.5 Q 2 3 2 2 Q 2 3 2.5 2.5 Q 3 1.5 2 1" fill="currentColor" />
-              </svg>
-            </div>
-            <div className="absolute top-0.5 right-0.5 pointer-events-none">
-              <svg width="4" height="4" viewBox="0 0 4 4" className="text-green-500 dark:text-green-400 opacity-70">
-                <path d="M 2 1 Q 1 1.5 1.5 2.5 Q 2 3 2 2 Q 2 3 2.5 2.5 Q 3 1.5 2 1" fill="currentColor" />
-              </svg>
-            </div>
-            <div className="absolute bottom-0.5 left-0.5 pointer-events-none">
-              <svg width="4" height="4" viewBox="0 0 4 4" className="text-green-500 dark:text-green-400 opacity-70">
-                <path d="M 2 1 Q 1 1.5 1.5 2.5 Q 2 3 2 2 Q 2 3 2.5 2.5 Q 3 1.5 2 1" fill="currentColor" />
-              </svg>
-            </div>
-            <div className="absolute bottom-0.5 right-0.5 pointer-events-none">
-              <svg width="4" height="4" viewBox="0 0 4 4" className="text-green-500 dark:text-green-400 opacity-70">
-                <path d="M 2 1 Q 1 1.5 1.5 2.5 Q 2 3 2 2 Q 2 3 2.5 2.5 Q 3 1.5 2 1" fill="currentColor" />
-              </svg>
+              <div className="text-blue-100 dark:text-blue-200 text-[10px] font-medium opacity-75">
+                Free Community
+              </div>
             </div>
           </div>
         </div>
