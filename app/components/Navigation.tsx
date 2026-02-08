@@ -8,64 +8,6 @@ export default function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [username, setUsername] = useState('');
-
-  useEffect(() => {
-    setMounted(true);
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/check');
-      const data = await response.json();
-      if (data.authenticated) {
-        setIsAuthenticated(true);
-        // Get user email and username from cookie (client-side)
-        const email = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('user_email='))
-          ?.split('=')[1];
-        const user = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('user_username='))
-          ?.split('=')[1];
-        if (email) setUserEmail(decodeURIComponent(email));
-        if (user) setUsername(decodeURIComponent(user));
-      } else {
-        setIsAuthenticated(false);
-        setUserEmail('');
-        setUsername('');
-      }
-    } catch (error) {
-      setIsAuthenticated(false);
-      setUserEmail('');
-    }
-  };
-
-  // Refresh auth status when pathname changes (after login/signup)
-  useEffect(() => {
-    checkAuth();
-  }, [pathname]);
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setIsAuthenticated(false);
-      setUserEmail('');
-      setUsername('');
-      if (pathname === '/research' || pathname === '/videos') {
-        router.push('/');
-      } else {
-        router.refresh();
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -152,39 +94,6 @@ export default function Navigation() {
                 Trades (Performance)
               </button>
             </div>
-          </div>
-          <div className="hidden md:flex items-center gap-4">
-            {isAuthenticated ? (
-              <>
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  {username || userEmail}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
-                  suppressHydrationWarning
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => handleNavClick('/login')}
-                  className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                  suppressHydrationWarning
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => handleNavClick('/signup')}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
-                  suppressHydrationWarning
-                >
-                  Sign Up
-                </button>
-              </>
-            )}
           </div>
         </div>
       </div>

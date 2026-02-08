@@ -9,6 +9,13 @@ interface VideoCardProps {
   thumbnailUrl?: string;
   date?: string;
   duration?: string;
+  viewCount?: number | null;
+}
+
+function formatViews(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M views`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K views`;
+  return `${n} views`;
 }
 
 export default function VideoCard({
@@ -18,6 +25,7 @@ export default function VideoCard({
   thumbnailUrl,
   date,
   duration,
+  viewCount,
 }: VideoCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -111,18 +119,17 @@ export default function VideoCard({
           </div>
         )}
       </div>
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-semibold text-black dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-500 transition-colors">
-            {title}
-          </h3>
-          {date && (
-            <span className="text-xs text-zinc-500 dark:text-zinc-400 ml-4 whitespace-nowrap">
-              {date}
-            </span>
+      <div className="p-5">
+        <h3 className="text-lg font-semibold text-black dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-500 transition-colors mb-2 line-clamp-2">
+          {title}
+        </h3>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400 mb-2">
+          {date && <span>{date}</span>}
+          {viewCount != null && viewCount > 0 && (
+            <span>{formatViews(viewCount)}</span>
           )}
         </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
           {description}
         </p>
       </div>
