@@ -1,0 +1,4 @@
+# Vercel ignore file - don't deploy these
+data/
+*.md
+!.vercelignore
