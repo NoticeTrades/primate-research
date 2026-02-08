@@ -4,45 +4,53 @@ import { useState, useEffect } from 'react';
 import Navigation from './components/Navigation';
 import MarketTicker from './components/MarketTicker';
 import VideoCard from './components/VideoCard';
-import ResearchCard from './components/ResearchCard';
 import ScrollButton from './components/ScrollButton';
+import SpotlightCall from './components/SpotlightCall';
 import SearchBar from './components/SearchBar';
 import ScrollFade from './components/ScrollFade';
 import ProfilePicture from './components/ProfilePicture';
 import CursorGlow from './components/CursorGlow';
 import CursorHover from './components/CursorHover';
 import DiscordSign from './components/DiscordSign';
+import ChartBackground from './components/ChartBackground';
 
 export default function Home() {
   const [researchOpacity, setResearchOpacity] = useState(0);
-  // Sample data - replace with your actual content
-  const researchReports = [
+
+  // Featured research calls – Seeking Alpha articles + key performance
+  const featuredCalls = [
     {
-      title: 'Equity Market Analysis: Tech Sector Q4 2024',
+      badge: 'Equity · Bull case',
+      title: 'RKLB: Space Pioneer at a Discount',
+      highlight: 'Called discount buying opportunity at $16–18 (Mar 2025). Price now ~$72.',
       description:
-        'Comprehensive analysis of technology sector performance, valuation metrics, and forward-looking trends in the fourth quarter of 2024.',
-      category: 'Equity Analysis',
-      date: 'Dec 2024',
-      pdfUrl: '#', // Replace with actual PDF URL
-      tags: ['Technology', 'Valuation', 'Q4 2024'],
+        'Made the cautious case for Rocket Lab as a long-term opportunity when the stock traded in the $16–18 range. Strong revenue growth and positioning in launch and space systems supported the thesis. Current price reflects significant upside from the identified entry zone.',
+      linkUrl: 'https://seekingalpha.com/article/4764746-space-pioneer-at-a-discount-the-cautious-case-for-rocket-lab-now',
+      linkLabel: 'View report on Seeking Alpha',
+      imageSrc: '/rklb-chart.png',
+      imageAlt: 'RKLB 1-year price chart',
     },
     {
-      title: 'Macroeconomic Outlook: Interest Rate Environment',
+      badge: 'Crypto · Bear case',
+      title: 'Why Trumpcoin Could Hurt Solana',
+      highlight: 'Called for caution / sell around $242. SOL later declined to ~$86.',
       description:
-        'Deep dive into current interest rate policies, their impact on markets, and strategic positioning recommendations.',
-      category: 'Macro Strategy',
-      date: 'Nov 2024',
-      pdfUrl: '#', // Replace with actual PDF URL
-      tags: ['Interest Rates', 'Monetary Policy', 'Macro'],
+        'Outlined risks to Solana from political-narrative-driven flows and valuation. The call highlighted downside risk from stretched positioning. Price has since retraced substantially from the levels discussed, validating the risk-aware view.',
+      linkUrl: 'https://seekingalpha.com/article/4751094-why-trumpcoin-could-hurt-solana',
+      linkLabel: 'View report on Seeking Alpha',
+      imageSrc: '/sol-chart.jpg',
+      imageAlt: 'SOL-USD 5-year price chart',
     },
     {
-      title: 'Cryptoasset Research: Layer 2 Scaling Solutions',
+      badge: 'Markets · Video',
+      title: 'Tech Local Tops — Jan 28 Call',
+      highlight: 'Flagged potential local tops in tech. Market corrected ~5–6% shortly after.',
       description:
-        'Analysis of Layer 2 blockchain solutions, their token economics, and investment thesis for the evolving crypto landscape.',
-      category: 'Crypto Research',
-      date: 'Oct 2024',
-      pdfUrl: '#', // Replace with actual PDF URL
-      tags: ['Blockchain', 'Layer 2', 'Tokenomics'],
+        'Video on X discussed the potential for near-term local tops in technology and related markets. The broad tech complex subsequently saw a roughly 5–6% correction, aligning with the risk-off framing shared in the update.',
+      linkUrl: 'https://x.com/noticetrades/status/2016567117659734475',
+      linkLabel: 'Watch on X',
+      imageSrc: '/x-post.jpg',
+      imageAlt: 'X post — Tech local tops Jan 28',
     },
   ];
 
@@ -116,6 +124,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black dark:bg-zinc-950 relative">
+      <ChartBackground />
       <CursorGlow />
       <CursorHover />
       <DiscordSign />
@@ -153,7 +162,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Research Section */}
+      {/* Featured calls / Research Section */}
       <section
         id="research"
         className="py-24 px-6 bg-black dark:bg-zinc-950 relative transition-opacity duration-700"
@@ -162,17 +171,15 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-16">
             <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-4">
-              Research Reports
+              Featured Research
             </h2>
             <p className="text-xl text-zinc-600 dark:text-zinc-400 max-w-3xl">
-              In-depth analysis covering equity markets, macroeconomic trends,
-              and cryptoasset research. Each report provides actionable insights
-              and strategic recommendations.
+              Select published calls and video updates across equities, crypto, and markets—with key outcomes and links to full reports.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {researchReports.map((report, index) => (
-              <ResearchCard key={index} {...report} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {featuredCalls.map((call, index) => (
+              <SpotlightCall key={index} {...call} />
             ))}
           </div>
         </div>
