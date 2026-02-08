@@ -23,15 +23,16 @@ import {
 
 interface Trade {
   id: string;
-  symbol: string;
+  symbol: 'NQ' | 'ES'; // NQ or ES micro contracts
   type: 'long' | 'short';
   entryDate: string;
-  entryPrice: number;
+  entryPrice: number; // Price in points
   exitDate?: string;
-  exitPrice?: number;
-  quantity: number;
+  exitPrice?: number; // Price in points
+  contracts: number; // Number of micro contracts
   status: 'open' | 'closed';
   notes?: string;
+  callType?: 'discord' | 'public'; // Where the call was posted
 }
 
 interface PerformanceData {
@@ -127,53 +128,75 @@ export default function TradesPage() {
     const closedTrades = trades.filter(t => t.status === 'closed' && t.exitPrice);
     const openTrades = trades.filter(t => t.status === 'open');
     
+    // Calculate P&L for futures contracts
+    // NQ micro: $2 per point, ES micro: $0.50 per point
+    const getPointValue = (symbol: string) => {
+      return symbol === 'NQ' ? 2 : 0.5; // NQ micro = $2/point, ES micro = $0.50/point
+    };
+
     const totalPnL = closedTrades.reduce((sum, trade) => {
-      const pnl = trade.type === 'long'
-        ? (trade.exitPrice! - trade.entryPrice) * trade.quantity
-        : (trade.entryPrice - trade.exitPrice!) * trade.quantity;
+      const pointValue = getPointValue(trade.symbol);
+      const points = trade.type === 'long'
+        ? trade.exitPrice! - trade.entryPrice
+        : trade.entryPrice - trade.exitPrice!;
+      const pnl = points * pointValue * trade.contracts;
       return sum + pnl;
     }, 0);
 
     const winRate = closedTrades.length > 0
       ? (closedTrades.filter(t => {
-          const pnl = t.type === 'long'
-            ? (t.exitPrice! - t.entryPrice) * t.quantity
-            : (t.entryPrice - t.exitPrice!) * t.quantity;
+          const pointValue = getPointValue(t.symbol);
+          const points = t.type === 'long'
+            ? t.exitPrice! - t.entryPrice
+            : t.entryPrice - t.exitPrice!;
+          const pnl = points * pointValue * t.contracts;
           return pnl > 0;
         }).length / closedTrades.length) * 100
       : 0;
 
     const avgWin = closedTrades.filter(t => {
-      const pnl = t.type === 'long'
-        ? (t.exitPrice! - t.entryPrice) * t.quantity
-        : (t.entryPrice - t.exitPrice!) * t.quantity;
+      const pointValue = getPointValue(t.symbol);
+      const points = t.type === 'long'
+        ? t.exitPrice! - t.entryPrice
+        : t.entryPrice - t.exitPrice!;
+      const pnl = points * pointValue * t.contracts;
       return pnl > 0;
     }).reduce((sum, t) => {
-      const pnl = t.type === 'long'
-        ? (t.exitPrice! - t.entryPrice) * t.quantity
-        : (t.entryPrice - t.exitPrice!) * t.quantity;
+      const pointValue = getPointValue(t.symbol);
+      const points = t.type === 'long'
+        ? t.exitPrice! - t.entryPrice
+        : t.entryPrice - t.exitPrice!;
+      const pnl = points * pointValue * t.contracts;
       return sum + pnl;
     }, 0) / Math.max(closedTrades.filter(t => {
-      const pnl = t.type === 'long'
-        ? (t.exitPrice! - t.entryPrice) * t.quantity
-        : (t.entryPrice - t.exitPrice!) * t.quantity;
+      const pointValue = getPointValue(t.symbol);
+      const points = t.type === 'long'
+        ? t.exitPrice! - t.entryPrice
+        : t.entryPrice - t.exitPrice!;
+      const pnl = points * pointValue * t.contracts;
       return pnl > 0;
     }).length, 1);
 
     const avgLoss = closedTrades.filter(t => {
-      const pnl = t.type === 'long'
-        ? (t.exitPrice! - t.entryPrice) * t.quantity
-        : (t.entryPrice - t.exitPrice!) * t.quantity;
+      const pointValue = getPointValue(t.symbol);
+      const points = t.type === 'long'
+        ? t.exitPrice! - t.entryPrice
+        : t.entryPrice - t.exitPrice!;
+      const pnl = points * pointValue * t.contracts;
       return pnl < 0;
     }).reduce((sum, t) => {
-      const pnl = t.type === 'long'
-        ? (t.exitPrice! - t.entryPrice) * t.quantity
-        : (t.entryPrice - t.exitPrice!) * t.quantity;
+      const pointValue = getPointValue(t.symbol);
+      const points = t.type === 'long'
+        ? t.exitPrice! - t.entryPrice
+        : t.entryPrice - t.exitPrice!;
+      const pnl = points * pointValue * t.contracts;
       return sum + pnl;
     }, 0) / Math.max(closedTrades.filter(t => {
-      const pnl = t.type === 'long'
-        ? (t.exitPrice! - t.entryPrice) * t.quantity
-        : (t.entryPrice - t.exitPrice!) * t.quantity;
+      const pointValue = getPointValue(t.symbol);
+      const points = t.type === 'long'
+        ? t.exitPrice! - t.entryPrice
+        : t.entryPrice - t.exitPrice!;
+      const pnl = points * pointValue * t.contracts;
       return pnl < 0;
     }).length, 1);
 
@@ -313,12 +336,36 @@ export default function TradesPage() {
             </div>
           </div>
 
+          {/* Discord CTA Section */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 rounded-lg p-8 mb-12 relative z-10 text-center">
+            <h2 className="text-3xl font-bold text-white mb-3">Want Access to Faster Calls?</h2>
+            <p className="text-blue-100 dark:text-blue-200 mb-6 text-lg">
+              Join the Discord community for real-time trade alerts, faster entry signals, and exclusive market analysis.
+            </p>
+            <a
+              href="https://discord.com/invite/QGnUGdAt"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 font-bold text-lg rounded-lg hover:bg-blue-50 dark:hover:bg-zinc-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <svg 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="currentColor"
+              >
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C2.601 6.7 2 9.175 2 11.639c0 2.23.479 4.403 1.409 6.456a.076.076 0 0 0 .08.051c1.577-.233 3.096-.835 4.5-1.73a.076.076 0 0 0 .041-.069 12.58 12.58 0 0 1-.632-1.104.077.077 0 0 0-.061-.051.078.078 0 0 0-.052.018c-1.134.513-2.36.876-3.667 1.105a.05.05 0 0 0-.03.03 19.9 19.9 0 0 0 5.619 0 .05.05 0 0 0-.021-.018 12.096 12.096 0 0 0-3.645-1.13.078.078 0 0 1-.061-.076c0-.114.003-.23.009-.345a12.285 12.285 0 0 0 3.644 1.116.076.076 0 0 0 .079-.04c.297-.57.651-1.103 1.062-1.59a.076.076 0 0 0-.041-.12 10.733 10.733 0 0 1-3.12-1.03.077.077 0 0 1-.008-.128 10.717 10.717 0 0 1 3.12-1.03.076.076 0 0 0 .05-.078c-.186-1.184-.47-2.31-.85-3.368a.077.077 0 0 0-.079-.05c-2.02.24-3.992.72-5.87 1.404a.07.07 0 0 1-.031-.028z"/>
+              </svg>
+              Join Discord for Free
+            </a>
+          </div>
+
           {/* Trade History - Read Only Portfolio Display */}
           <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 mb-12 relative z-10">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-black dark:text-zinc-50 mb-2">Trade History</h2>
+              <h2 className="text-2xl font-bold text-black dark:text-zinc-50 mb-2">Live Positions & Trade History</h2>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Complete record of closed positions and current open trades. Updated regularly to reflect portfolio performance.
+                Complete record of NQ and ES micro futures positions. Updated in real-time as trades are entered and calls are posted.
               </p>
             </div>
 
@@ -329,11 +376,11 @@ export default function TradesPage() {
                   <tr className="border-b-2 border-zinc-300 dark:border-zinc-700">
                     <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Symbol</th>
                     <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Type</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Entry</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Exit</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Quantity</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">P&L</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Return %</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Entry (Points)</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Exit (Points)</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Contracts</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Points</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">P&L ($)</th>
                     <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
@@ -349,22 +396,28 @@ export default function TradesPage() {
                     </tr>
                   ) : (
                     trades.map((trade) => {
-                      const pnl = trade.status === 'closed' && trade.exitPrice
+                      // Calculate point value: NQ micro = $2/point, ES micro = $0.50/point
+                      const pointValue = trade.symbol === 'NQ' ? 2 : 0.5;
+                      
+                      // Calculate points gained/lost
+                      const points = trade.status === 'closed' && trade.exitPrice
                         ? trade.type === 'long'
-                          ? (trade.exitPrice - trade.entryPrice) * trade.quantity
-                          : (trade.entryPrice - trade.exitPrice) * trade.quantity
+                          ? trade.exitPrice - trade.entryPrice
+                          : trade.entryPrice - trade.exitPrice
                         : null;
                       
-                      const returnPercent = trade.status === 'closed' && trade.exitPrice
-                        ? trade.type === 'long'
-                          ? ((trade.exitPrice - trade.entryPrice) / trade.entryPrice) * 100
-                          : ((trade.entryPrice - trade.exitPrice) / trade.entryPrice) * 100
+                      // Calculate P&L in dollars
+                      const pnl = points !== null
+                        ? points * pointValue * trade.contracts
                         : null;
 
                       return (
                         <tr key={trade.id} className="border-b border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                           <td className="py-4 px-4">
                             <span className="text-black dark:text-zinc-50 font-semibold text-base">{trade.symbol}</span>
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                              {trade.symbol === 'NQ' ? 'Micro' : 'Micro'} Futures
+                            </div>
                           </td>
                           <td className="py-4 px-4">
                             <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
@@ -376,33 +429,33 @@ export default function TradesPage() {
                             </span>
                           </td>
                           <td className="py-4 px-4">
-                            <div className="text-black dark:text-zinc-50 font-medium">{formatCurrency(trade.entryPrice)}</div>
+                            <div className="text-black dark:text-zinc-50 font-medium">{trade.entryPrice.toFixed(2)}</div>
                             <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{new Date(trade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                           </td>
                           <td className="py-4 px-4">
                             {trade.exitPrice ? (
                               <>
-                                <div className="text-black dark:text-zinc-50 font-medium">{formatCurrency(trade.exitPrice)}</div>
+                                <div className="text-black dark:text-zinc-50 font-medium">{trade.exitPrice.toFixed(2)}</div>
                                 <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{trade.exitDate ? new Date(trade.exitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</div>
                               </>
                             ) : (
                               <span className="text-zinc-400 dark:text-zinc-500">-</span>
                             )}
                           </td>
-                          <td className="py-4 px-4 text-black dark:text-zinc-50 font-medium">{trade.quantity.toLocaleString()}</td>
+                          <td className="py-4 px-4 text-black dark:text-zinc-50 font-medium">{trade.contracts}</td>
                           <td className="py-4 px-4">
-                            {pnl !== null ? (
-                              <span className={`font-semibold text-base ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                {formatCurrency(pnl)}
+                            {points !== null ? (
+                              <span className={`font-semibold ${points >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {points >= 0 ? '+' : ''}{points.toFixed(2)} pts
                               </span>
                             ) : (
                               <span className="text-zinc-400 dark:text-zinc-500">-</span>
                             )}
                           </td>
                           <td className="py-4 px-4">
-                            {returnPercent !== null ? (
-                              <span className={`font-semibold ${returnPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                {formatPercent(returnPercent)}
+                            {pnl !== null ? (
+                              <span className={`font-semibold text-base ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {formatCurrency(pnl)}
                               </span>
                             ) : (
                               <span className="text-zinc-400 dark:text-zinc-500">-</span>
