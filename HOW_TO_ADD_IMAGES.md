@@ -36,19 +36,31 @@ Your project is located at: `C:\Users\golds\Desktop\project-website`
      - `headshot.jpg`
      - `headshot.png`
 
-### 4. Verify the Files
+### 4. Featured Research Charts (Homepage)
+
+To show the RKLB and Solana charts in the "Featured Research" section on the homepage:
+
+1. Save your chart screenshots (e.g. from your broker or Yahoo Finance) as:
+   - **RKLB 1-year chart** → `rklb-chart.png`
+   - **SOL-USD 5-year chart** → `sol-chart.png`
+2. Copy both files into the `public` folder.  
+If either file is missing, that card will still show but without the chart image.
+
+### 5. Verify the Files
 
 After adding the images, your `public` folder should look something like this:
 ```
 public/
   ├── primate-logo.png  (your logo)
   ├── nick-headshot.jpg (your photo)
+  ├── rklb-chart.png    (optional – RKLB chart for Featured Research)
+  ├── sol-chart.png     (optional – Solana chart for Featured Research)
   ├── file.svg
   ├── globe.svg
   └── ... (other files)
 ```
 
-### 5. Restart Your Development Server
+### 6. Restart Your Development Server
 
 After adding the images:
 1. Stop your development server (if running) by pressing `Ctrl+C` in the terminal
