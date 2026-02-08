@@ -103,9 +103,7 @@ export default function Navigation() {
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
               <a
-                href="https://discord.gg/QGnUGdAt"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/"
                 className="text-base font-semibold text-black dark:text-zinc-50 tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
               >
                 Primate Research
