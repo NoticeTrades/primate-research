@@ -248,10 +248,10 @@ export default function TradesPage() {
           {/* Header */}
           <div className="mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-zinc-50 mb-4">
-              Trading Performance & Track Record
+              Nick's Live Positions
             </h1>
             <p className="text-lg text-zinc-700 dark:text-zinc-300">
-              Real-time portfolio performance and trade history. Updated regularly to reflect current market positions and closed trades.
+              Real-time tracking of NQ and ES micro futures positions. Updated as trades are entered and calls are posted in Discord.
             </p>
           </div>
 
