@@ -43,20 +43,7 @@ interface PerformanceData {
 export default function TradesPage() {
   const router = useRouter();
   const [trades, setTrades] = useState<Trade[]>([]);
-  const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
-  const [showForm, setShowForm] = useState(false);
   const [sp500Data, setSp500Data] = useState<PerformanceData[]>([]);
-  const [formData, setFormData] = useState<Partial<Trade>>({
-    symbol: '',
-    type: 'long',
-    entryDate: new Date().toISOString().split('T')[0],
-    entryPrice: 0,
-    exitDate: '',
-    exitPrice: 0,
-    quantity: 0,
-    status: 'open',
-    notes: '',
-  });
 
   // Load trades from localStorage
   useEffect(() => {
@@ -210,66 +197,6 @@ export default function TradesPage() {
 
   const stats = calculateStats();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editingTrade) {
-      // Update existing trade
-      const updated = trades.map(t => 
-        t.id === editingTrade.id ? { ...formData, id: editingTrade.id } as Trade : t
-      );
-      setTrades(updated);
-      localStorage.setItem('primate-trades', JSON.stringify(updated));
-      setEditingTrade(null);
-    } else {
-      // Add new trade
-      const newTrade: Trade = {
-        id: Date.now().toString(),
-        symbol: formData.symbol!,
-        type: formData.type!,
-        entryDate: formData.entryDate!,
-        entryPrice: formData.entryPrice!,
-        exitDate: formData.exitDate || undefined,
-        exitPrice: formData.exitPrice || undefined,
-        quantity: formData.quantity!,
-        status: formData.status!,
-        notes: formData.notes,
-      };
-      
-      const updated = [...trades, newTrade];
-      setTrades(updated);
-      localStorage.setItem('primate-trades', JSON.stringify(updated));
-    }
-
-    // Reset form
-    setFormData({
-      symbol: '',
-      type: 'long',
-      entryDate: new Date().toISOString().split('T')[0],
-      entryPrice: 0,
-      exitDate: '',
-      exitPrice: 0,
-      quantity: 0,
-      status: 'open',
-      notes: '',
-    });
-    setShowForm(false);
-  };
-
-  const handleEdit = (trade: Trade) => {
-    setEditingTrade(trade);
-    setFormData(trade);
-    setShowForm(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this trade?')) {
-      const updated = trades.filter(t => t.id !== id);
-      setTrades(updated);
-      localStorage.setItem('primate-trades', JSON.stringify(updated));
-    }
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -298,10 +225,10 @@ export default function TradesPage() {
           {/* Header */}
           <div className="mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-zinc-50 mb-4">
-              Trade Performance Tracker
+              Trading Performance & Track Record
             </h1>
             <p className="text-lg text-zinc-700 dark:text-zinc-300">
-              Track your trades and compare performance against the S&P 500
+              Real-time portfolio performance and trade history. Updated regularly to reflect current market positions and closed trades.
             </p>
           </div>
 
@@ -386,213 +313,38 @@ export default function TradesPage() {
             </div>
           </div>
 
-          {/* Trade Management */}
+          {/* Trade History - Read Only Portfolio Display */}
           <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 mb-12 relative z-10">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-black dark:text-zinc-50">Trades</h2>
-              <button
-                onClick={() => {
-                  setEditingTrade(null);
-                  setShowForm(!showForm);
-                  setFormData({
-                    symbol: '',
-                    type: 'long',
-                    entryDate: new Date().toISOString().split('T')[0],
-                    entryPrice: 0,
-                    exitDate: '',
-                    exitPrice: 0,
-                    quantity: 0,
-                    status: 'open',
-                    notes: '',
-                  });
-                }}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors shadow-lg hover:shadow-xl"
-                suppressHydrationWarning
-              >
-                {showForm ? 'Cancel' : '+ Add Trade'}
-              </button>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-black dark:text-zinc-50 mb-2">Trade History</h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Complete record of closed positions and current open trades. Updated regularly to reflect portfolio performance.
+              </p>
             </div>
 
-            {/* Trade Form */}
-            {showForm && (
-              <form onSubmit={handleSubmit} className="mb-8 p-6 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Symbol
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.symbol}
-                      onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                      required
-                      suppressHydrationWarning
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Type
-                    </label>
-                    <select
-                      value={formData.type}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value as 'long' | 'short' })}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                      suppressHydrationWarning
-                    >
-                      <option value="long">Long</option>
-                      <option value="short">Short</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Entry Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.entryDate}
-                      onChange={(e) => setFormData({ ...formData, entryDate: e.target.value })}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                      required
-                      suppressHydrationWarning
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Entry Price
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.entryPrice || ''}
-                      onChange={(e) => setFormData({ ...formData, entryPrice: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                      required
-                      suppressHydrationWarning
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.quantity || ''}
-                      onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                      required
-                      suppressHydrationWarning
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Status
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as 'open' | 'closed' })}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                      suppressHydrationWarning
-                    >
-                      <option value="open">Open</option>
-                      <option value="closed">Closed</option>
-                    </select>
-                  </div>
-
-                  {formData.status === 'closed' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                          Exit Date
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.exitDate || ''}
-                          onChange={(e) => setFormData({ ...formData, exitDate: e.target.value })}
-                          className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                          suppressHydrationWarning
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                          Exit Price
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={formData.exitPrice || ''}
-                          onChange={(e) => setFormData({ ...formData, exitPrice: parseFloat(e.target.value) })}
-                          className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                          suppressHydrationWarning
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Notes
-                    </label>
-                    <textarea
-                      value={formData.notes || ''}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-black dark:text-zinc-50"
-                      rows={3}
-                      suppressHydrationWarning
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-4">
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                    suppressHydrationWarning
-                  >
-                    {editingTrade ? 'Update Trade' : 'Add Trade'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowForm(false);
-                      setEditingTrade(null);
-                    }}
-                    className="px-6 py-2 bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600 text-black dark:text-zinc-50 rounded-lg transition-colors"
-                    suppressHydrationWarning
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Trades Table */}
+            {/* Trades Table - Read Only */}
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-200 dark:border-zinc-700">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">Symbol</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">Type</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">Entry</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">Exit</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">Quantity</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">P&L</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">Actions</th>
+                  <tr className="border-b-2 border-zinc-300 dark:border-zinc-700">
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Symbol</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Type</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Entry</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Exit</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Quantity</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">P&L</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Return %</th>
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {trades.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-zinc-500">
-                        No trades yet. Click "Add Trade" to get started.
+                      <td colSpan={8} className="py-12 text-center">
+                        <div className="text-zinc-500 dark:text-zinc-400">
+                          <p className="text-lg mb-2">No trades recorded yet</p>
+                          <p className="text-sm">Portfolio performance will be displayed here as trades are updated.</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -602,69 +354,68 @@ export default function TradesPage() {
                           ? (trade.exitPrice - trade.entryPrice) * trade.quantity
                           : (trade.entryPrice - trade.exitPrice) * trade.quantity
                         : null;
+                      
+                      const returnPercent = trade.status === 'closed' && trade.exitPrice
+                        ? trade.type === 'long'
+                          ? ((trade.exitPrice - trade.entryPrice) / trade.entryPrice) * 100
+                          : ((trade.entryPrice - trade.exitPrice) / trade.entryPrice) * 100
+                        : null;
 
                       return (
-                        <tr key={trade.id} className="border-b border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-                          <td className="py-3 px-4 text-black dark:text-zinc-50 font-medium">{trade.symbol}</td>
-                          <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        <tr key={trade.id} className="border-b border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                          <td className="py-4 px-4">
+                            <span className="text-black dark:text-zinc-50 font-semibold text-base">{trade.symbol}</span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
                               trade.type === 'long' 
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+                                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
                             }`}>
                               {trade.type.toUpperCase()}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">
-                            {formatCurrency(trade.entryPrice)}<br />
-                            <span className="text-xs text-zinc-500">{new Date(trade.entryDate).toLocaleDateString()}</span>
+                          <td className="py-4 px-4">
+                            <div className="text-black dark:text-zinc-50 font-medium">{formatCurrency(trade.entryPrice)}</div>
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{new Date(trade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                           </td>
-                          <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">
+                          <td className="py-4 px-4">
                             {trade.exitPrice ? (
                               <>
-                                {formatCurrency(trade.exitPrice)}<br />
-                                <span className="text-xs text-zinc-500">{trade.exitDate ? new Date(trade.exitDate).toLocaleDateString() : ''}</span>
+                                <div className="text-black dark:text-zinc-50 font-medium">{formatCurrency(trade.exitPrice)}</div>
+                                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{trade.exitDate ? new Date(trade.exitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</div>
                               </>
                             ) : (
-                              <span className="text-zinc-400">-</span>
+                              <span className="text-zinc-400 dark:text-zinc-500">-</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">{trade.quantity}</td>
-                          <td className="py-3 px-4">
+                          <td className="py-4 px-4 text-black dark:text-zinc-50 font-medium">{trade.quantity.toLocaleString()}</td>
+                          <td className="py-4 px-4">
                             {pnl !== null ? (
-                              <span className={pnl >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                              <span className={`font-semibold text-base ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {formatCurrency(pnl)}
                               </span>
                             ) : (
-                              <span className="text-zinc-400">-</span>
+                              <span className="text-zinc-400 dark:text-zinc-500">-</span>
                             )}
                           </td>
-                          <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          <td className="py-4 px-4">
+                            {returnPercent !== null ? (
+                              <span className={`font-semibold ${returnPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {formatPercent(returnPercent)}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-400 dark:text-zinc-500">-</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
                               trade.status === 'open'
-                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400'
                                 : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
                             }`}>
                               {trade.status.toUpperCase()}
                             </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEdit(trade)}
-                                className="text-blue-600 hover:text-blue-700 text-sm"
-                                suppressHydrationWarning
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(trade.id)}
-                                className="text-red-600 hover:text-red-700 text-sm"
-                                suppressHydrationWarning
-                              >
-                                Delete
-                              </button>
-                            </div>
                           </td>
                         </tr>
                       );
