@@ -293,7 +293,7 @@ export default function TradesPage() {
         <MarketTicker />
       </div>
 
-      <div className="pt-32 pb-24 px-6">
+      <div className="pt-32 pb-24 px-6 relative z-10">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-12">
@@ -306,7 +306,7 @@ export default function TradesPage() {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 relative z-10">
             <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800">
               <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Total Return</div>
               <div className={`text-2xl font-bold ${stats.portfolioReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -337,50 +337,57 @@ export default function TradesPage() {
           </div>
 
           {/* Performance Chart */}
-          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 mb-12">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 mb-12 relative z-10">
             <h2 className="text-2xl font-bold text-black dark:text-zinc-50 mb-6">
               Portfolio Performance vs S&P 500
             </h2>
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#6b7280"
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                />
-                <YAxis 
-                  stroke="#6b7280"
-                  label={{ value: 'Return %', angle: -90, position: 'insideLeft' }}
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-                  labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                  formatter={(value: number | undefined) => value !== undefined ? formatPercent(value) : ''}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="portfolio" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  name="Portfolio"
-                  dot={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="sp500" 
-                  stroke="#6b7280" 
-                  strokeWidth={2}
-                  name="S&P 500"
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="w-full" style={{ height: '400px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-700" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#6b7280"
+                    className="dark:stroke-zinc-400"
+                    tick={{ fill: '#6b7280' }}
+                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  />
+                  <YAxis 
+                    stroke="#6b7280"
+                    className="dark:stroke-zinc-400"
+                    tick={{ fill: '#6b7280' }}
+                    label={{ value: 'Return %', angle: -90, position: 'insideLeft', fill: '#6b7280' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f3f4f6' }}
+                    labelStyle={{ color: '#f3f4f6' }}
+                    labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                    formatter={(value: any) => value !== undefined ? formatPercent(value) : ''}
+                  />
+                  <Legend wrapperStyle={{ color: '#6b7280' }} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="portfolio" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    name="Portfolio"
+                    dot={false}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="sp500" 
+                    stroke="#6b7280" 
+                    strokeWidth={2}
+                    name="S&P 500"
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Trade Management */}
-          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 mb-12">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 mb-12 relative z-10">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-black dark:text-zinc-50">Trades</h2>
               <button
