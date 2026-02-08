@@ -8,8 +8,8 @@ import DiscordSign from '../components/DiscordSign';
 import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
 import VideoCard from '../components/VideoCard';
-import { videos as initialVideos, getYouTubeVideoId } from '@/data/videos';
-import type { VideoEntry } from '@/data/videos';
+import { videos as initialVideos, getYouTubeVideoId } from '../../data/videos';
+import type { VideoEntry } from '../../data/videos';
 
 type SortOption = 'newest' | 'oldest' | 'most_views' | 'least_views';
 

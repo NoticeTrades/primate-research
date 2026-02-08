@@ -8,8 +8,8 @@ import DiscordSign from '../components/DiscordSign';
 import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
 import ResearchCard from '../components/ResearchCard';
-import { researchArticles } from '@/data/research';
-import type { ResearchArticle } from '@/data/research';
+import { researchArticles } from '../../data/research';
+import type { ResearchArticle } from '../../data/research';
 
 function matchSearch(article: ResearchArticle, query: string): boolean {
   if (!query.trim()) return true;
