@@ -162,17 +162,17 @@ export default function Navigation() {
     }
   };
 
-  const handleBellClick = async () => {
+  const handleBellClick = () => {
     setShowNotifications((prev) => !prev);
-    // Mark all as read when opening
-    if (!showNotifications && unreadCount > 0) {
-      setUnreadCount(0);
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      try {
-        await fetch('/api/notifications/read', { method: 'POST' });
-      } catch {
-        // silently fail
-      }
+  };
+
+  const handleMarkAllRead = async () => {
+    setUnreadCount(0);
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    try {
+      await fetch('/api/notifications/read', { method: 'POST' });
+    } catch {
+      // silently fail
     }
   };
 
@@ -367,13 +367,23 @@ export default function Navigation() {
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-zinc-100">Notifications</h3>
                       {notifications.length > 0 && (
-                        <button
-                          onClick={handleClearAll}
-                          disabled={isClearing}
-                          className="text-[11px] font-medium text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                        >
-                          {isClearing ? 'Clearing...' : 'Clear all'}
-                        </button>
+                        <div className="flex items-center gap-3">
+                          {unreadCount > 0 && (
+                            <button
+                              onClick={handleMarkAllRead}
+                              className="text-[11px] font-medium text-zinc-400 hover:text-blue-400 transition-colors cursor-pointer"
+                            >
+                              Mark read
+                            </button>
+                          )}
+                          <button
+                            onClick={handleClearAll}
+                            disabled={isClearing}
+                            className="text-[11px] font-medium text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            {isClearing ? 'Clearing...' : 'Clear all'}
+                          </button>
+                        </div>
                       )}
                     </div>
                     {/* Unread / All toggle */}

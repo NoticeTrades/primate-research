@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getDb } from '../../../lib/db';
 
+// Prevent Next.js from caching this route — always fetch fresh data
+export const dynamic = 'force-dynamic';
+
 // GET /api/notifications — returns notifications + unread count for the logged-in user
 // Respects notifications_cleared_at (hides notifications the user has cleared)
 // Returns is_read per notification so the frontend can filter unread vs all
