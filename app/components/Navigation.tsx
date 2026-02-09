@@ -61,9 +61,21 @@ export default function Navigation() {
       }
     };
     fetchNotifications();
-    // Poll every 60 seconds for new notifications
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
+    // Poll every 15 seconds for new notifications
+    const interval = setInterval(fetchNotifications, 15000);
+    // Also refetch when the user focuses the tab (instant feel)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', fetchNotifications);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', fetchNotifications);
+    };
   }, [isAuthenticated, pathname]);
 
   useEffect(() => {
