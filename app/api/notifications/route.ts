@@ -50,7 +50,7 @@ export async function GET() {
     }
 
     // Add is_read flag per notification based on last_notification_seen
-    const notificationsWithReadStatus = notifications.map((notif: { created_at: string; [key: string]: unknown }) => ({
+    const notificationsWithReadStatus = notifications.map((notif) => ({
       ...notif,
       is_read: lastSeen ? new Date(notif.created_at) <= new Date(lastSeen) : false,
     }));
