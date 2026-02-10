@@ -78,7 +78,7 @@ export default function EconomicCalendarPage() {
     script.type = 'text/javascript';
     script.innerHTML = JSON.stringify({
       colorTheme: 'dark',
-      isTransparent: true,
+      isTransparent: false,
       width: '100%',
       height: '500',
       locale: 'en',

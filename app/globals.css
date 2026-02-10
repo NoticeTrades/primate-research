@@ -168,3 +168,14 @@ body {
 .verified-badge:hover svg {
   filter: drop-shadow(0 0 6px rgba(29, 161, 242, 0.7)) drop-shadow(0 0 12px rgba(29, 161, 242, 0.4));
 }
+
+/* TradingView widget dark mode fix */
+.tradingview-widget-container iframe {
+  background: #131722 !important;
+  border-radius: 0 0 1rem 1rem;
+}
+
+.tradingview-widget-container {
+  background: #131722;
+  border-radius: 0 0 1rem 1rem;
+}
