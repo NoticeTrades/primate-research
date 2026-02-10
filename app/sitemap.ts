@@ -2,7 +2,8 @@ import { MetadataRoute } from 'next';
 import { researchArticles, generateSlug } from '../data/research';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com';
+  // Normalize baseUrl to remove trailing slash
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com').replace(/\/$/, '');
   const currentDate = new Date();
 
   // Static pages
