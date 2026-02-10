@@ -2,14 +2,9 @@ import { ImageResponse } from 'next/og';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
-export const alt = 'Primate Trading - Market Analysis & Trading Research';
-export const size = {
-  width: 1200,
-  height: 630,
-};
-export const contentType = 'image/png';
+export const ogSize = { width: 1200, height: 630 };
 
-export default async function TwitterImage() {
+export async function generatePageOGImage(pageTitle: string, pageSubtitle: string) {
   const logoData = await readFile(
     join(process.cwd(), 'public', 'primate-logo.png')
   );
@@ -29,6 +24,7 @@ export default async function TwitterImage() {
           position: 'relative',
         }}
       >
+        {/* Top blue accent */}
         <div
           style={{
             position: 'absolute',
@@ -40,46 +36,67 @@ export default async function TwitterImage() {
           }}
         />
 
+        {/* Logo */}
         <img
           src={logoBase64}
-          width={180}
-          height={180}
-          style={{ objectFit: 'contain', marginBottom: '28px' }}
+          width={140}
+          height={140}
+          style={{ objectFit: 'contain', marginBottom: '24px' }}
         />
 
+        {/* Brand name */}
         <div
           style={{
             display: 'flex',
-            fontSize: '54px',
-            fontWeight: 800,
-            color: '#1e3a5f',
-            letterSpacing: '-1px',
-            marginBottom: '12px',
+            fontSize: '28px',
+            fontWeight: 600,
+            color: '#94a3b8',
+            letterSpacing: '2px',
+            textTransform: 'uppercase',
+            marginBottom: '8px',
           }}
         >
           Primate Trading
         </div>
 
+        {/* Page title */}
         <div
           style={{
             display: 'flex',
-            fontSize: '22px',
-            fontWeight: 500,
-            color: '#64748b',
+            fontSize: '48px',
+            fontWeight: 800,
+            color: '#1e3a5f',
+            letterSpacing: '-0.5px',
+            marginBottom: '12px',
           }}
         >
-          Market Analysis & Trading Research
+          {pageTitle}
         </div>
 
+        {/* Subtitle */}
+        <div
+          style={{
+            display: 'flex',
+            fontSize: '20px',
+            fontWeight: 400,
+            color: '#64748b',
+            maxWidth: '700px',
+            textAlign: 'center',
+          }}
+        >
+          {pageSubtitle}
+        </div>
+
+        {/* Domain */}
         <div
           style={{
             display: 'flex',
             marginTop: '28px',
-            padding: '10px 28px',
+            padding: '8px 24px',
             borderRadius: '999px',
             background: '#eff6ff',
             border: '2px solid #bfdbfe',
-            fontSize: '16px',
+            fontSize: '14px',
             fontWeight: 600,
             color: '#2563eb',
             letterSpacing: '0.5px',
@@ -88,6 +105,7 @@ export default async function TwitterImage() {
           primatetrading.com
         </div>
 
+        {/* Bottom accent */}
         <div
           style={{
             position: 'absolute',
@@ -100,6 +118,7 @@ export default async function TwitterImage() {
         />
       </div>
     ),
-    { ...size }
+    { ...ogSize }
   );
 }
+
