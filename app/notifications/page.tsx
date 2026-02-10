@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '../components/Navigation';
 import CursorGlow from '../components/CursorGlow';
@@ -31,6 +31,8 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
@@ -70,6 +72,20 @@ export default function NotificationsPage() {
     // Refresh every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowFilterDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Delete single notification
@@ -228,21 +244,99 @@ export default function NotificationsPage() {
           {/* Actions Bar */}
           <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Filter Dropdown */}
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Filter:</label>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-3 py-1.5 bg-zinc-800/50 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                <option value="all">All Notifications</option>
-                <option value="unread">Unread Only</option>
-                {notificationTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </option>
-                ))}
-              </select>
+            <div className="relative" ref={filterDropdownRef}>
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Filter by Type:</label>
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  onMouseEnter={() => setShowFilterDropdown(true)}
+                  onMouseLeave={() => setShowFilterDropdown(false)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/50 border border-zinc-700 rounded-lg text-sm font-medium text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors"
+                >
+                  <span>
+                    {typeFilter === 'all'
+                      ? 'All Notifications'
+                      : typeFilter === 'unread'
+                        ? 'Unread Only'
+                        : typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+
+              {showFilterDropdown && (
+                <div
+                  onMouseEnter={() => setShowFilterDropdown(true)}
+                  onMouseLeave={() => setShowFilterDropdown(false)}
+                  className="absolute top-full left-0 mt-2 w-56 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50"
+                >
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        setTypeFilter('all');
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-3 ${
+                        typeFilter === 'all'
+                          ? 'bg-blue-500/15 text-blue-400 border-l-2 border-blue-500'
+                          : 'text-zinc-300 hover:bg-zinc-800'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      All Notifications
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTypeFilter('unread');
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-3 ${
+                        typeFilter === 'unread'
+                          ? 'bg-blue-500/15 text-blue-400 border-l-2 border-blue-500'
+                          : 'text-zinc-300 hover:bg-zinc-800'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      Unread Only
+                    </button>
+                    {notificationTypes.length > 0 && (
+                      <>
+                        <div className="h-px bg-zinc-800 my-1" />
+                        {notificationTypes.map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              setTypeFilter(type);
+                              setShowFilterDropdown(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-3 ${
+                              typeFilter === type
+                                ? 'bg-blue-500/15 text-blue-400 border-l-2 border-blue-500'
+                                : 'text-zinc-300 hover:bg-zinc-800'
+                            }`}
+                          >
+                            <div className={`p-1 rounded ${getTypeColor(type)}`}>
+                              {getTypeIcon(type)}
+                            </div>
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
