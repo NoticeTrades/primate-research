@@ -107,7 +107,7 @@ export default async function OGImage() {
           Market Analysis & Trading Research
         </div>
 
-        {/* Domain */}
+        {/* Domain badge */}
         <div
           style={{
             display: 'flex',

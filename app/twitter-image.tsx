@@ -29,6 +29,22 @@ export default async function TwitterImage() {
           position: 'relative',
         }}
       >
+        {/* Subtle grid overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            opacity: 0.06,
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        {/* Top accent line */}
         <div
           style={{
             position: 'absolute',
@@ -40,6 +56,7 @@ export default async function TwitterImage() {
           }}
         />
 
+        {/* Logo with white background to pop in front */}
         <div
           style={{
             display: 'flex',
@@ -62,6 +79,7 @@ export default async function TwitterImage() {
           />
         </div>
 
+        {/* Title */}
         <div
           style={{
             display: 'flex',
@@ -76,6 +94,7 @@ export default async function TwitterImage() {
           Primate Trading
         </div>
 
+        {/* Subtitle */}
         <div
           style={{
             display: 'flex',
@@ -88,6 +107,7 @@ export default async function TwitterImage() {
           Market Analysis & Trading Research
         </div>
 
+        {/* Domain badge */}
         <div
           style={{
             display: 'flex',
@@ -105,6 +125,7 @@ export default async function TwitterImage() {
           primatetrading.com
         </div>
 
+        {/* Bottom accent */}
         <div
           style={{
             position: 'absolute',
