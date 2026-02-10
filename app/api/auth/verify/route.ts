@@ -53,27 +53,59 @@ export async function POST(request: Request) {
     }
 
     // Mark user as verified and clear the code
+    // Also set last_notification_seen to created_at so the welcome notification appears as unread
     await sql`
       UPDATE users
-      SET verified = true, verification_code = NULL, verification_code_expires = NULL
+      SET verified = true, 
+          verification_code = NULL, 
+          verification_code_expires = NULL,
+          last_notification_seen = created_at
       WHERE id = ${user.id}
     `;
 
-    // Send welcome notification to the new user (user-specific)
+    // Send welcome notification to the new user in their notification hub
+    // Create it as a global notification (user_email = NULL) so it shows up for everyone
+    // This ensures it works even if the user_email column migration hasn't run yet
     try {
-      await sql`
-        INSERT INTO notifications (title, description, link, type, user_email)
-        VALUES (
-          'Welcome to Primate Trading! 🎉',
-          'Welcome to Primate Trading V1! Explore our Research reports, Market Calendar with live economic events & earnings, Video content, and Trade performance tracking. This is just the beginning — we're constantly adding new features to help you trade smarter. Click the bell icon anytime to see your notifications.',
-          '/research',
-          'update',
-          ${email}
-        )
-      `;
+      // Wait a moment to ensure notification is created after last_notification_seen is set
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Try user-specific first, fallback to global if column doesn't exist
+      try {
+        const result = await sql`
+          INSERT INTO notifications (title, description, link, type, user_email)
+          VALUES (
+            'Welcome to Primate Trading! 🎉',
+            'Welcome to Primate Trading V1! Explore our Research reports, Market Calendar with live economic events & earnings, Video content, and Trade performance tracking. This is just the beginning — we're constantly adding new features to help you trade smarter. Click the bell icon anytime to see your notifications.',
+            '/research',
+            'update',
+            ${email}
+          )
+          RETURNING id
+        `;
+        console.log('✅ Welcome notification created (user-specific) for', email, 'ID:', result[0]?.id);
+      } catch (userSpecificErr: any) {
+        // If user_email column doesn't exist, create as global notification
+        if (userSpecificErr?.message?.includes('user_email') || userSpecificErr?.code === '42703') {
+          console.log('user_email column not found, creating global welcome notification');
+          const result = await sql`
+            INSERT INTO notifications (title, description, link, type)
+            VALUES (
+              'Welcome to Primate Trading! 🎉',
+              'Welcome to Primate Trading V1! Explore our Research reports, Market Calendar with live economic events & earnings, Video content, and Trade performance tracking. This is just the beginning — we're constantly adding new features to help you trade smarter. Click the bell icon anytime to see your notifications.',
+              '/research',
+              'update'
+            )
+            RETURNING id
+          `;
+          console.log('✅ Welcome notification created (global) ID:', result[0]?.id);
+        } else {
+          throw userSpecificErr;
+        }
+      }
     } catch (err) {
-      console.error('Failed to create welcome notification:', err);
-      // Don't fail the verification if notification creation fails
+      console.error('❌ Failed to create welcome notification:', err);
+      // Don't fail verification if notification creation fails
     }
 
     // Create session — log them in
