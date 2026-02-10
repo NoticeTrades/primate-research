@@ -6,10 +6,11 @@ export const dynamic = 'force-dynamic';
 // GET /api/ticker/[symbol] — fetch crypto data from CoinGecko
 export async function GET(
   request: Request,
-  { params }: { params: { symbol: string } }
+  { params }: { params: Promise<{ symbol: string }> }
 ) {
   try {
-    const symbol = params.symbol.toUpperCase();
+    const { symbol: symbolParam } = await params;
+    const symbol = symbolParam.toUpperCase();
 
     // Common crypto symbol mappings (CoinGecko uses IDs, not symbols)
     const symbolToId: Record<string, string> = {
