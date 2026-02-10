@@ -191,9 +191,6 @@ export default function Home() {
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-black dark:text-zinc-50 mb-6 leading-tight">
               Edge Through the Regime
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 mb-2 font-medium">
-              Primate Trading
-            </p>
             <p className="text-xl md:text-2xl text-zinc-700 dark:text-zinc-300 mb-8 leading-relaxed max-w-3xl mx-auto">
               Real-time market analysis, comprehensive research, and video insights across equities, crypto, and macro markets. Built for traders and investors who demand clarity.
             </p>
