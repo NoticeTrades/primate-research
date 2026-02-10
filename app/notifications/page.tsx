@@ -29,6 +29,7 @@ export default function NotificationsPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -45,9 +46,11 @@ export default function NotificationsPage() {
     }
   }, [router]);
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    setLoading(true);
+  // Fetch notifications (silent background refresh after initial load)
+  const fetchNotifications = async (isInitial = false) => {
+    if (isInitial) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const res = await fetch('/api/notifications');
@@ -61,28 +64,35 @@ export default function NotificationsPage() {
       const data = await res.json();
       setNotifications(data.notifications || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load notifications');
+      // Only show error on initial load, not on background refreshes
+      if (isInitial) {
+        setError(err instanceof Error ? err.message : 'Failed to load notifications');
+      }
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setLoading(false);
+        setInitialLoad(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchNotifications();
-    // Refresh every 5 seconds for real-time feel
-    const interval = setInterval(fetchNotifications, 5000);
-    // Also refetch when the user focuses the tab or window becomes visible
+    // Initial load with loading state
+    fetchNotifications(true);
+    // Background refresh every 5 seconds (silent, no loading state)
+    const interval = setInterval(() => fetchNotifications(false), 5000);
+    // Also refetch when the user focuses the tab or window becomes visible (silent)
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        fetchNotifications();
+        fetchNotifications(false);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', fetchNotifications);
+    window.addEventListener('focus', () => fetchNotifications(false));
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', fetchNotifications);
+      window.removeEventListener('focus', () => fetchNotifications(false));
     };
   }, []);
 
