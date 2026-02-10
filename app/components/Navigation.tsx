@@ -135,6 +135,22 @@ export default function Navigation() {
     router.push(`/research/${slug}`);
   };
 
+  // Check if search query looks like a crypto ticker
+  const isCryptoTicker = (query: string): boolean => {
+    const trimmed = query.trim().toUpperCase();
+    // Common crypto tickers: 2-10 chars, usually all caps
+    const cryptoPattern = /^[A-Z]{2,10}$/;
+    const knownCryptos = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'MATIC', 'AVAX', 'LINK', 'UNI', 'ATOM', 'XRP', 'DOGE', 'SHIB', 'LTC', 'BCH', 'XLM', 'ALGO', 'NEAR', 'FTM', 'SAND', 'MANA', 'APE', 'ARB', 'OP', 'SUI', 'APT'];
+    return cryptoPattern.test(trimmed) && knownCryptos.includes(trimmed);
+  };
+
+  const handleTickerClick = (ticker: string) => {
+    setIsDropdownOpen(false);
+    setSearchQuery('');
+    searchRef.current?.blur();
+    router.push(`/ticker/${ticker.toUpperCase()}`);
+  };
+
   const scrollToSection = (id: string) => {
     if (pathname !== '/') {
       router.push(`/#${id}`);
@@ -257,13 +273,55 @@ export default function Navigation() {
               ref={dropdownRef}
               className="absolute top-full mt-2 right-0 w-80 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
             >
+              {/* Crypto ticker option */}
+              {isCryptoTicker(searchQuery) && (
+                <>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleTickerClick(searchQuery.trim());
+                    }}
+                    className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg
+                        className="w-5 h-5 text-blue-500 shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      <div>
+                        <div className="font-medium text-sm text-black dark:text-zinc-50">
+                          View {searchQuery.trim().toUpperCase()} Details
+                        </div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          Crypto statistics, charts & analysis
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                  {searchResults.length > 0 && (
+                    <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                      <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                        Related Articles ({searchResults.length})
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+
               {searchResults.length > 0 ? (
                 <>
-                  <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
-                    <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
-                      {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
+                  {!isCryptoTicker(searchQuery) && (
+                    <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                      <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                        {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
                   <div className="max-h-80 overflow-y-auto">
                     {searchResults.map((article, index) => (
                       <button
