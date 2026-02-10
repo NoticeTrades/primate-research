@@ -25,7 +25,7 @@ export default async function OGImage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #3b82f6 60%, #1e3a8a 90%, #0f172a 100%)',
+          background: 'linear-gradient(135deg, #030712 0%, #1e293b 25%, #1e3a8a 50%, #1e293b 75%, #030712 100%)',
           position: 'relative',
         }}
       >
@@ -37,9 +37,9 @@ export default async function OGImage() {
             left: 0,
             right: 0,
             bottom: 0,
-            opacity: 0.08,
+            opacity: 0.06,
             backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
+              'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
           }}
         />
@@ -56,24 +56,25 @@ export default async function OGImage() {
           }}
         />
 
-        {/* Logo */}
+        {/* Logo with white background to pop in front */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '32px',
-            padding: '20px',
-            borderRadius: '24px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 0 80px rgba(59, 130, 246, 0.3)',
+            padding: '24px',
+            borderRadius: '28px',
+            background: '#ffffff',
+            border: '2px solid rgba(59, 130, 246, 0.3)',
+            boxShadow: '0 0 100px rgba(59, 130, 246, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3)',
+            zIndex: 10,
           }}
         >
           <img
             src={logoBase64}
-            width={120}
-            height={120}
+            width={140}
+            height={140}
             style={{ objectFit: 'contain' }}
           />
         </div>
@@ -87,7 +88,7 @@ export default async function OGImage() {
             color: '#ffffff',
             letterSpacing: '-1px',
             marginBottom: '12px',
-            textShadow: '0 2px 20px rgba(0, 0, 0, 0.3)',
+            textShadow: '0 2px 20px rgba(0, 0, 0, 0.5)',
           }}
         >
           Primate Trading
