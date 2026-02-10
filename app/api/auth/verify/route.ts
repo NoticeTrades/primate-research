@@ -59,6 +59,22 @@ export async function POST(request: Request) {
       WHERE id = ${user.id}
     `;
 
+    // Send welcome notification to the user
+    try {
+      await sql`
+        INSERT INTO notifications (title, description, link, type)
+        VALUES (
+          'Welcome to Primate Trading! 🎉',
+          'Welcome to Primate Trading V1! Explore our Research reports, Market Calendar with live economic events & earnings, Video content, and Trade performance tracking. This is just the beginning — we're constantly adding new features to help you trade smarter. Click the bell icon anytime to see your notifications.',
+          '/research',
+          'update'
+        )
+      `;
+    } catch (err) {
+      console.error('Failed to create welcome notification:', err);
+      // Don't fail the verification if notification creation fails
+    }
+
     // Create session — log them in
     const sessionToken = Buffer.from(`${email}:${Date.now()}`).toString('base64');
 
