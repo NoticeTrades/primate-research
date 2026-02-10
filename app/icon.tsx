@@ -23,15 +23,17 @@ export default async function Icon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#0a0a0a',
-          borderRadius: '10px',
+          background: '#ffffff',
+          borderRadius: '8px',
         }}
       >
         <img
           src={logoBase64}
-          width={42}
-          height={42}
-          style={{ filter: 'invert(1) brightness(1.5)' }}
+          width={40}
+          height={40}
+          style={{ 
+            objectFit: 'contain',
+          }}
         />
       </div>
     ),
