@@ -158,3 +158,13 @@ body {
 .shake-on-hover:hover {
   animation: shake-hard 0.4s ease-in-out infinite;
 }
+
+/* Verified badge glow */
+.verified-badge svg {
+  filter: drop-shadow(0 0 3px rgba(29, 161, 242, 0.4));
+  transition: filter 0.3s ease;
+}
+
+.verified-badge:hover svg {
+  filter: drop-shadow(0 0 6px rgba(29, 161, 242, 0.7)) drop-shadow(0 0 12px rgba(29, 161, 242, 0.4));
+}
