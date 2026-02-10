@@ -147,9 +147,7 @@ export default function Home() {
     url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com',
     description: 'Real-time market analysis, weekly research reports, and trading insights across equities, crypto, and macroeconomic trends.',
     sameAs: [
-      // Add your social media links here when available
-      // 'https://twitter.com/primatetrading',
-      // 'https://linkedin.com/company/primatetrading',
+      'https://x.com/primatetrading',
     ],
   };
 
@@ -421,19 +419,34 @@ export default function Home() {
             <p className="text-zinc-400 dark:text-zinc-500 text-sm">
               © {new Date().getFullYear()} Primate Trading (primatetrading.com). All rights reserved.
             </p>
-            <div className="flex gap-6 text-sm">
+            <div className="flex items-center gap-6">
               <a
-                href="/privacy"
-                className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-300 dark:hover:text-zinc-400 transition-colors"
+                href="https://x.com/primatetrading"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-zinc-400 dark:text-zinc-500 hover:text-[#1DA1F2] transition-colors group"
+                aria-label="Follow us on X (Twitter)"
               >
-                Privacy Policy
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                <span className="text-sm font-medium">Follow on X</span>
               </a>
-              <a
-                href="/terms"
-                className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-300 dark:hover:text-zinc-400 transition-colors"
-              >
-                Terms of Service
-              </a>
+              <div className="h-4 w-px bg-zinc-700" />
+              <div className="flex gap-6 text-sm">
+                <a
+                  href="/privacy"
+                  className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-300 dark:hover:text-zinc-400 transition-colors"
+                >
+                  Privacy Policy
+                </a>
+                <a
+                  href="/terms"
+                  className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-300 dark:hover:text-zinc-400 transition-colors"
+                >
+                  Terms of Service
+                </a>
+              </div>
             </div>
           </div>
         </div>
