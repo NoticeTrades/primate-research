@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { getArticleBySlug } from '../../../data/research';
@@ -11,6 +12,22 @@ export default function ReportViewer() {
   const router = useRouter();
   const slug = params.slug as string;
   const article = getArticleBySlug(slug);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEnlargedImage(null);
+    };
+    if (enlargedImage) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [enlargedImage]);
 
   if (!article) {
     return (
@@ -175,7 +192,8 @@ export default function ReportViewer() {
                   {section.images.map((img, j) => (
                     <div
                       key={j}
-                      className="relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900"
+                      onClick={() => setEnlargedImage(img)}
+                      className="relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 cursor-pointer hover:border-zinc-700 transition-colors group"
                     >
                       <Image
                         src={img}
@@ -186,6 +204,11 @@ export default function ReportViewer() {
                         style={{ objectFit: 'contain' }}
                         unoptimized
                       />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900/90 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs text-zinc-300 font-medium">
+                          Click to enlarge
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -227,6 +250,46 @@ export default function ReportViewer() {
           </div>
         </div>
       </article>
+
+      {/* ─── Image Lightbox Modal ─── */}
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setEnlargedImage(null)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setEnlargedImage(null)}
+            className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-zinc-800 z-10"
+            aria-label="Close"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Enlarged image */}
+          <div
+            className="relative max-w-[95vw] max-h-[95vh] w-full h-full flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={enlargedImage}
+              alt="Enlarged chart"
+              width={1600}
+              height={1000}
+              className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg"
+              unoptimized
+              priority
+            />
+          </div>
+
+          {/* Hint text */}
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-zinc-500">
+            Click outside or press ESC to close
+          </p>
+        </div>
+      )}
     </div>
   );
 }
