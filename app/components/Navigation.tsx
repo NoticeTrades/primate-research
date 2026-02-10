@@ -341,6 +341,9 @@ export default function Navigation() {
             <span className="text-sm font-medium text-zinc-300 max-w-[120px] truncate">
               {username}
             </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 px-2 py-0.5 rounded-md shadow-[0_0_8px_rgba(59,130,246,0.5)]">
+              Premium
+            </span>
 
             {/* Notification Bell */}
             <div className="relative" ref={bellRef}>
