@@ -143,7 +143,7 @@ export default function Home() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Primate Trading',
-    alternateName: 'Primate Research',
+    alternateName: ['Primate Research', 'primatetrading', 'PrimateTrading'],
     url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com',
     description: 'Real-time market analysis, weekly research reports, and trading insights across equities, crypto, and macroeconomic trends.',
     sameAs: [
@@ -191,6 +191,9 @@ export default function Home() {
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-black dark:text-zinc-50 mb-6 leading-tight">
               Edge Through the Regime
             </h1>
+            <p className="text-lg sm:text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 mb-2 font-medium">
+              Primate Trading
+            </p>
             <p className="text-xl md:text-2xl text-zinc-700 dark:text-zinc-300 mb-8 leading-relaxed max-w-3xl mx-auto">
               Real-time market analysis, comprehensive research, and video insights across equities, crypto, and macro markets. Built for traders and investors who demand clarity.
             </p>
@@ -419,7 +422,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-zinc-400 dark:text-zinc-500 text-sm">
-              © {new Date().getFullYear()} Primate Trading. All rights reserved.
+              © {new Date().getFullYear()} Primate Trading (primatetrading.com). All rights reserved.
             </p>
             <div className="flex gap-6 text-sm">
               <a
