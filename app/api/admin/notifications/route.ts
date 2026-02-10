@@ -53,4 +53,24 @@ export async function GET(request: Request) {
   }
 }
 
+// DELETE /api/admin/notifications — delete all notifications
+export async function DELETE(request: Request) {
+  try {
+    const { secret } = await request.json();
+
+    if (!process.env.NOTIFY_SECRET || secret !== process.env.NOTIFY_SECRET) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const sql = getDb();
+    const result = await sql`DELETE FROM notifications`;
+    const deleted = result.count ?? 0;
+
+    return NextResponse.json({ success: true, message: `Deleted ${deleted} notification(s)` });
+  } catch (error) {
+    console.error('Delete notifications error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 

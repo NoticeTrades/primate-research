@@ -35,6 +35,11 @@ export default function AdminPage() {
   const [bellStatus, setBellStatus] = useState('');
   const [bellSending, setBellSending] = useState(false);
 
+  // Delete all notifications state
+  const [deleteStatus, setDeleteStatus] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   // DB setup state
   const [dbStatus, setDbStatus] = useState('');
 
@@ -179,6 +184,38 @@ export default function AdminPage() {
       setBellStatus('Failed to create notification.');
     } finally {
       setBellSending(false);
+    }
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      setDeleteStatus('Click again to confirm deletion');
+      setTimeout(() => {
+        setConfirmDelete(false);
+        setDeleteStatus('');
+      }, 4000);
+      return;
+    }
+    setDeleting(true);
+    setDeleteStatus('');
+    setConfirmDelete(false);
+    try {
+      const res = await fetch('/api/admin/notifications', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDeleteStatus(data.message);
+      } else {
+        setDeleteStatus(`Error: ${data.error}`);
+      }
+    } catch {
+      setDeleteStatus('Failed to delete notifications.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -368,6 +405,32 @@ export default function AdminPage() {
                 </span>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Delete All Notifications */}
+        <div className="bg-zinc-900 border border-red-500/20 rounded-xl p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-1">🗑️ Delete All Notifications</h2>
+          <p className="text-sm text-zinc-400 mb-4">
+            Permanently removes all bell notifications from the database. New users won&apos;t see any old notifications.
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleDeleteAllNotifications}
+              disabled={deleting}
+              className={`px-6 py-2.5 font-semibold rounded-lg transition-colors ${
+                confirmDelete
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'
+              } disabled:opacity-50`}
+            >
+              {deleting ? 'Deleting...' : confirmDelete ? 'Confirm Delete All' : 'Delete All Notifications'}
+            </button>
+            {deleteStatus && (
+              <span className={`text-sm ${deleteStatus.startsWith('Error') || deleteStatus.startsWith('Failed') ? 'text-red-400' : deleteStatus.startsWith('Click') ? 'text-yellow-400' : 'text-green-400'}`}>
+                {deleteStatus}
+              </span>
+            )}
           </div>
         </div>
 
