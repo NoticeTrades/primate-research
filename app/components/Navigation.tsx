@@ -341,8 +341,14 @@ export default function Navigation() {
             <span className="text-sm font-medium text-zinc-300 max-w-[120px] truncate">
               {username}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 px-2 py-0.5 rounded-md shadow-[0_0_8px_rgba(59,130,246,0.5)]">
-              Premium
+            <span className="relative group/badge cursor-default" title="Premium">
+              <svg className="w-[18px] h-[18px] text-blue-500 drop-shadow-[0_0_4px_rgba(59,130,246,0.5)]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1l3.09 4.26L20 6.27l-2.64 4.41L17.82 16l-5.82-1.63L6.18 16l.46-5.32L4 6.27l4.91-1.01L12 1z" />
+                <path d="M9.5 12.3l1.8 1.8 3.2-3.2" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-zinc-800 border border-zinc-700 rounded-md opacity-0 group-hover/badge:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                Premium
+              </span>
             </span>
 
             {/* Notification Bell */}
