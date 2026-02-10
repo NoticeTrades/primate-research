@@ -59,20 +59,26 @@ export default function Navigation() {
       }
     };
     fetchNotifications();
-    // Poll every 15 seconds for new notifications
-    const interval = setInterval(fetchNotifications, 15000);
+    // Poll every 5 seconds for new notifications (more frequent for real-time feel)
+    const interval = setInterval(fetchNotifications, 5000);
     // Also refetch when the user focuses the tab (instant feel)
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchNotifications();
       }
     };
+    // Listen for notifications being cleared/updated from other pages
+    const handleNotificationsCleared = () => {
+      fetchNotifications();
+    };
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', fetchNotifications);
+    window.addEventListener('notificationsCleared', handleNotificationsCleared);
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', fetchNotifications);
+      window.removeEventListener('notificationsCleared', handleNotificationsCleared);
     };
   }, [isAuthenticated, pathname]);
 

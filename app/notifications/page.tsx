@@ -69,9 +69,21 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     fetchNotifications();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    // Refresh every 5 seconds for real-time feel
+    const interval = setInterval(fetchNotifications, 5000);
+    // Also refetch when the user focuses the tab or window becomes visible
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', fetchNotifications);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', fetchNotifications);
+    };
   }, []);
 
   // Close filter dropdown when clicking outside
@@ -132,6 +144,10 @@ export default function NotificationsPage() {
       const res = await fetch('/api/notifications/clear', { method: 'POST' });
       if (!res.ok) throw new Error('Failed to clear notifications');
       setNotifications([]);
+      // Trigger a refetch to update the unread count in Navigation
+      await fetchNotifications();
+      // Also trigger a custom event that Navigation can listen to
+      window.dispatchEvent(new CustomEvent('notificationsCleared'));
     } catch (err) {
       console.error('Clear all error:', err);
       alert('Failed to clear notifications');
@@ -244,13 +260,16 @@ export default function NotificationsPage() {
           {/* Actions Bar */}
           <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Filter Dropdown */}
-            <div className="relative" ref={filterDropdownRef}>
+            <div 
+              className="relative" 
+              ref={filterDropdownRef}
+              onMouseEnter={() => setShowFilterDropdown(true)}
+              onMouseLeave={() => setShowFilterDropdown(false)}
+            >
               <div className="flex items-center gap-3">
                 <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Filter by Type:</label>
                 <button
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  onMouseEnter={() => setShowFilterDropdown(true)}
-                  onMouseLeave={() => setShowFilterDropdown(false)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/50 border border-zinc-700 rounded-lg text-sm font-medium text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors"
                 >
                   <span>
@@ -272,11 +291,8 @@ export default function NotificationsPage() {
               </div>
 
               {showFilterDropdown && (
-                <div
-                  onMouseEnter={() => setShowFilterDropdown(true)}
-                  onMouseLeave={() => setShowFilterDropdown(false)}
-                  className="absolute top-full left-0 mt-2 w-56 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50"
-                >
+                <div className="absolute top-full left-0 pt-2 w-56 z-50">
+                  <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
                   <div className="py-1">
                     <button
                       onClick={() => {
@@ -334,6 +350,7 @@ export default function NotificationsPage() {
                         ))}
                       </>
                     )}
+                    </div>
                   </div>
                 </div>
               )}
