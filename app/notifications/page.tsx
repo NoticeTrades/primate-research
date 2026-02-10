@@ -1,0 +1,371 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Navigation from '../components/Navigation';
+import CursorGlow from '../components/CursorGlow';
+import CursorHover from '../components/CursorHover';
+import DiscordSign from '../components/DiscordSign';
+import ScrollFade from '../components/ScrollFade';
+import MarketTicker from '../components/MarketTicker';
+
+interface Notification {
+  id: number;
+  title: string;
+  description: string;
+  link: string;
+  type: string;
+  created_at: string;
+  is_read: boolean;
+}
+
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+export default function NotificationsPage() {
+  const router = useRouter();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+
+  // Check authentication
+  useEffect(() => {
+    const email = getCookie('user_email');
+    if (!email) {
+      router.push('/signup?redirect=/notifications');
+    }
+  }, [router]);
+
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/notifications');
+      if (!res.ok) {
+        if (res.status === 401) {
+          router.push('/signup?redirect=/notifications');
+          return;
+        }
+        throw new Error('Failed to fetch notifications');
+      }
+      const data = await res.json();
+      setNotifications(data.notifications || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Delete single notification
+  const handleDelete = async (id: number) => {
+    setDeletingIds((prev) => new Set(prev).add(id));
+    try {
+      const res = await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete notification');
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Failed to delete notification');
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  // Mark all as read
+  const handleMarkAllRead = async () => {
+    setIsMarkingAllRead(true);
+    try {
+      const res = await fetch('/api/notifications/read', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to mark as read');
+      await fetchNotifications();
+    } catch (err) {
+      console.error('Mark all read error:', err);
+      alert('Failed to mark all as read');
+    } finally {
+      setIsMarkingAllRead(false);
+    }
+  };
+
+  // Clear all notifications
+  const handleClearAll = async () => {
+    if (!confirm('Are you sure you want to clear all notifications? This cannot be undone.')) {
+      return;
+    }
+    setIsClearingAll(true);
+    try {
+      const res = await fetch('/api/notifications/clear', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to clear notifications');
+      setNotifications([]);
+    } catch (err) {
+      console.error('Clear all error:', err);
+      alert('Failed to clear notifications');
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
+
+  // Get unique notification types
+  const notificationTypes = Array.from(new Set(notifications.map((n) => n.type))).sort();
+
+  // Filter notifications
+  const filteredNotifications = notifications.filter((n) => {
+    if (typeFilter === 'all') return true;
+    if (typeFilter === 'unread') return !n.is_read;
+    return n.type === typeFilter;
+  });
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'article':
+      case 'research':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
+      case 'update':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        );
+      case 'video':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+        );
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'article':
+      case 'research':
+        return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+      case 'update':
+        return 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30';
+      case 'video':
+        return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
+      default:
+        return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-black dark:bg-zinc-950 relative">
+      <CursorGlow />
+      <CursorHover />
+      <DiscordSign />
+      <ScrollFade />
+      <Navigation />
+      <div className="fixed top-[72px] left-0 right-0 z-40">
+        <MarketTicker />
+      </div>
+
+      <div className="pt-44 pb-24 px-4 md:px-6 relative z-10">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2.5 bg-blue-600/20 rounded-xl">
+                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Notifications</h1>
+                <p className="text-zinc-500 text-sm mt-0.5">
+                  {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions Bar */}
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            {/* Filter Dropdown */}
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Filter:</label>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-3 py-1.5 bg-zinc-800/50 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="all">All Notifications</option>
+                <option value="unread">Unread Only</option>
+                {notificationTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  disabled={isMarkingAllRead}
+                  className="px-4 py-1.5 text-sm font-medium text-zinc-300 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isMarkingAllRead ? 'Marking...' : 'Mark All Read'}
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={handleClearAll}
+                  disabled={isClearingAll}
+                  className="px-4 py-1.5 text-sm font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isClearingAll ? 'Clearing...' : 'Clear All'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Notifications List */}
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-zinc-400">Loading notifications...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+              <p className="text-red-400 text-sm font-medium">{error}</p>
+            </div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-12 text-center">
+              <svg className="w-12 h-12 text-zinc-700 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <p className="text-zinc-400 text-sm font-medium mb-1">No notifications</p>
+              <p className="text-zinc-600 text-xs">
+                {typeFilter === 'all' ? "You're all caught up!" : `No ${typeFilter} notifications`}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`bg-zinc-900/80 border rounded-xl overflow-hidden transition-all hover:border-zinc-600 ${
+                    notification.is_read
+                      ? 'border-zinc-800/60 opacity-75'
+                      : 'border-zinc-800 shadow-[0_0_15px_rgba(59,130,246,0.08)]'
+                  }`}
+                >
+                  <div className="flex items-start gap-4 p-4">
+                    {/* Type Icon */}
+                    <div className={`p-2 rounded-lg ${getTypeColor(notification.type)} shrink-0`}>
+                      {getTypeIcon(notification.type)}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3 mb-1">
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`text-sm font-semibold mb-0.5 ${notification.is_read ? 'text-zinc-400' : 'text-zinc-100'}`}>
+                            {notification.title}
+                          </h3>
+                          <p className="text-xs text-zinc-500 mb-2">{notification.description}</p>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-zinc-600">{formatDate(notification.created_at)}</span>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${getTypeColor(notification.type)}`}>
+                              {notification.type}
+                            </span>
+                            {!notification.is_read && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                                New
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDelete(notification.id)}
+                          disabled={deletingIds.has(notification.id)}
+                          className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete notification"
+                        >
+                          {deletingIds.has(notification.id) ? (
+                            <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Link Button */}
+                      {notification.link && (
+                        <a
+                          href={notification.link}
+                          className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-colors"
+                        >
+                          View
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+

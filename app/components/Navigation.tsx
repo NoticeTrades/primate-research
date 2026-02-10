@@ -22,13 +22,9 @@ export default function Navigation() {
   const [username, setUsername] = useState('');
   const [notifications, setNotifications] = useState<{ id: number; title: string; description: string; link: string; type: string; created_at: string; is_read: boolean }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
   const [showToolsDropdown, setShowToolsDropdown] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const bellRef = useRef<HTMLDivElement>(null);
   const toolsDropdownRef = useRef<HTMLDivElement>(null);
 
   // Check auth state on mount and when pathname changes (login/signup redirect)
@@ -98,12 +94,6 @@ export default function Navigation() {
         !searchRef.current.contains(e.target as Node)
       ) {
         setIsDropdownOpen(false);
-      }
-      if (
-        bellRef.current &&
-        !bellRef.current.contains(e.target as Node)
-      ) {
-        setShowNotifications(false);
       }
       if (
         toolsDropdownRef.current &&
@@ -282,38 +272,9 @@ export default function Navigation() {
   };
 
   const handleBellClick = () => {
-    setShowNotifications((prev) => !prev);
+    router.push('/notifications');
   };
 
-  const handleMarkAllRead = async () => {
-    setUnreadCount(0);
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    try {
-      await fetch('/api/notifications/read', { method: 'POST' });
-    } catch {
-      // silently fail
-    }
-  };
-
-  const handleClearAll = async () => {
-    setIsClearing(true);
-    try {
-      const res = await fetch('/api/notifications/clear', { method: 'POST' });
-      if (res.ok) {
-        setNotifications([]);
-        setUnreadCount(0);
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setIsClearing(false);
-    }
-  };
-
-  // Filtered notifications based on unread toggle
-  const filteredNotifications = showUnreadOnly
-    ? notifications.filter((n) => !n.is_read)
-    : notifications;
 
   const handleLogout = async () => {
     try {
@@ -590,7 +551,7 @@ export default function Navigation() {
             </span>
 
             {/* Notification Bell */}
-            <div className="relative" ref={bellRef}>
+            <div className="relative">
               <button
                 onClick={handleBellClick}
                 className="relative p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
@@ -606,121 +567,6 @@ export default function Navigation() {
                 )}
               </button>
 
-              {/* Notification Dropdown */}
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-[60]">
-                  {/* Header */}
-                  <div className="px-4 py-3 border-b border-zinc-800">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-zinc-100">Notifications</h3>
-                      {notifications.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          {unreadCount > 0 && (
-                            <button
-                              onClick={handleMarkAllRead}
-                              className="text-[11px] font-medium text-zinc-400 hover:text-blue-400 transition-colors cursor-pointer"
-                            >
-                              Mark read
-                            </button>
-                          )}
-                          <button
-                            onClick={handleClearAll}
-                            disabled={isClearing}
-                            className="text-[11px] font-medium text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                          >
-                            {isClearing ? 'Clearing...' : 'Clear all'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {/* Unread / All toggle */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <button
-                        onClick={() => setShowUnreadOnly(false)}
-                        className={`text-[11px] font-medium px-2 py-0.5 rounded-md transition-colors ${
-                          !showUnreadOnly
-                            ? 'bg-zinc-700 text-zinc-100'
-                            : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                      >
-                        All
-                      </button>
-                      <button
-                        onClick={() => setShowUnreadOnly(true)}
-                        className={`text-[11px] font-medium px-2 py-0.5 rounded-md transition-colors ${
-                          showUnreadOnly
-                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                            : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                      >
-                        Unread{unreadCount > 0 ? ` (${unreadCount})` : ''}
-                      </button>
-                    </div>
-                  </div>
-                  {/* Notification list */}
-                  {filteredNotifications.length > 0 ? (
-                    <div className="max-h-80 overflow-y-auto">
-                      {filteredNotifications.map((notif) => (
-                        <button
-                          key={notif.id}
-                          onClick={() => {
-                            setShowNotifications(false);
-                            if (notif.link) {
-                              router.push(notif.link);
-                            }
-                          }}
-                          className={`w-full text-left px-4 py-3 hover:bg-zinc-800 transition-colors border-b border-zinc-800/50 last:border-b-0 ${
-                            !notif.is_read ? 'bg-zinc-800/40' : ''
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
-                              !notif.is_read
-                                ? 'bg-blue-500 ring-2 ring-blue-500/30'
-                                : notif.type === 'article' ? 'bg-blue-500/40' :
-                                  notif.type === 'update' ? 'bg-green-500/40' :
-                                  'bg-zinc-600'
-                            }`} />
-                            <div className="min-w-0">
-                              <p className={`text-sm leading-snug ${
-                                !notif.is_read
-                                  ? 'font-semibold text-zinc-50'
-                                  : 'font-medium text-zinc-300'
-                              }`}>
-                                {notif.title}
-                              </p>
-                              {notif.description && (
-                                <p className="text-xs text-zinc-400 mt-0.5 line-clamp-2">
-                                  {notif.description}
-                                </p>
-                              )}
-                              <p className="text-[10px] text-zinc-600 mt-1">
-                                {new Date(notif.created_at).toLocaleDateString('en-US', {
-                                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="px-4 py-8 text-center">
-                      <svg className="w-8 h-8 text-zinc-700 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                      </svg>
-                      <p className="text-sm text-zinc-500">
-                        {showUnreadOnly ? 'No unread notifications' : 'No notifications yet'}
-                      </p>
-                      <p className="text-xs text-zinc-600 mt-0.5">
-                        {showUnreadOnly
-                          ? 'Switch to "All" to see previous notifications'
-                          : 'You\u0027ll see new reports and updates here'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             <button

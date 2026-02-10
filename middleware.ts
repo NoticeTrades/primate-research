@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Routes that require authentication
-const protectedRoutes = ['/research', '/videos', '/trades', '/ticker', '/calendar'];
+const protectedRoutes = ['/research', '/videos', '/trades', '/ticker', '/calendar', '/notifications'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -31,6 +31,7 @@ export const config = {
     '/trades/:path*',
     '/ticker/:path*',
     '/calendar/:path*',
+    '/notifications/:path*',
   ],
 };
 
