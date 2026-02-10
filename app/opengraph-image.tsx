@@ -25,7 +25,7 @@ export default async function OGImage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0a0a0a 0%, #111827 40%, #1e3a5f 70%, #0a0a0a 100%)',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #3b82f6 60%, #1e3a8a 90%, #0f172a 100%)',
           position: 'relative',
         }}
       >
@@ -37,9 +37,9 @@ export default async function OGImage() {
             left: 0,
             right: 0,
             bottom: 0,
-            opacity: 0.05,
+            opacity: 0.08,
             backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+              'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
           }}
         />
@@ -51,7 +51,7 @@ export default async function OGImage() {
             top: 0,
             left: 0,
             right: 0,
-            height: '4px',
+            height: '6px',
             background: 'linear-gradient(90deg, transparent, #3b82f6, #60a5fa, #3b82f6, transparent)',
           }}
         />
@@ -65,9 +65,9 @@ export default async function OGImage() {
             marginBottom: '32px',
             padding: '20px',
             borderRadius: '24px',
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            boxShadow: '0 0 60px rgba(59, 130, 246, 0.15)',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 0 80px rgba(59, 130, 246, 0.3)',
           }}
         >
           <img
@@ -87,6 +87,7 @@ export default async function OGImage() {
             color: '#ffffff',
             letterSpacing: '-1px',
             marginBottom: '12px',
+            textShadow: '0 2px 20px rgba(0, 0, 0, 0.3)',
           }}
         >
           Primate Trading
@@ -98,7 +99,7 @@ export default async function OGImage() {
             display: 'flex',
             fontSize: '22px',
             fontWeight: 400,
-            color: '#94a3b8',
+            color: '#cbd5e1',
             letterSpacing: '0.5px',
           }}
         >
@@ -112,16 +113,28 @@ export default async function OGImage() {
             marginTop: '28px',
             padding: '8px 24px',
             borderRadius: '999px',
-            background: 'rgba(59, 130, 246, 0.15)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
+            background: 'rgba(59, 130, 246, 0.2)',
+            border: '1px solid rgba(96, 165, 250, 0.4)',
             fontSize: '16px',
             fontWeight: 600,
-            color: '#60a5fa',
+            color: '#93c5fd',
             letterSpacing: '1px',
           }}
         >
           primatetrading.com
         </div>
+
+        {/* Bottom accent */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '6px',
+            background: 'linear-gradient(90deg, transparent, #3b82f6, #60a5fa, #3b82f6, transparent)',
+          }}
+        />
       </div>
     ),
     { ...size }
