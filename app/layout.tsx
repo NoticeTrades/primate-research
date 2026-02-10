@@ -51,20 +51,11 @@ export const metadata: Metadata = {
     siteName: 'Primate Trading | PrimateTrading.com',
     title: 'Primate Trading | Market Analysis & Trading Research | PrimateTrading.com',
     description: 'Primate Trading (primatetrading.com) provides real-time market analysis, weekly research reports, and trading insights across equities, crypto, and macroeconomic trends.',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Primate Trading - Market Analysis',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Primate Trading | PrimateTrading.com - Market Analysis & Research',
     description: 'Primate Trading provides real-time market analysis, weekly research reports, and trading insights.',
-    images: ['/og-image.png'],
   },
   robots: {
     index: true,
