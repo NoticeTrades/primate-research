@@ -342,9 +342,13 @@ export default function Navigation() {
               {username}
             </span>
             <span className="relative group/badge cursor-default flex items-center verified-badge" title="Premium">
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8.52 1.401l1.84 1.56a1.5 1.5 0 001.14.36l2.4-.24a1.5 1.5 0 011.62 1.16l.48 2.36a1.5 1.5 0 00.72.96l2.08 1.2a1.5 1.5 0 01.6 1.88l-.96 2.24a1.5 1.5 0 000 1.2l.96 2.24a1.5 1.5 0 01-.6 1.88l-2.08 1.2a1.5 1.5 0 00-.72.96l-.48 2.36a1.5 1.5 0 01-1.62 1.16l-2.4-.24a1.5 1.5 0 00-1.14.36l-1.84 1.56a1.5 1.5 0 01-1.92 0l-1.84-1.56a1.5 1.5 0 00-1.14-.36l-2.4.24a1.5 1.5 0 01-1.62-1.16l-.48-2.36a1.5 1.5 0 00-.72-.96l-2.08-1.2a1.5 1.5 0 01-.6-1.88l.96-2.24a1.5 1.5 0 000-1.2L.22 8.861a1.5 1.5 0 01.6-1.88l2.08-1.2a1.5 1.5 0 00.72-.96l.48-2.36a1.5 1.5 0 011.62-1.16l2.4.24a1.5 1.5 0 001.14-.36l1.84-1.56a1.5 1.5 0 011.92 0z" fill="#1DA1F2"/>
-                <path d="M7.5 12.5l2.5 2.5 5.5-5.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                {/* Three rotated rounded rectangles form the seal/flower shape */}
+                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#1DA1F2" />
+                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#1DA1F2" transform="rotate(30 12 12)" />
+                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#1DA1F2" transform="rotate(60 12 12)" />
+                {/* White checkmark */}
+                <path d="M7.5 12.5l3 3 6-6" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>
               <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-zinc-800 border border-zinc-700 rounded-md opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50 shadow-lg">
                 Premium
