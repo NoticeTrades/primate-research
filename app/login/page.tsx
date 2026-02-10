@@ -42,9 +42,9 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect to the page they were trying to access, or research
+      // Redirect to the page they were trying to access, or home
       const params = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect') || '/research';
+      const redirect = params.get('redirect') || '/';
       router.push(redirect);
     } catch {
       setError('Network error. Please try again.');

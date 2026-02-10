@@ -93,7 +93,7 @@ function VerifyPageContent() {
       }
 
       // Verified + logged in — redirect
-      const redirect = searchParams.get('redirect') || '/research';
+      const redirect = searchParams.get('redirect') || '/';
       router.push(redirect);
     } catch {
       setError('Network error. Please try again.');

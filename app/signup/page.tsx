@@ -58,7 +58,7 @@ export default function SignupPage() {
 
       // Redirect to verification page
       const params = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect') || '/research';
+      const redirect = params.get('redirect') || '/';
       router.push(`/verify?email=${encodeURIComponent(formData.email)}&redirect=${encodeURIComponent(redirect)}`);
     } catch {
       setError('Network error. Please try again.');
