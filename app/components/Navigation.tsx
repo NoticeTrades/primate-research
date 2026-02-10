@@ -25,9 +25,11 @@ export default function Navigation() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [showToolsDropdown, setShowToolsDropdown] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
+  const toolsDropdownRef = useRef<HTMLDivElement>(null);
 
   // Check auth state on mount and when pathname changes (login/signup redirect)
   // Note: session_token is httpOnly so JS can't read it — use user_email instead
@@ -102,6 +104,12 @@ export default function Navigation() {
         !bellRef.current.contains(e.target as Node)
       ) {
         setShowNotifications(false);
+      }
+      if (
+        toolsDropdownRef.current &&
+        !toolsDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowToolsDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -775,34 +783,86 @@ export default function Navigation() {
               >
                 About
               </button>
-              <button
-                onClick={() => handleNavClick('/research')}
-                className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                suppressHydrationWarning
-              >
-                Research
-              </button>
-              <button
-                onClick={() => handleNavClick('/videos')}
-                className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                suppressHydrationWarning
-              >
-                Videos
-              </button>
-              <button
-                onClick={() => handleNavClick('/trades')}
-                className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                suppressHydrationWarning
-              >
-                Trades (Performance)
-              </button>
-              <button
-                onClick={() => handleNavClick('/calendar')}
-                className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                suppressHydrationWarning
-              >
-                Calendar
-              </button>
+              
+              {/* Tools Dropdown */}
+              <div className="relative" ref={toolsDropdownRef}>
+                <button
+                  onMouseEnter={() => setShowToolsDropdown(true)}
+                  onMouseLeave={() => setShowToolsDropdown(false)}
+                  onClick={() => setShowToolsDropdown(!showToolsDropdown)}
+                  className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-1.5"
+                  suppressHydrationWarning
+                >
+                  Tools
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${showToolsDropdown ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showToolsDropdown && (
+                  <div
+                    onMouseEnter={() => setShowToolsDropdown(true)}
+                    onMouseLeave={() => setShowToolsDropdown(false)}
+                    className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50"
+                  >
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          handleNavClick('/research');
+                          setShowToolsDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3"
+                      >
+                        <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Research
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleNavClick('/videos');
+                          setShowToolsDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3"
+                      >
+                        <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Videos
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleNavClick('/trades');
+                          setShowToolsDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3"
+                      >
+                        <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Trades (Performance)
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleNavClick('/calendar');
+                          setShowToolsDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3"
+                      >
+                        <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Calendar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
