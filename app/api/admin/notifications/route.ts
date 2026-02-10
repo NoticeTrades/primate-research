@@ -63,10 +63,9 @@ export async function DELETE(request: Request) {
     }
 
     const sql = getDb();
-    const result = await sql`DELETE FROM notifications`;
-    const deleted = result.count ?? 0;
+    await sql`DELETE FROM notifications`;
 
-    return NextResponse.json({ success: true, message: `Deleted ${deleted} notification(s)` });
+    return NextResponse.json({ success: true, message: 'All notifications deleted' });
   } catch (error) {
     console.error('Delete notifications error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
