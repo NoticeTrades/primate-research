@@ -341,12 +341,12 @@ export default function Navigation() {
             <span className="text-sm font-medium text-zinc-300 max-w-[120px] truncate">
               {username}
             </span>
-            <span className="relative group/badge cursor-default" title="Premium">
-              <svg className="w-[18px] h-[18px] text-blue-500 drop-shadow-[0_0_4px_rgba(59,130,246,0.5)]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 1l3.09 4.26L20 6.27l-2.64 4.41L17.82 16l-5.82-1.63L6.18 16l.46-5.32L4 6.27l4.91-1.01L12 1z" />
-                <path d="M9.5 12.3l1.8 1.8 3.2-3.2" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <span className="relative group/badge cursor-default flex items-center" title="Premium">
+              <svg className="w-5 h-5 transition-all duration-300 group-hover/badge:drop-shadow-[0_0_8px_rgba(59,130,246,0.7)] drop-shadow-[0_0_3px_rgba(59,130,246,0.4)]" viewBox="0 0 22 22" fill="none">
+                <path d="M20.396 11c.746-.868.782-1.957.086-2.782a2.19 2.19 0 00-.123-.147c.487-.93.394-2.038-.3-2.858a2.154 2.154 0 00-.14-.143c.193-.976-.098-1.99-.84-2.693-.143-.137-.299-.258-.466-.363-.03-1.003-.637-1.897-1.573-2.382a2.257 2.257 0 00-.498-.2C15.836-.477 14.737-.11 14.02.539a2.184 2.184 0 00-.346.393C12.806.454 11.708.326 10.727.804a2.2 2.2 0 00-.393.26C9.563.356 8.412.293 7.454.782a2.18 2.18 0 00-.346.26C6.31.488 5.166.524 4.253 1.088a2.192 2.192 0 00-.308.258c-.862-.36-1.907-.24-2.65.388a2.181 2.181 0 00-.243.268C.25 2.476-.173 3.532.104 4.5a2.2 2.2 0 00.108.349C-.47 5.63-.575 6.75.044 7.65a2.2 2.2 0 00.203.292C-.34 8.813-.32 9.947.312 10.79a2.2 2.2 0 00.15.186c-.53.93-.458 2.07.21 2.907.064.08.133.155.206.225-.32.962-.103 2.06.613 2.8.087.09.18.174.278.252-.074.99.387 1.936 1.256 2.47.105.064.215.12.328.171.09.994.744 1.864 1.712 2.303.117.053.238.098.362.134.337.94 1.12 1.647 2.11 1.886.12.028.242.049.366.06.565.865 1.48 1.41 2.5 1.43.123.002.247-.006.37-.024.786.745 1.796 1.085 2.786.868.12-.027.238-.062.354-.105.974.576 2.12.653 3.103.17.12-.06.235-.128.343-.204 1.09.333 2.29.12 3.16-.592.105-.087.204-.182.296-.283 1.095.053 2.16-.497 2.817-1.45.079-.116.151-.238.214-.365.93-.241 1.696-.923 2.056-1.85.044-.113.08-.23.11-.35.738-.44 1.28-1.16 1.456-2.01.021-.104.035-.21.042-.318.525-.6.822-1.39.802-2.21a2.233 2.233 0 00-.048-.343c.357-.73.434-1.588.18-2.39z" fill="#1D9BF0"/>
+                <path d="M9.585 14.929l-3.28-3.28a.667.667 0 01.942-.943l2.338 2.337 5.378-5.378a.667.667 0 01.943.943l-6.321 6.321z" fill="white"/>
               </svg>
-              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-zinc-800 border border-zinc-700 rounded-md opacity-0 group-hover/badge:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-zinc-800 border border-zinc-700 rounded-md opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50 shadow-lg">
                 Premium
               </span>
             </span>
