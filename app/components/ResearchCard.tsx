@@ -1,5 +1,8 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { generateSlug } from '../../data/research';
+
 interface ResearchCardProps {
   title: string;
   description: string;
@@ -8,6 +11,7 @@ interface ResearchCardProps {
   date?: string;
   dateRange?: string;
   pdfUrl?: string;
+  slug?: string;
   tags?: string[];
 }
 
@@ -17,13 +21,14 @@ export default function ResearchCard({
   category,
   date,
   dateRange,
-  pdfUrl,
+  slug,
   tags,
 }: ResearchCardProps) {
+  const router = useRouter();
+
   const handleViewReport = () => {
-    if (pdfUrl) {
-      window.open(pdfUrl, '_blank');
-    }
+    const articleSlug = slug || generateSlug(title);
+    router.push(`/research/${articleSlug}`);
   };
 
   return (
@@ -61,28 +66,26 @@ export default function ResearchCard({
           ))}
         </div>
       )}
-      {pdfUrl && (
-        <button
-          onClick={handleViewReport}
-          className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
-          suppressHydrationWarning
+      <button
+        onClick={handleViewReport}
+        className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
+        suppressHydrationWarning
+      >
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          View Report (PDF)
-        </button>
-      )}
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        View Report
+      </button>
     </div>
   );
 }

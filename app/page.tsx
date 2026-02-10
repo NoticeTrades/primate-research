@@ -12,7 +12,7 @@ import ProfilePicture from './components/ProfilePicture';
 import CursorGlow from './components/CursorGlow';
 import CursorHover from './components/CursorHover';
 import DiscordSign from './components/DiscordSign';
-import { researchArticles } from '../data/research';
+import { researchArticles, generateSlug } from '../data/research';
 
 export default function Home() {
   const router = useRouter();
@@ -25,15 +25,13 @@ export default function Home() {
     // Check if user is logged in via cookie
     const match = document.cookie.match(/(^| )user_email=([^;]+)/);
     const isLoggedIn = !!match;
+    const slug = latestArticle?.slug || generateSlug(latestArticle?.title || '');
+    const reportPath = `/research/${slug}`;
 
     if (isLoggedIn) {
-      if (latestArticle?.pdfUrl) {
-        window.open(latestArticle.pdfUrl, '_blank');
-      } else {
-        router.push('/research');
-      }
+      router.push(reportPath);
     } else {
-      router.push('/signup?redirect=/research');
+      router.push(`/signup?redirect=${encodeURIComponent(reportPath)}`);
     }
   };
 

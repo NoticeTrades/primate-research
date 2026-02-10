@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Logo from './Logo';
-import { researchArticles } from '../../data/research';
+import { researchArticles, generateSlug } from '../../data/research';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -131,11 +131,8 @@ export default function Navigation() {
     setIsDropdownOpen(false);
     setSearchQuery('');
     searchRef.current?.blur();
-    if (article.pdfUrl) {
-      window.open(article.pdfUrl, '_blank');
-    } else {
-      router.push(`/research?q=${encodeURIComponent(article.title)}`);
-    }
+    const slug = article.slug || generateSlug(article.title);
+    router.push(`/research/${slug}`);
   };
 
   const scrollToSection = (id: string) => {

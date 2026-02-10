@@ -9,7 +9,7 @@
  * - category: Label e.g. "Weekly Market Outlook", "Equity Analysis", "Macro Strategy", "Crypto Research"
  * - date: Display date e.g. "Jan 26, 2026"
  * - dateRange: Week range e.g. "01/26/2026 - 01/30/2026"
- * - pdfUrl: Path to PDF in /public/pdfs/ or external URL
+ * - slug: URL-friendly identifier e.g. "weekly-market-outlook-01-26-2026"
  * - tags: Array of tags for filtering & search
  */
 
@@ -21,7 +21,25 @@ export interface ResearchArticle {
   date?: string;
   dateRange?: string;
   pdfUrl?: string;
+  slug?: string;
   tags?: string[];
+}
+
+// Generate a URL-friendly slug from a title
+export function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+}
+
+// Find an article by its slug
+export function getArticleBySlug(slug: string): ResearchArticle | undefined {
+  return researchArticles.find(
+    (a) => (a.slug || generateSlug(a.title)) === slug
+  );
 }
 
 export const researchArticles: ResearchArticle[] = [
@@ -52,7 +70,7 @@ Metals (GC & SI) - Silver's move is unprecedented. Double top on RSI in gold and
     category: 'Weekly Market Outlook',
     date: 'Jan 26, 2026',
     dateRange: '01/26/2026 - 01/30/2026',
-    pdfUrl: '/pdfs/weekly-market-outlook-01-26-2026.pdf',
+    slug: 'weekly-market-outlook-01-26-2026',
     tags: ['FOMC', 'DXY', 'T-Bonds', 'NQ', 'BTC', 'Gold', 'Silver', 'Macro', 'Volatility'],
   },
 
@@ -67,7 +85,7 @@ Metals (GC & SI) - Silver's move is unprecedented. Double top on RSI in gold and
   //   category: 'Weekly Market Outlook',
   //   date: 'Mon DD, YYYY',
   //   dateRange: 'MM/DD/YYYY - MM/DD/YYYY',
-  //   pdfUrl: '/pdfs/weekly-market-outlook-MM-DD-YYYY.pdf',
+  //   slug: 'weekly-market-outlook-MM-DD-YYYY',
   //   tags: ['Tag1', 'Tag2'],
   // },
 ];
