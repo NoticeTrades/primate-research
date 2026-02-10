@@ -135,20 +135,77 @@ export default function Navigation() {
     router.push(`/research/${slug}`);
   };
 
-  // Check if search query looks like a crypto ticker
-  const isCryptoTicker = (query: string): boolean => {
-    const trimmed = query.trim().toUpperCase();
-    // Common crypto tickers: 2-10 chars, usually all caps
-    const cryptoPattern = /^[A-Z]{2,10}$/;
-    const knownCryptos = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'MATIC', 'AVAX', 'LINK', 'UNI', 'ATOM', 'XRP', 'DOGE', 'SHIB', 'LTC', 'BCH', 'XLM', 'ALGO', 'NEAR', 'FTM', 'SAND', 'MANA', 'APE', 'ARB', 'OP', 'SUI', 'APT'];
-    return cryptoPattern.test(trimmed) && knownCryptos.includes(trimmed);
+  // Crypto name to symbol mapping
+  const cryptoNameToSymbol: Record<string, string> = {
+    bitcoin: 'BTC',
+    ethereum: 'ETH',
+    solana: 'SOL',
+    cardano: 'ADA',
+    polkadot: 'DOT',
+    polygon: 'MATIC',
+    avalanche: 'AVAX',
+    chainlink: 'LINK',
+    uniswap: 'UNI',
+    cosmos: 'ATOM',
+    ripple: 'XRP',
+    dogecoin: 'DOGE',
+    shiba: 'SHIB',
+    shibainu: 'SHIB',
+    litecoin: 'LTC',
+    'bitcoin cash': 'BCH',
+    stellar: 'XLM',
+    algorand: 'ALGO',
+    near: 'NEAR',
+    fantom: 'FTM',
+    'the sandbox': 'SAND',
+    sandbox: 'SAND',
+    decentraland: 'MANA',
+    apecoin: 'APE',
+    arbitrum: 'ARB',
+    optimism: 'OP',
+    sui: 'SUI',
+    aptos: 'APT',
   };
 
-  const handleTickerClick = (ticker: string) => {
-    setIsDropdownOpen(false);
-    setSearchQuery('');
-    searchRef.current?.blur();
-    router.push(`/ticker/${ticker.toUpperCase()}`);
+  // Get crypto symbol from name or ticker
+  const getCryptoSymbol = (query: string): string | null => {
+    const trimmed = query.trim().toLowerCase();
+    const upperTrimmed = query.trim().toUpperCase();
+    
+    // Check if it's already a known ticker
+    const knownTickers = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'MATIC', 'AVAX', 'LINK', 'UNI', 'ATOM', 'XRP', 'DOGE', 'SHIB', 'LTC', 'BCH', 'XLM', 'ALGO', 'NEAR', 'FTM', 'SAND', 'MANA', 'APE', 'ARB', 'OP', 'SUI', 'APT'];
+    if (knownTickers.includes(upperTrimmed)) {
+      return upperTrimmed;
+    }
+    
+    // Check if it's a crypto name
+    if (cryptoNameToSymbol[trimmed]) {
+      return cryptoNameToSymbol[trimmed];
+    }
+    
+    // Check partial matches (e.g., "bitcoin" matches "bitcoin")
+    for (const [name, symbol] of Object.entries(cryptoNameToSymbol)) {
+      if (name.includes(trimmed) || trimmed.includes(name)) {
+        return symbol;
+      }
+    }
+    
+    return null;
+  };
+
+  // Check if search query is a crypto (ticker or name)
+  const isCryptoTicker = (query: string): boolean => {
+    return getCryptoSymbol(query) !== null;
+  };
+
+  const handleTickerClick = (query: string) => {
+    const symbol = getCryptoSymbol(query);
+    if (symbol) {
+      setIsDropdownOpen(false);
+      setSearchQuery('');
+      searchRef.current?.blur();
+      router.push(`/ticker/${symbol}`);
+    }
   };
 
   const scrollToSection = (id: string) => {

@@ -40,7 +40,13 @@ export default function TickerPage() {
   const [cryptoData, setCryptoData] = useState<CryptoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'articles' | 'stats' | 'chart'>('stats');
+  const [activeTab, setActiveTab] = useState<'articles' | 'stats' | 'chart' | 'sentiment'>('stats');
+  const [sentimentData, setSentimentData] = useState<{
+    fearGreed: number;
+    fearGreedClassification: string;
+    timestamp: number;
+  } | null>(null);
+  const [sentimentLoading, setSentimentLoading] = useState(false);
 
   // Filter articles that mention this ticker
   const relatedArticles = researchArticles.filter((article) => {
@@ -70,6 +76,34 @@ export default function TickerPage() {
     };
     fetchData();
   }, [symbol]);
+
+  // Fetch sentiment data when sentiment tab is active
+  useEffect(() => {
+    if (activeTab === 'sentiment' && !sentimentData && !sentimentLoading) {
+      const fetchSentiment = async () => {
+        setSentimentLoading(true);
+        try {
+          const res = await fetch('https://api.alternative.me/fng/?limit=1');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.data && data.data.length > 0) {
+              const fng = data.data[0];
+              setSentimentData({
+                fearGreed: parseInt(fng.value),
+                fearGreedClassification: fng.value_classification,
+                timestamp: parseInt(fng.timestamp) * 1000,
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch sentiment:', err);
+        } finally {
+          setSentimentLoading(false);
+        }
+      };
+      fetchSentiment();
+    }
+  }, [activeTab, sentimentData, sentimentLoading]);
 
   // Format large numbers
   const formatNumber = (num: number): string => {
@@ -179,7 +213,8 @@ export default function TickerPage() {
           <div className="flex gap-2 mb-8 border-b border-zinc-800">
             {[
               { id: 'stats', label: 'Statistics' },
-              { id: 'articles', label: `Your Articles (${relatedArticles.length})` },
+              { id: 'articles', label: `Research (${relatedArticles.length})` },
+              { id: 'sentiment', label: 'Sentiment' },
               { id: 'chart', label: 'Chart' },
             ].map((tab) => (
               <button
@@ -350,6 +385,172 @@ export default function TickerPage() {
                   <p className="text-sm text-zinc-500">Check back later for analysis on this crypto.</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Sentiment Tab */}
+          {activeTab === 'sentiment' && (
+            <div className="space-y-6">
+              {/* Fear & Greed Index */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                <h2 className="text-lg font-semibold mb-4">Crypto Fear & Greed Index</h2>
+                {sentimentLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-pulse text-zinc-400">Loading sentiment data...</div>
+                  </div>
+                ) : sentimentData ? (
+                  <div>
+                    {/* Gauge Visualization */}
+                    <div className="relative w-full max-w-md mx-auto mb-6">
+                      <div className="relative h-48 flex items-center justify-center">
+                        {/* Gauge background circle */}
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                          {/* Background arc */}
+                          <circle
+                            cx="100"
+                            cy="100"
+                            r="80"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="20"
+                            className="text-zinc-800"
+                          />
+                          {/* Colored segments */}
+                          <circle
+                            cx="100"
+                            cy="100"
+                            r="80"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="20"
+                            strokeDasharray={`${(sentimentData.fearGreed / 100) * 502.4} 502.4`}
+                            strokeLinecap="round"
+                            className={
+                              sentimentData.fearGreed >= 75
+                                ? 'text-green-500'
+                                : sentimentData.fearGreed >= 50
+                                ? 'text-yellow-500'
+                                : sentimentData.fearGreed >= 25
+                                ? 'text-orange-500'
+                                : 'text-red-500'
+                            }
+                          />
+                        </svg>
+                        {/* Center value */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <div
+                            className={`text-5xl font-bold ${
+                              sentimentData.fearGreed >= 75
+                                ? 'text-green-400'
+                                : sentimentData.fearGreed >= 50
+                                ? 'text-yellow-400'
+                                : sentimentData.fearGreed >= 25
+                                ? 'text-orange-400'
+                                : 'text-red-400'
+                            }`}
+                          >
+                            {sentimentData.fearGreed}
+                          </div>
+                          <div className="text-sm text-zinc-500 mt-1">/ 100</div>
+                          <div
+                            className={`text-lg font-semibold mt-2 ${
+                              sentimentData.fearGreed >= 75
+                                ? 'text-green-400'
+                                : sentimentData.fearGreed >= 50
+                                ? 'text-yellow-400'
+                                : sentimentData.fearGreed >= 25
+                                ? 'text-orange-400'
+                                : 'text-red-400'
+                            }`}
+                          >
+                            {sentimentData.fearGreedClassification}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sentiment Scale */}
+                    <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden mb-4">
+                      <div
+                        className="absolute inset-y-0 left-0 transition-all duration-500"
+                        style={{
+                          width: `${sentimentData.fearGreed}%`,
+                          background: `linear-gradient(to right, ${
+                            sentimentData.fearGreed >= 75
+                              ? '#10b981'
+                              : sentimentData.fearGreed >= 50
+                              ? '#eab308'
+                              : sentimentData.fearGreed >= 25
+                              ? '#f97316'
+                              : '#ef4444'
+                          }, ${
+                            sentimentData.fearGreed >= 75
+                              ? '#34d399'
+                              : sentimentData.fearGreed >= 50
+                              ? '#fde047'
+                              : sentimentData.fearGreed >= 25
+                              ? '#fb923c'
+                              : '#f87171'
+                          })`,
+                        }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-between px-2 text-[10px] text-zinc-500">
+                        <span>Extreme Fear</span>
+                        <span>Fear</span>
+                        <span>Neutral</span>
+                        <span>Greed</span>
+                        <span>Extreme Greed</span>
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="bg-zinc-800/50 rounded-lg p-4">
+                      <p className="text-sm text-zinc-300 leading-relaxed">
+                        The Fear & Greed Index measures market sentiment on a scale of 0-100. Values above 50 indicate greed (bullish sentiment), while values below 50 indicate fear (bearish sentiment). This index combines volatility, market momentum, social media sentiment, surveys, and Bitcoin dominance.
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-3">
+                        Last updated: {new Date(sentimentData.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-zinc-400">Failed to load sentiment data</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Market Sentiment Context */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                <h2 className="text-lg font-semibold mb-4">Market Context</h2>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-200 mb-1">Current Price Action</p>
+                      <p className="text-sm text-zinc-400">
+                        {cryptoData.priceChange24h >= 0
+                          ? `${cryptoData.name} is up ${cryptoData.priceChange24h.toFixed(2)}% in the last 24 hours, indicating positive short-term momentum.`
+                          : `${cryptoData.name} is down ${Math.abs(cryptoData.priceChange24h).toFixed(2)}% in the last 24 hours, showing bearish pressure.`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-200 mb-1">Market Position</p>
+                      <p className="text-sm text-zinc-400">
+                        Trading at {formatNumber(cryptoData.currentPrice)} with a market cap of {formatNumber(cryptoData.marketCap)}. 
+                        {cryptoData.currentPrice < cryptoData.ath * 0.5
+                          ? ' Currently trading significantly below all-time high, potentially indicating value opportunity or continued bearish sentiment.'
+                          : cryptoData.currentPrice < cryptoData.ath * 0.8
+                          ? ' Trading below all-time high, showing room for potential recovery.'
+                          : ' Trading near all-time high levels, indicating strong market confidence.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
