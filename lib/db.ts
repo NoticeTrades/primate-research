@@ -63,5 +63,17 @@ export async function initDb() {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
   `;
+
+  // Feedback table
+  await sql`
+    CREATE TABLE IF NOT EXISTS feedback (
+      id SERIAL PRIMARY KEY,
+      user_email TEXT NOT NULL,
+      username TEXT,
+      category TEXT DEFAULT 'general',
+      message TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `;
 }
 

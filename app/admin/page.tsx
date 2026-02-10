@@ -40,6 +40,11 @@ export default function AdminPage() {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // Feedback state
+  const [feedbackList, setFeedbackList] = useState<{ id: number; user_email: string; username: string; category: string; message: string; created_at: string }[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackLoaded, setFeedbackLoaded] = useState(false);
+
   // DB setup state
   const [dbStatus, setDbStatus] = useState('');
 
@@ -184,6 +189,38 @@ export default function AdminPage() {
       setBellStatus('Failed to create notification.');
     } finally {
       setBellSending(false);
+    }
+  };
+
+  const fetchFeedback = async () => {
+    setFeedbackLoading(true);
+    try {
+      const res = await fetch(`/api/admin/feedback?secret=${encodeURIComponent(secret)}`);
+      const data = await res.json();
+      if (res.ok) {
+        setFeedbackList(data.feedback || []);
+        setFeedbackLoaded(true);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const handleDeleteAllFeedback = async () => {
+    if (!confirm('Delete all feedback? This cannot be undone.')) return;
+    try {
+      const res = await fetch('/api/admin/feedback', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      });
+      if (res.ok) {
+        setFeedbackList([]);
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -432,6 +469,69 @@ export default function AdminPage() {
               </span>
             )}
           </div>
+        </div>
+
+        {/* User Feedback */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
+          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">💬 User Feedback</h2>
+            <div className="flex items-center gap-3">
+              {feedbackLoaded && feedbackList.length > 0 && (
+                <button
+                  onClick={handleDeleteAllFeedback}
+                  className="text-xs font-medium text-zinc-400 hover:text-red-400 transition-colors"
+                >
+                  Delete All
+                </button>
+              )}
+              <button
+                onClick={fetchFeedback}
+                disabled={feedbackLoading}
+                className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
+              >
+                {feedbackLoading ? 'Loading...' : feedbackLoaded ? 'Refresh' : 'Load Feedback'}
+              </button>
+            </div>
+          </div>
+          {!feedbackLoaded ? (
+            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+              Click &quot;Load Feedback&quot; to view user submissions.
+            </div>
+          ) : feedbackList.length === 0 ? (
+            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+              No feedback submitted yet.
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-800/50">
+              {feedbackList.map((item) => (
+                <div key={item.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm font-medium text-zinc-200">{item.username || 'Unknown'}</span>
+                    <span className="text-xs text-zinc-500">{item.user_email}</span>
+                    <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                      item.category === 'feature'
+                        ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                        : item.category === 'bug'
+                        ? 'bg-red-500/15 text-red-400 border border-red-500/30'
+                        : 'bg-zinc-700 text-zinc-400'
+                    }`}>
+                      {item.category}
+                    </span>
+                    <span className="text-xs text-zinc-600 ml-auto">
+                      {new Date(item.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-zinc-300 leading-relaxed">{item.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Users Table */}
