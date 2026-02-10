@@ -60,8 +60,14 @@ export async function initDb() {
       description TEXT,
       link TEXT,
       type TEXT DEFAULT 'update',
+      user_email TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
+  `;
+  
+  // Add user_email column if it doesn't exist (for user-specific notifications)
+  await sql`
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS user_email TEXT
   `;
 
   // Feedback table

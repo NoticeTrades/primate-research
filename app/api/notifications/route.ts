@@ -33,13 +33,15 @@ export async function GET() {
     const clearedAt = users[0].notifications_cleared_at;
 
     // Get notifications (newest first), limit 20
+    // Show both global notifications (user_email IS NULL) and user-specific notifications (user_email = user's email)
     // If user has cleared notifications, only show those created after the cleared_at timestamp
     let notifications;
     if (clearedAt) {
       notifications = await sql`
         SELECT id, title, description, link, type, created_at
         FROM notifications
-        WHERE created_at > ${clearedAt}
+        WHERE (user_email IS NULL OR user_email = ${userEmail})
+          AND created_at > ${clearedAt}
         ORDER BY created_at DESC
         LIMIT 20
       `;
@@ -47,6 +49,7 @@ export async function GET() {
       notifications = await sql`
         SELECT id, title, description, link, type, created_at
         FROM notifications
+        WHERE user_email IS NULL OR user_email = ${userEmail}
         ORDER BY created_at DESC
         LIMIT 20
       `;
@@ -59,16 +62,19 @@ export async function GET() {
     }));
 
     // Count unread (created after last_notification_seen, and after cleared_at if set)
+    // Only count notifications visible to this user (global or user-specific)
     let unreadResult;
     if (clearedAt) {
       unreadResult = await sql`
         SELECT COUNT(*) as count FROM notifications
-        WHERE created_at > ${lastSeen} AND created_at > ${clearedAt}
+        WHERE (user_email IS NULL OR user_email = ${userEmail})
+          AND created_at > ${lastSeen} AND created_at > ${clearedAt}
       `;
     } else {
       unreadResult = await sql`
         SELECT COUNT(*) as count FROM notifications
-        WHERE created_at > ${lastSeen}
+        WHERE (user_email IS NULL OR user_email = ${userEmail})
+          AND created_at > ${lastSeen}
       `;
     }
     const unreadCount = parseInt(unreadResult[0].count, 10);

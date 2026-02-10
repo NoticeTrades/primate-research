@@ -59,15 +59,16 @@ export async function POST(request: Request) {
       WHERE id = ${user.id}
     `;
 
-    // Send welcome notification to the user
+    // Send welcome notification to the new user (user-specific)
     try {
       await sql`
-        INSERT INTO notifications (title, description, link, type)
+        INSERT INTO notifications (title, description, link, type, user_email)
         VALUES (
           'Welcome to Primate Trading! 🎉',
           'Welcome to Primate Trading V1! Explore our Research reports, Market Calendar with live economic events & earnings, Video content, and Trade performance tracking. This is just the beginning — we're constantly adding new features to help you trade smarter. Click the bell icon anytime to see your notifications.',
           '/research',
-          'update'
+          'update',
+          ${email}
         )
       `;
     } catch (err) {
