@@ -796,6 +796,13 @@ export default function Navigation() {
               >
                 Trades (Performance)
               </button>
+              <button
+                onClick={() => handleNavClick('/calendar')}
+                className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                suppressHydrationWarning
+              >
+                Calendar
+              </button>
             </div>
           </div>
         </div>
