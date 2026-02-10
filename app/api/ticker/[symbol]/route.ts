@@ -56,7 +56,7 @@ export async function GET(
         headers: {
           'Accept': 'application/json',
         },
-        next: { revalidate: 60 }, // Cache for 60 seconds
+        next: { revalidate: 30 }, // Cache for 30 seconds to match polling interval
       }
     );
 
@@ -94,6 +94,8 @@ export async function GET(
         blockchain: data.links?.blockchain_site || [],
       },
       categories: data.categories || [],
+      updateInterval: 30, // Data updates every 30 seconds
+      lastUpdated: new Date().toISOString(),
     };
 
     return NextResponse.json(tickerData);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Navigation from '../../components/Navigation';
@@ -31,6 +31,8 @@ interface CryptoData {
     blockchain: string[];
   };
   categories: string[];
+  updateInterval?: number;
+  lastUpdated?: string;
 }
 
 export default function TickerPage() {
@@ -47,6 +49,9 @@ export default function TickerPage() {
     timestamp: number;
   } | null>(null);
   const [sentimentLoading, setSentimentLoading] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+  const [updateIntervalSeconds, setUpdateIntervalSeconds] = useState<number>(30); // Default 30 seconds
+  const POLLING_INTERVAL = 30000; // 30 seconds in milliseconds
 
   // Filter articles that mention this ticker
   const relatedArticles = researchArticles.filter((article) => {
@@ -55,27 +60,40 @@ export default function TickerPage() {
            (article.tags && article.tags.some(tag => tag.toLowerCase() === symbol.toLowerCase()));
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/ticker/${symbol}`);
-        if (!res.ok) {
-          const data = await res.json();
-          setError(data.error || 'Failed to load crypto data');
-          return;
-        }
+  // Fetch data function
+  const fetchData = useCallback(async () => {
+    setError(null);
+    try {
+      const res = await fetch(`/api/ticker/${symbol}?t=${Date.now()}`); // Add timestamp to bypass cache
+      if (!res.ok) {
         const data = await res.json();
-        setCryptoData(data);
-      } catch (err) {
-        setError('Failed to fetch crypto data');
-      } finally {
-        setLoading(false);
+        setError(data.error || 'Failed to load crypto data');
+        return;
       }
-    };
-    fetchData();
+      const data = await res.json();
+      setCryptoData(data);
+      setLastUpdateTime(new Date());
+      if (data.updateInterval) {
+        setUpdateIntervalSeconds(data.updateInterval);
+      }
+    } catch (err) {
+      setError('Failed to fetch crypto data');
+    } finally {
+      setLoading(false);
+    }
   }, [symbol]);
+
+  // Initial fetch and polling
+  useEffect(() => {
+    fetchData();
+    
+    // Set up polling interval
+    const intervalId = setInterval(fetchData, POLLING_INTERVAL);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [symbol, fetchData]);
 
   // Fetch sentiment data when sentiment tab is active
   useEffect(() => {
@@ -196,15 +214,22 @@ export default function TickerPage() {
                 <span className="font-semibold">
                   {formatNumber(cryptoData.currentPrice)}
                 </span>
-                <span
-                  className={`font-medium ${
-                    cryptoData.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'
-                  }`}
-                >
-                  {cryptoData.priceChange24h >= 0 ? '▲' : '▼'}{' '}
-                  {Math.abs(cryptoData.priceChange24h).toFixed(2)}%
-                </span>
-                <span className="text-sm text-zinc-500">24h</span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`font-medium ${
+                      cryptoData.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}
+                  >
+                    {cryptoData.priceChange24h >= 0 ? '▲' : '▼'}{' '}
+                    {Math.abs(cryptoData.priceChange24h).toFixed(2)}%
+                  </span>
+                  <span className="text-sm text-zinc-500">24h</span>
+                  {lastUpdateTime && (
+                    <span className="text-xs text-zinc-500 ml-2" title={`Last updated: ${lastUpdateTime.toLocaleTimeString()}`}>
+                      • Updated every {updateIntervalSeconds}s
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
