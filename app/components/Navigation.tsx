@@ -167,6 +167,47 @@ export default function Navigation() {
     aptos: 'APT',
   };
 
+  // Crypto autocomplete options (name + ticker pairs)
+  const cryptoAutocompleteOptions = [
+    { name: 'Bitcoin', ticker: 'BTC' },
+    { name: 'Ethereum', ticker: 'ETH' },
+    { name: 'Solana', ticker: 'SOL' },
+    { name: 'Cardano', ticker: 'ADA' },
+    { name: 'Polkadot', ticker: 'DOT' },
+    { name: 'Polygon', ticker: 'MATIC' },
+    { name: 'Avalanche', ticker: 'AVAX' },
+    { name: 'Chainlink', ticker: 'LINK' },
+    { name: 'Uniswap', ticker: 'UNI' },
+    { name: 'Cosmos', ticker: 'ATOM' },
+    { name: 'Ripple', ticker: 'XRP' },
+    { name: 'Dogecoin', ticker: 'DOGE' },
+    { name: 'Shiba Inu', ticker: 'SHIB' },
+    { name: 'Litecoin', ticker: 'LTC' },
+    { name: 'Bitcoin Cash', ticker: 'BCH' },
+    { name: 'Stellar', ticker: 'XLM' },
+    { name: 'Algorand', ticker: 'ALGO' },
+    { name: 'NEAR Protocol', ticker: 'NEAR' },
+    { name: 'Fantom', ticker: 'FTM' },
+    { name: 'The Sandbox', ticker: 'SAND' },
+    { name: 'Decentraland', ticker: 'MANA' },
+    { name: 'ApeCoin', ticker: 'APE' },
+    { name: 'Arbitrum', ticker: 'ARB' },
+    { name: 'Optimism', ticker: 'OP' },
+    { name: 'Sui', ticker: 'SUI' },
+    { name: 'Aptos', ticker: 'APT' },
+  ];
+
+  // Filter crypto autocomplete options based on search query
+  const cryptoAutocomplete = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return cryptoAutocompleteOptions.filter((crypto) => {
+      const nameMatch = crypto.name.toLowerCase().includes(q);
+      const tickerMatch = crypto.ticker.toLowerCase().includes(q);
+      return nameMatch || tickerMatch;
+    }).slice(0, 5); // Limit to 5 suggestions
+  }, [searchQuery]);
+
   // Get crypto symbol from name or ticker
   const getCryptoSymbol = (query: string): string | null => {
     const trimmed = query.trim().toLowerCase();
@@ -299,7 +340,20 @@ export default function Navigation() {
             onChange={(e) => handleSearchChange(e.target.value)}
             onFocus={() => {
               setIsSearchFocused(true);
-              if (searchQuery.trim()) setIsDropdownOpen(true);
+              if (searchQuery.trim()) {
+                // Check for matches inline
+                const q = searchQuery.toLowerCase().trim();
+                const hasCryptoMatch = cryptoAutocompleteOptions.some(c => 
+                  c.name.toLowerCase().includes(q) || c.ticker.toLowerCase().includes(q)
+                ) || isCryptoTicker(searchQuery);
+                const hasArticleMatch = researchArticles.some(article => {
+                  const searchText = `${article.title} ${article.description} ${article.content || ''}`.toLowerCase();
+                  return searchText.includes(q);
+                });
+                if (hasCryptoMatch || hasArticleMatch) {
+                  setIsDropdownOpen(true);
+                }
+              }
             }}
             onBlur={() => setIsSearchFocused(false)}
             placeholder="Search research..."
@@ -325,13 +379,59 @@ export default function Navigation() {
           </svg>
 
           {/* Dropdown results */}
-          {isDropdownOpen && searchQuery.trim() && (
+          {isDropdownOpen && searchQuery.trim() && (cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0) && (
             <div
               ref={dropdownRef}
               className="absolute top-full mt-2 right-0 w-80 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
             >
+              {/* Crypto Autocomplete Suggestions */}
+              {cryptoAutocomplete.length > 0 && (
+                <>
+                  <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                    <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                      Cryptocurrencies
+                    </span>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {cryptoAutocomplete.map((crypto, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleTickerClick(crypto.ticker);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0"
+                      >
+                        <div className="flex items-center gap-3">
+                          <svg
+                            className="w-5 h-5 text-blue-500 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-sm text-black dark:text-zinc-50">
+                              {crypto.name}
+                            </div>
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                              {crypto.ticker}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {(isCryptoTicker(searchQuery) || searchResults.length > 0) && (
+                    <div className="border-t border-zinc-100 dark:border-zinc-800" />
+                  )}
+                </>
+              )}
+
               {/* Crypto ticker option */}
-              {isCryptoTicker(searchQuery) && (
+              {isCryptoTicker(searchQuery) && !cryptoAutocomplete.some(c => c.ticker === getCryptoSymbol(searchQuery)) && (
                 <>
                   <button
                     type="button"
