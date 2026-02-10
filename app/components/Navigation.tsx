@@ -337,12 +337,12 @@ export default function Navigation() {
 
         {/* Auth buttons */}
         {isAuthenticated ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5">
             <span className="text-sm font-medium text-zinc-300 max-w-[120px] truncate">
               {username}
             </span>
             <span className="relative group/badge cursor-default flex items-center verified-badge" title="Premium">
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 {/* Three rotated rounded rectangles form the seal/flower shape */}
                 <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#1DA1F2" />
                 <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#1DA1F2" transform="rotate(30 12 12)" />
