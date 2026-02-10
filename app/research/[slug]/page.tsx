@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { getArticleBySlug } from '../../../data/research';
 import Navigation from '../../components/Navigation';
 import MarketTicker from '../../components/MarketTicker';
+import StructuredData from '../../components/StructuredData';
 
 export default function ReportViewer() {
   const params = useParams();
@@ -52,8 +53,38 @@ export default function ReportViewer() {
 
   const hasSections = article.sections && article.sections.length > 0;
 
+  // Structured data for article SEO
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.description,
+    image: article.sections?.[0]?.images?.[0] ? `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com'}${article.sections[0].images[0]}` : undefined,
+    datePublished: article.date || new Date().toISOString(),
+    dateModified: article.date || new Date().toISOString(),
+    author: {
+      '@type': 'Organization',
+      name: 'Primate Trading',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Primate Trading',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com'}/primate-logo.png`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com'}/research/${slug}`,
+    },
+    keywords: article.tags?.join(', ') || '',
+    articleSection: article.category,
+  };
+
   return (
     <div className="min-h-screen bg-black text-zinc-50">
+      <StructuredData data={articleSchema} />
       <Navigation />
       <div className="fixed top-[72px] left-0 right-0 z-40">
         <MarketTicker />

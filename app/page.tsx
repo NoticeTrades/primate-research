@@ -13,6 +13,7 @@ import CursorGlow from './components/CursorGlow';
 import CursorHover from './components/CursorHover';
 import DiscordSign from './components/DiscordSign';
 import { researchArticles, generateSlug } from '../data/research';
+import StructuredData from './components/StructuredData';
 
 export default function Home() {
   const router = useRouter();
@@ -137,8 +138,40 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Structured data for SEO
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Primate Trading',
+    alternateName: 'Primate Research',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com',
+    description: 'Real-time market analysis, weekly research reports, and trading insights across equities, crypto, and macroeconomic trends.',
+    sameAs: [
+      // Add your social media links here when available
+      // 'https://twitter.com/primatetrading',
+      // 'https://linkedin.com/company/primatetrading',
+    ],
+  };
+
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Primate Trading',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com'}/research?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   return (
     <div className="min-h-screen bg-black dark:bg-zinc-950 relative">
+      <StructuredData data={organizationSchema} />
+      <StructuredData data={websiteSchema} />
       <CursorGlow />
       <CursorHover />
       <DiscordSign />
