@@ -43,14 +43,40 @@ export default function VideosPage() {
   const [categoryFilter, setCategoryFilter] = useState<VideoCategory>('all');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [viewCounts, setViewCounts] = useState<Record<string, number | null>>({});
+  const [dbVideos, setDbVideos] = useState<VideoEntry[]>([]);
+  const [videosLoading, setVideosLoading] = useState(true);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch videos from database
+  useEffect(() => {
+    const fetchVideos = async () => {
+      try {
+        const res = await fetch('/api/videos');
+        if (res.ok) {
+          const data = await res.json();
+          setDbVideos(data.videos || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch videos from database:', error);
+      } finally {
+        setVideosLoading(false);
+      }
+    };
+    fetchVideos();
+  }, []);
+
+  // Combine static videos (from data file) with database videos
+  const allVideos = useMemo(() => {
+    // Database videos first (newest), then static videos
+    return [...dbVideos, ...initialVideos];
+  }, [dbVideos]);
 
   const videoIds = useMemo(
     () =>
-      initialVideos
+      allVideos
         .map((v) => getYouTubeVideoId(v.videoUrl))
         .filter((id): id is string => id != null),
-    []
+    [allVideos]
   );
 
   useEffect(() => {
@@ -96,7 +122,7 @@ export default function VideosPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    let result = initialVideos.filter((v) => matchSearch(v, searchQuery));
+    let result = allVideos.filter((v) => matchSearch(v, searchQuery));
     
     // Apply category filter
     if (categoryFilter !== 'all') {
@@ -104,7 +130,7 @@ export default function VideosPage() {
     }
     
     return result;
-  }, [searchQuery, categoryFilter]);
+  }, [searchQuery, categoryFilter, allVideos]);
 
   const sorted = useMemo(() => {
     const withViews = filtered.map((v) => {

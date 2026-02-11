@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { getDb } from '../../../lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,86 +36,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Read current videos file
-    const videosPath = join(process.cwd(), 'data', 'videos.ts');
-    const fileContent = await readFile(videosPath, 'utf-8');
-
-    // Parse the videos array (simple regex approach)
-    // Find the videos array start
-    const arrayStart = fileContent.indexOf('export const videos: VideoEntry[] = [');
-    if (arrayStart === -1) {
-      return NextResponse.json(
-        { error: 'Could not find videos array in data file' },
-        { status: 500 }
-      );
-    }
-
-    // Find the closing bracket of the array
-    let bracketCount = 0;
-    let arrayEnd = arrayStart;
-    let inString = false;
-    let stringChar = '';
-
-    for (let i = arrayStart; i < fileContent.length; i++) {
-      const char = fileContent[i];
-      const prevChar = i > 0 ? fileContent[i - 1] : '';
-
-      // Handle string escaping
-      if (prevChar === '\\') continue;
-
-      // Toggle string state
-      if ((char === '"' || char === "'" || char === '`') && prevChar !== '\\') {
-        if (!inString) {
-          inString = true;
-          stringChar = char;
-        } else if (char === stringChar) {
-          inString = false;
-          stringChar = '';
-        }
-      }
-
-      // Count brackets only when not in string
-      if (!inString) {
-        if (char === '[') bracketCount++;
-        if (char === ']') {
-          bracketCount--;
-          if (bracketCount === 0) {
-            arrayEnd = i;
-            break;
-          }
-        }
-      }
-    }
-
-    // Extract existing videos
-    const arrayContent = fileContent.substring(arrayStart, arrayEnd + 1);
-    const beforeArray = fileContent.substring(0, arrayStart);
-    const afterArray = fileContent.substring(arrayEnd + 1);
-
-    // Generate new video entry
-    const newVideoEntry = `  {
-    title: '${videoData.title.replace(/'/g, "\\'")}',
-    description: '${videoData.description.replace(/'/g, "\\'").replace(/\n/g, '\\n')}',
-    videoUrl: '${videoData.videoUrl}',
-    videoType: '${videoData.videoType || 'exclusive'}',
-    category: '${videoData.category || 'educational'}',
-    ${videoData.thumbnailUrl ? `thumbnailUrl: '${videoData.thumbnailUrl}',` : 'thumbnailUrl: \'\','}
-    ${videoData.date ? `date: '${videoData.date}',` : ''}
-    ${videoData.duration ? `duration: '${videoData.duration}',` : ''}
-    ${videoData.isExclusive !== undefined ? `isExclusive: ${videoData.isExclusive},` : 'isExclusive: true,'}
-  },`;
-
-    // Insert new video at the beginning of the array (most recent first)
-    const arrayStartPos = arrayContent.indexOf('[') + 1;
-    const newArrayContent =
-      arrayContent.substring(0, arrayStartPos) +
-      '\n' +
-      newVideoEntry +
-      arrayContent.substring(arrayStartPos);
-
-    // Write updated file
-    const newFileContent = beforeArray + newArrayContent + afterArray;
-    await writeFile(videosPath, newFileContent, 'utf-8');
+    // Insert video into database
+    const sql = getDb();
+    await sql`
+      INSERT INTO videos (
+        title,
+        description,
+        video_url,
+        video_type,
+        category,
+        thumbnail_url,
+        date,
+        duration,
+        is_exclusive
+      ) VALUES (
+        ${videoData.title},
+        ${videoData.description},
+        ${videoData.videoUrl},
+        ${videoData.videoType || 'exclusive'},
+        ${videoData.category || 'educational'},
+        ${videoData.thumbnailUrl || null},
+        ${videoData.date || null},
+        ${videoData.duration || null},
+        ${videoData.isExclusive !== false}
+      )
+    `;
 
     return NextResponse.json({
       success: true,

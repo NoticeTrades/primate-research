@@ -81,5 +81,22 @@ export async function initDb() {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
   `;
+
+  // Videos table (for The Vault)
+  await sql`
+    CREATE TABLE IF NOT EXISTS videos (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      video_url TEXT NOT NULL,
+      video_type TEXT DEFAULT 'exclusive',
+      category TEXT DEFAULT 'educational',
+      thumbnail_url TEXT,
+      date TEXT,
+      duration TEXT,
+      is_exclusive BOOLEAN DEFAULT true,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `;
 }
 
