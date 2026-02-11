@@ -262,13 +262,17 @@ export default function NotificationsPage() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to update preferences');
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Failed to update preferences';
+        throw new Error(errorMessage);
       }
 
-      setBrowserNotificationsEnabled(newValue);
+      const data = await res.json();
+      setBrowserNotificationsEnabled(data.browserNotificationsEnabled ?? newValue);
     } catch (err) {
       console.error('Failed to update preferences:', err);
-      alert('Failed to update notification preferences');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update notification preferences';
+      alert(errorMessage);
     } finally {
       setIsUpdatingPreferences(false);
     }
