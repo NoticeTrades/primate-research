@@ -54,7 +54,11 @@ export default function VideosPage() {
         const res = await fetch('/api/videos');
         if (res.ok) {
           const data = await res.json();
+          console.log('Fetched videos from database:', data.videos?.length || 0);
           setDbVideos(data.videos || []);
+        } else {
+          const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('Failed to fetch videos:', res.status, errorData);
         }
       } catch (error) {
         console.error('Failed to fetch videos from database:', error);
