@@ -402,10 +402,10 @@ export default function Home() {
             </h3>
             <div className="space-y-6">
               <p className="text-lg text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                Primate Trading serves as an educational hub designed to help traders and investors understand the current regime in financial markets. Our mission is to provide the knowledge and analytical framework needed to navigate today's complex market landscape—breaking down how markets work, how the machine runs, and what drives price action across equities, crypto, and macro markets.
+                Primate Trading is designed to be your one-stop shop for traders and investors to get their daily overview of the market, helping prepare you for your trading day. My mission is to provide the knowledge and analytical framework needed to navigate today's complex market landscape—breaking down how markets work, how the machine runs, and what drives price action across equities, crypto, and macro markets.
               </p>
               <p className="text-lg text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                Through real-time market analysis, comprehensive research reports, and educational video content, we focus on regime identification, active investing strategies, trade execution, and comprehensive risk management. We bridge the gap between institutional-level research and accessible, practical guidance, helping traders understand not just what's happening in markets, but why it's happening and how to position accordingly. Our goal is to empower active market participants with the clarity, context, and analytical tools needed to make informed decisions and manage risk effectively in any market environment.
+                Primate Trading serves as an educational hub designed to help traders and investors understand the current regime in financial markets. Through real-time market analysis, comprehensive research reports, and educational video content, I focus on regime identification, active investing strategies, trade execution, and comprehensive risk management. The goal is to bridge the gap between institutional-level research and accessible, practical guidance, helping traders understand not just what's happening in markets, but why it's happening and how to position accordingly. My aim is to empower active market participants with the clarity, context, and analytical tools needed to make informed decisions and manage risk effectively in any market environment.
               </p>
             </div>
           </div>
