@@ -118,3 +118,11 @@ The system automatically:
 
 **No migration needed!** Existing Vercel Blob videos will continue to work. New uploads will use R2 automatically.
 
+## Testing Your Setup
+
+After adding environment variables and redeploying:
+1. Go to your admin page
+2. Try uploading a video
+3. The system will automatically use R2 if configured correctly
+4. If R2 isn't configured, it will fall back to Vercel Blob
+
