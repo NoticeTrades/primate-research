@@ -12,6 +12,7 @@ interface VideoCardProps {
   duration?: string;
   viewCount?: number | null;
   isExclusive?: boolean;
+  videoDbId?: number | null;
 }
 
 function formatViews(n: number): string {
@@ -30,9 +31,31 @@ export default function VideoCard({
   duration,
   viewCount,
   isExclusive = false,
+  videoDbId = null,
 }: VideoCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [currentViewCount, setCurrentViewCount] = useState<number | null>(viewCount ?? null);
+
+  // Track view when exclusive video starts playing
+  const handlePlay = async () => {
+    setIsPlaying(true);
+    
+    // Track view for exclusive videos
+    if (isExclusive && videoDbId && videoType === 'exclusive') {
+      try {
+        const res = await fetch(`/api/videos/${videoDbId}/view`, {
+          method: 'POST',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentViewCount(data.viewCount);
+        }
+      } catch (error) {
+        console.error('Failed to track video view:', error);
+      }
+    }
+  };
 
   // Build YouTube embed URL with optional autoplay and mute (mute allows autoplay on hover)
   const getEmbedUrl = (url: string, options: { autoplay?: boolean; mute?: boolean } = {}) => {
@@ -118,7 +141,7 @@ export default function VideoCard({
             controls
             autoPlay
             className="w-full h-full"
-            onPlay={() => setIsPlaying(true)}
+            onPlay={handlePlay}
             onPause={() => setIsPlaying(false)}
           >
             Your browser does not support the video tag.
@@ -174,12 +197,12 @@ export default function VideoCard({
                     {title}
                   </p>
                 </div>
-                {videoUrl && (
-                  <button
-                    onClick={() => setIsPlaying(true)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors z-20"
-                    suppressHydrationWarning
-                  >
+            {videoUrl && (
+              <button
+                onClick={handlePlay}
+                className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors z-20"
+                suppressHydrationWarning
+              >
                     <div className={`w-20 h-20 ${isExclusiveVideo ? 'bg-blue-500/90 hover:bg-blue-600/90' : 'bg-white/90 dark:bg-zinc-800/90'} rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110`}>
                       <svg
                         className={`w-10 h-10 ${isExclusiveVideo ? 'text-white' : 'text-black dark:text-white'} ml-1`}
@@ -219,8 +242,8 @@ export default function VideoCard({
         </div>
         <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-500 dark:text-zinc-400 mb-3">
           {date && <span>{date}</span>}
-          {(date && viewCount != null && viewCount > 0) && <span aria-hidden>·</span>}
-          {viewCount != null && viewCount > 0 && <span>{formatViews(viewCount)}</span>}
+          {(date && (currentViewCount != null && currentViewCount > 0)) && <span aria-hidden>·</span>}
+          {currentViewCount != null && currentViewCount > 0 && <span>{formatViews(currentViewCount)}</span>}
         </div>
         <div className="flex-1 min-h-[60px]">
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-500 mb-1.5">

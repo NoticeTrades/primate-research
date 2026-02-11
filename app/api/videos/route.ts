@@ -20,6 +20,7 @@ export async function GET() {
         date,
         duration,
         is_exclusive as "isExclusive",
+        view_count as "viewCount",
         created_at as "createdAt"
       FROM videos
       ORDER BY created_at DESC
@@ -37,6 +38,7 @@ export async function GET() {
         date: v.date || null,
         duration: v.duration || null,
         isExclusive: v.isExclusive !== false,
+        viewCount: v.viewCount || 0,
         createdAt: v.createdAt,
       })),
     });

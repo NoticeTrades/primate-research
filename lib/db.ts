@@ -95,8 +95,14 @@ export async function initDb() {
       date TEXT,
       duration TEXT,
       is_exclusive BOOLEAN DEFAULT true,
+      view_count INTEGER DEFAULT 0,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
+  `;
+  
+  // Add view_count column if it doesn't exist (for existing databases)
+  await sql`
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0
   `;
 }
 

@@ -43,6 +43,7 @@ export default function VideosPage() {
   const [categoryFilter, setCategoryFilter] = useState<VideoCategory>('all');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [viewCounts, setViewCounts] = useState<Record<string, number | null>>({});
+  const [exclusiveViewCounts, setExclusiveViewCounts] = useState<Record<number, number>>({});
   const [dbVideos, setDbVideos] = useState<VideoEntry[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
@@ -56,6 +57,15 @@ export default function VideosPage() {
           const data = await res.json();
           console.log('Fetched videos from database:', data.videos?.length || 0);
           setDbVideos(data.videos || []);
+          
+          // Store exclusive video view counts (by video ID)
+          const exclusiveViews: Record<number, number> = {};
+          data.videos.forEach((v: any) => {
+            if (v.id && (v.isExclusive || v.videoType === 'exclusive')) {
+              exclusiveViews[v.id] = v.viewCount || 0;
+            }
+          });
+          setExclusiveViewCounts(exclusiveViews);
         } else {
           const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
           console.error('Failed to fetch videos:', res.status, errorData);
@@ -153,6 +163,18 @@ export default function VideosPage() {
   const sorted = useMemo(() => {
     const withViews = filtered.map((v) => {
       const videoId = getYouTubeVideoId(v.videoUrl);
+      const isExclusive = v.isExclusive || v.videoType === 'exclusive';
+      
+      // Get view count: YouTube videos from viewCounts, exclusive videos from exclusiveViewCounts
+      let viewCount: number | null = null;
+      if (videoId) {
+        // YouTube video
+        viewCount = viewCounts[videoId] ?? null;
+      } else if (isExclusive && (v as any).id) {
+        // Exclusive video - get from database view count
+        viewCount = exclusiveViewCounts[(v as any).id] ?? null;
+      }
+      
       return {
         title: v.title,
         description: v.description,
@@ -163,8 +185,9 @@ export default function VideosPage() {
         duration: v.duration,
         videoId,
         dateNum: parseDate(v.date),
-        viewCount: videoId ? (viewCounts[videoId] ?? null) : null,
-        isExclusive: v.isExclusive,
+        viewCount,
+        isExclusive,
+        videoDbId: (v as any).id || null, // Store database ID for exclusive videos
       };
     });
     const order = [...withViews];
@@ -205,7 +228,7 @@ export default function VideosPage() {
         <MarketTicker />
       </div>
 
-      <div className="pt-32 pb-24 px-4 md:px-6">
+      <div className="pt-40 pb-24 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
           {/* Header + search */}
           <div className="mb-8">
@@ -368,6 +391,7 @@ export default function VideosPage() {
                       duration={video.duration}
                       viewCount={video.viewCount}
                       isExclusive={video.isExclusive}
+                      videoDbId={video.videoDbId}
                     />
                   ))}
                 </div>
