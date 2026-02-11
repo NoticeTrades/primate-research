@@ -40,6 +40,12 @@ export default function NotificationsPage() {
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
   const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set client-side flag
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Check authentication and fetch preferences
   useEffect(() => {
@@ -84,7 +90,7 @@ export default function NotificationsPage() {
       const newNotifications = data.notifications || [];
       
       // Check for new notifications and show browser notification if enabled
-      if (!isInitial && browserNotificationsEnabled && 'Notification' in window) {
+      if (!isInitial && browserNotificationsEnabled && typeof window !== 'undefined' && 'Notification' in window) {
         const unreadCount = newNotifications.filter((n: Notification) => !n.is_read).length;
         const previousUnreadCount = notifications.filter((n) => !n.is_read).length;
         
@@ -95,7 +101,7 @@ export default function NotificationsPage() {
             .slice(0, unreadCount - previousUnreadCount);
           
           newUnread.forEach((notification: Notification) => {
-            if (Notification.permission === 'granted') {
+            if (typeof window !== 'undefined' && Notification.permission === 'granted') {
               new Notification(notification.title, {
                 body: notification.description || '',
                 icon: '/favicon.ico',
@@ -226,7 +232,7 @@ export default function NotificationsPage() {
 
   // Handle browser notification toggle
   const handleToggleBrowserNotifications = async () => {
-    if (!('Notification' in window)) {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
       alert('Your browser does not support notifications');
       return;
     }
@@ -375,7 +381,7 @@ export default function NotificationsPage() {
               </div>
               <button
                 onClick={handleToggleBrowserNotifications}
-                disabled={isUpdatingPreferences || !('Notification' in window)}
+                disabled={isUpdatingPreferences || !isClient || (typeof window !== 'undefined' && !('Notification' in window))}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed ${
                   browserNotificationsEnabled ? 'bg-blue-600' : 'bg-zinc-700'
                 }`}
@@ -387,12 +393,12 @@ export default function NotificationsPage() {
                 />
               </button>
             </div>
-            {!('Notification' in window) && (
+            {isClient && typeof window !== 'undefined' && !('Notification' in window) && (
               <p className="text-xs text-yellow-400 mt-2">
                 Your browser does not support notifications
               </p>
             )}
-            {Notification.permission === 'denied' && (
+            {isClient && typeof window !== 'undefined' && Notification.permission === 'denied' && (
               <p className="text-xs text-yellow-400 mt-2">
                 Notifications are blocked. Please enable them in your browser settings.
               </p>
