@@ -84,7 +84,7 @@ export default function VideoCard({
 
   return (
     <div
-      className={`group flex flex-col bg-white dark:bg-zinc-900 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 border ${
+      className={`group flex flex-col bg-white dark:bg-zinc-900 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 border relative z-10 ${
         isExclusiveVideo
           ? 'border-blue-500/30 dark:border-blue-500/30 shadow-blue-500/10'
           : 'border-zinc-200 dark:border-zinc-800'
@@ -206,7 +206,7 @@ export default function VideoCard({
           </div>
         )}
       </div>
-      <div className="p-5 flex flex-col flex-1 min-h-0 border-t border-zinc-100 dark:border-zinc-800">
+      <div className="p-5 flex flex-col flex-1 min-h-0 border-t border-zinc-100 dark:border-zinc-800 relative z-20 bg-white dark:bg-zinc-900">
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3 className="text-lg font-semibold text-black dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-500 transition-colors flex-1">
             {title}
@@ -222,11 +222,11 @@ export default function VideoCard({
           {(date && viewCount != null && viewCount > 0) && <span aria-hidden>·</span>}
           {viewCount != null && viewCount > 0 && <span>{formatViews(viewCount)}</span>}
         </div>
-        <div className="flex-1 min-h-0 overflow-visible">
+        <div className="flex-1 min-h-[60px]">
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-500 mb-1.5">
             Description
           </p>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-line break-words overflow-visible">
+          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-line break-words">
             {description ?? 'No description.'}
           </p>
         </div>

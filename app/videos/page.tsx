@@ -69,10 +69,24 @@ export default function VideosPage() {
     fetchVideos();
   }, []);
 
-  // Combine static videos (from data file) with database videos
+  // Combine static videos (from data file) with database videos, removing duplicates
   const allVideos = useMemo(() => {
     // Database videos first (newest), then static videos
-    return [...dbVideos, ...initialVideos];
+    const combined = [...dbVideos, ...initialVideos];
+    
+    // Remove duplicates based on videoUrl (database videos take priority)
+    const seen = new Set<string>();
+    const unique: VideoEntry[] = [];
+    
+    for (const video of combined) {
+      const url = video.videoUrl?.toLowerCase().trim() || '';
+      if (url && !seen.has(url)) {
+        seen.add(url);
+        unique.push(video);
+      }
+    }
+    
+    return unique;
   }, [dbVideos]);
 
   const videoIds = useMemo(

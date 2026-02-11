@@ -42,14 +42,14 @@ export default function ScrollFade() {
   return (
     <>
       <div
-        className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-700"
+        className="fixed inset-0 pointer-events-none z-[-1] transition-opacity duration-700"
         style={{ opacity }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-black via-zinc-950 to-zinc-950 dark:from-black dark:via-zinc-950 dark:to-zinc-950" />
       </div>
       {/* Blue gradient on left side - consistent across all sections */}
       <div
-        className="fixed left-0 top-0 bottom-0 w-1/3 pointer-events-none z-0 transition-opacity duration-700"
+        className="fixed left-0 top-0 bottom-0 w-1/3 pointer-events-none z-[-1] transition-opacity duration-700"
         style={{ opacity: blueGradientOpacity }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-500/10 to-transparent dark:from-blue-500/30 dark:via-blue-500/15 dark:to-transparent" />
