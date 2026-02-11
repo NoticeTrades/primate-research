@@ -45,6 +45,19 @@ export default function AdminPage() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackLoaded, setFeedbackLoaded] = useState(false);
 
+  // Video upload state
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
+  const [videoCategory, setVideoCategory] = useState<'market-analysis' | 'trading-strategies' | 'educational' | 'live-trading' | 'market-structure' | 'risk-management'>('educational');
+  const [videoDate, setVideoDate] = useState('');
+  const [videoDuration, setVideoDuration] = useState('');
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoStatus, setVideoStatus] = useState('');
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState('');
+  const [uploadedThumbnailUrl, setUploadedThumbnailUrl] = useState('');
+
   // DB setup state
   const [dbStatus, setDbStatus] = useState('');
 
@@ -221,6 +234,95 @@ export default function AdminPage() {
       }
     } catch {
       // ignore
+    }
+  };
+
+  const handleVideoUpload = async () => {
+    if (!videoFile) {
+      setVideoStatus('Error: Please select a video file');
+      return;
+    }
+    if (!videoTitle.trim() || !videoDescription.trim()) {
+      setVideoStatus('Error: Title and description are required');
+      return;
+    }
+
+    setVideoUploading(true);
+    setVideoStatus('');
+
+    try {
+      // Step 1: Upload video and thumbnail to Vercel Blob
+      const formData = new FormData();
+      formData.append('video', videoFile);
+      if (thumbnailFile) {
+        formData.append('thumbnail', thumbnailFile);
+      }
+
+      const uploadRes = await fetch('/api/videos/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json();
+
+      if (!uploadRes.ok) {
+        if (uploadData.setupRequired) {
+          setVideoStatus('Error: Vercel Blob not configured. Please add BLOB_READ_WRITE_TOKEN to your Vercel environment variables. See VIDEO_STORAGE_GUIDE.md for setup instructions.');
+        } else {
+          setVideoStatus(`Error: ${uploadData.error || 'Upload failed'}`);
+        }
+        return;
+      }
+
+      setUploadedVideoUrl(uploadData.videoUrl);
+      setUploadedThumbnailUrl(uploadData.thumbnailUrl || '');
+
+      // Step 2: Add video to The Vault
+      const addRes = await fetch('/api/videos/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: videoTitle,
+          description: videoDescription,
+          videoUrl: uploadData.videoUrl,
+          videoType: 'exclusive',
+          category: videoCategory,
+          thumbnailUrl: uploadData.thumbnailUrl || '',
+          date: videoDate || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          duration: videoDuration || '',
+          isExclusive: true,
+        }),
+      });
+
+      const addData = await addRes.json();
+
+      if (!addRes.ok) {
+        setVideoStatus(`Error: Video uploaded but failed to add to vault: ${addData.error}`);
+        return;
+      }
+
+      setVideoStatus('✅ Video uploaded and added to The Vault successfully!');
+      
+      // Reset form
+      setVideoFile(null);
+      setThumbnailFile(null);
+      setVideoTitle('');
+      setVideoDescription('');
+      setVideoCategory('educational');
+      setVideoDate('');
+      setVideoDuration('');
+      setUploadedVideoUrl('');
+      setUploadedThumbnailUrl('');
+
+      // Clear file inputs
+      const videoInput = document.getElementById('video-input') as HTMLInputElement;
+      const thumbnailInput = document.getElementById('thumbnail-input') as HTMLInputElement;
+      if (videoInput) videoInput.value = '';
+      if (thumbnailInput) thumbnailInput.value = '';
+    } catch (error: any) {
+      setVideoStatus(`Error: ${error.message || 'Failed to upload video'}`);
+    } finally {
+      setVideoUploading(false);
     }
   };
 
@@ -467,6 +569,148 @@ export default function AdminPage() {
               <span className={`text-sm ${deleteStatus.startsWith('Error') || deleteStatus.startsWith('Failed') ? 'text-red-400' : deleteStatus.startsWith('Click') ? 'text-yellow-400' : 'text-green-400'}`}>
                 {deleteStatus}
               </span>
+            )}
+          </div>
+        </div>
+
+        {/* Video Upload to The Vault */}
+        <div className="bg-zinc-900 border border-blue-500/20 rounded-xl p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-1">🎬 Upload Video to The Vault</h2>
+          <p className="text-sm text-zinc-400 mb-4">
+            Upload exclusive videos to The Vault. Videos are stored on Vercel Blob and automatically added to the videos page.
+          </p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Video File <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="video-input"
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                />
+                {videoFile && (
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Thumbnail (Optional)
+                </label>
+                <input
+                  id="thumbnail-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
+                />
+                {thumbnailFile && (
+                  <p className="text-xs text-zinc-500 mt-1">{thumbnailFile.name}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
+                Title <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={videoTitle}
+                onChange={(e) => setVideoTitle(e.target.value)}
+                placeholder="Video title"
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
+                Description <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={videoDescription}
+                onChange={(e) => setVideoDescription(e.target.value)}
+                placeholder="Video description"
+                rows={4}
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Category
+                </label>
+                <select
+                  value={videoCategory}
+                  onChange={(e) => setVideoCategory(e.target.value as any)}
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="market-analysis">Market Analysis</option>
+                  <option value="trading-strategies">Trading Strategies</option>
+                  <option value="educational">Educational</option>
+                  <option value="live-trading">Live Trading</option>
+                  <option value="market-structure">Market Structure</option>
+                  <option value="risk-management">Risk Management</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Date (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={videoDate}
+                  onChange={(e) => setVideoDate(e.target.value)}
+                  placeholder="e.g. Jan 2025"
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Duration (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={videoDuration}
+                  onChange={(e) => setVideoDuration(e.target.value)}
+                  placeholder="e.g. 15:30"
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 pt-2">
+              <button
+                onClick={handleVideoUpload}
+                disabled={videoUploading || !videoFile || !videoTitle.trim() || !videoDescription.trim()}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold rounded-lg transition-colors"
+              >
+                {videoUploading ? 'Uploading...' : 'Upload to The Vault'}
+              </button>
+              {videoStatus && (
+                <span className={`text-sm ${
+                  videoStatus.startsWith('Error') || videoStatus.startsWith('❌')
+                    ? 'text-red-400'
+                    : videoStatus.startsWith('✅')
+                    ? 'text-green-400'
+                    : 'text-yellow-400'
+                }`}>
+                  {videoStatus}
+                </span>
+              )}
+            </div>
+
+            {uploadedVideoUrl && (
+              <div className="mt-4 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg">
+                <p className="text-xs text-zinc-400 mb-1">Video URL:</p>
+                <p className="text-xs text-zinc-500 break-all">{uploadedVideoUrl}</p>
+              </div>
             )}
           </div>
         </div>
