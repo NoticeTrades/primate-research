@@ -311,23 +311,13 @@ export default function AdminPage() {
     }
 
     // Validate file size
+    // Cloudflare R2: No file size limit (practical limit ~5GB)
     // Vercel Blob limits: Free tier = 500MB, Pro tier = 4.5GB
-    const freeTierLimit = 500 * 1024 * 1024; // 500MB
-    const proTierLimit = 4.5 * 1024 * 1024 * 1024; // 4.5GB
+    const maxSize = 5 * 1024 * 1024 * 1024; // 5GB (practical limit for R2)
     
-    if (videoFile.size > freeTierLimit) {
+    if (videoFile.size > maxSize) {
       const fileSizeGB = (videoFile.size / (1024 * 1024 * 1024)).toFixed(2);
-      setVideoStatus(
-        `Error: File size (${fileSizeGB}GB) exceeds Vercel Blob Free tier limit (500MB). ` +
-        `Your file is ${fileSizeGB}GB. You need to either: ` +
-        `1) Upgrade to Vercel Pro plan (supports up to 4.5GB), or ` +
-        `2) Compress/reduce the video file size to under 500MB.`
-      );
-      return;
-    }
-    
-    if (videoFile.size > proTierLimit) {
-      setVideoStatus('Error: Video file too large. Maximum size is 4.5GB (Vercel Blob Pro tier limit).');
+      setVideoStatus(`Error: Video file too large. Maximum size is 5GB. Your file is ${fileSizeGB}GB.`);
       return;
     }
 
@@ -335,68 +325,168 @@ export default function AdminPage() {
     setVideoStatus('Uploading video...');
 
     try {
-      // Step 1: Get upload token from server
-      const tokenRes = await fetch('/api/videos/upload-url', {
+      // Try Cloudflare R2 first (preferred for large files)
+      let videoUrl = '';
+      let thumbnailUrl = '';
+
+      // Step 1: Get R2 presigned URL for upload
+      const r2Res = await fetch('/api/videos/upload-r2-client', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           filename: videoFile.name,
           contentType: videoFile.type,
+          fileSize: videoFile.size,
         }),
       });
 
-      const tokenData = await tokenRes.json();
-      if (!tokenRes.ok) {
-        setVideoStatus(`Error: ${tokenData.error || 'Failed to get upload token'}`);
-        return;
-      }
+      if (r2Res.ok) {
+        // Use R2 for upload
+        const r2Data = await r2Res.json();
+        
+        setVideoStatus('Uploading video to Cloudflare R2... (This may take 10-30 minutes for large files)');
+        
+        // Add timeout warning after 2 minutes
+        const timeoutWarning = setTimeout(() => {
+          setVideoStatus('Uploading video to R2... (Large file - this is normal, please wait)');
+        }, 120000); // 2 minutes
 
-      // Step 2: Upload video directly to Vercel Blob from client
-      const { put } = await import('@vercel/blob');
-      
-      const timestamp = Date.now();
-      const sanitizedName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const videoFileName = `videos/${timestamp}-${sanitizedName}`;
+        try {
+          // Upload video to R2 using presigned URL
+          const uploadRes = await fetch(r2Data.presignedUrl, {
+            method: 'PUT',
+            body: videoFile,
+            headers: {
+              'Content-Type': videoFile.type,
+            },
+          });
 
-      setVideoStatus('Uploading video to storage... (This may take 10-30 minutes for large files)');
-      
-      // Add timeout warning after 2 minutes
-      const timeoutWarning = setTimeout(() => {
-        setVideoStatus('Uploading video to storage... (Large file - this is normal, please wait)');
-      }, 120000); // 2 minutes
-      
-      let videoBlob;
-      try {
-        videoBlob = await put(videoFileName, videoFile, {
-          access: 'public',
-          token: tokenData.token,
-        });
-        clearTimeout(timeoutWarning);
-      } catch (uploadError: any) {
-        clearTimeout(timeoutWarning);
-        console.error('Video upload error:', uploadError);
-        if (uploadError.message?.includes('timeout') || uploadError.message?.includes('network')) {
-          setVideoStatus('Error: Upload timed out. Please check your internet connection and try again with a smaller file or better connection.');
-        } else {
-          setVideoStatus(`Error: Upload failed - ${uploadError.message || 'Unknown error'}`);
+          if (!uploadRes.ok) {
+            throw new Error('Failed to upload to R2');
+          }
+
+          videoUrl = r2Data.publicUrl;
+          clearTimeout(timeoutWarning);
+
+          // Upload thumbnail if provided
+          if (thumbnailFile && thumbnailFile.size > 0) {
+            setVideoStatus('Uploading thumbnail to R2...');
+            const thumbnailR2Res = await fetch('/api/videos/upload-r2-client', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                filename: thumbnailFile.name,
+                contentType: thumbnailFile.type,
+                fileSize: thumbnailFile.size,
+              }),
+            });
+
+            if (thumbnailR2Res.ok) {
+              const thumbnailR2Data = await thumbnailR2Res.json();
+              const timestamp = Date.now();
+              const sanitizedName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+              const thumbnailFileName = `videos/thumbnails/${timestamp}-${sanitizedName.replace(/\.[^/.]+$/, '')}.jpg`;
+              
+              // Get presigned URL for thumbnail
+              const thumbR2Res = await fetch('/api/videos/upload-r2-client', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  filename: thumbnailFileName,
+                  contentType: thumbnailFile.type,
+                  fileSize: thumbnailFile.size,
+                }),
+              });
+
+              if (thumbR2Res.ok) {
+                const thumbR2Data = await thumbR2Res.json();
+                await fetch(thumbR2Data.presignedUrl, {
+                  method: 'PUT',
+                  body: thumbnailFile,
+                  headers: {
+                    'Content-Type': thumbnailFile.type,
+                  },
+                });
+                thumbnailUrl = thumbR2Data.publicUrl;
+              }
+            }
+          }
+        } catch (uploadError: any) {
+          clearTimeout(timeoutWarning);
+          console.error('R2 upload error:', uploadError);
+          if (uploadError.message?.includes('timeout') || uploadError.message?.includes('network')) {
+            setVideoStatus('Error: Upload timed out. Please check your internet connection and try again.');
+          } else {
+            setVideoStatus(`Error: R2 upload failed - ${uploadError.message || 'Unknown error'}`);
+          }
+          return;
         }
-        return;
-      }
+      } else {
+        // Fallback to Vercel Blob if R2 is not configured
+        const r2Error = await r2Res.json();
+        if (r2Error.setupRequired) {
+          setVideoStatus('R2 not configured, falling back to Vercel Blob...');
+        }
 
-      let thumbnailUrl = '';
-
-      // Step 3: Upload thumbnail if provided
-      if (thumbnailFile && thumbnailFile.size > 0) {
-        setVideoStatus('Uploading thumbnail...');
-        const thumbnailFileName = `videos/thumbnails/${timestamp}-${sanitizedName.replace(/\.[^/.]+$/, '')}.jpg`;
-        const thumbnailBlob = await put(thumbnailFileName, thumbnailFile, {
-          access: 'public',
-          token: tokenData.token,
+        // Use Vercel Blob as fallback
+        const tokenRes = await fetch('/api/videos/upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: videoFile.name,
+            contentType: videoFile.type,
+          }),
         });
-        thumbnailUrl = thumbnailBlob.url;
+
+        const tokenData = await tokenRes.json();
+        if (!tokenRes.ok) {
+          setVideoStatus(`Error: ${tokenData.error || 'Failed to get upload token'}`);
+          return;
+        }
+
+        const { put } = await import('@vercel/blob');
+        const timestamp = Date.now();
+        const sanitizedName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const videoFileName = `videos/${timestamp}-${sanitizedName}`;
+
+        setVideoStatus('Uploading video to Vercel Blob... (This may take 10-30 minutes for large files)');
+        
+        const timeoutWarning = setTimeout(() => {
+          setVideoStatus('Uploading video to Vercel Blob... (Large file - this is normal, please wait)');
+        }, 120000);
+
+        let videoBlob;
+        try {
+          videoBlob = await put(videoFileName, videoFile, {
+            access: 'public',
+            token: tokenData.token,
+          });
+          clearTimeout(timeoutWarning);
+          videoUrl = videoBlob.url;
+
+          // Upload thumbnail if provided
+          if (thumbnailFile && thumbnailFile.size > 0) {
+            setVideoStatus('Uploading thumbnail...');
+            const thumbnailFileName = `videos/thumbnails/${timestamp}-${sanitizedName.replace(/\.[^/.]+$/, '')}.jpg`;
+            const thumbnailBlob = await put(thumbnailFileName, thumbnailFile, {
+              access: 'public',
+              token: tokenData.token,
+            });
+            thumbnailUrl = thumbnailBlob.url;
+          }
+        } catch (uploadError: any) {
+          clearTimeout(timeoutWarning);
+          console.error('Video upload error:', uploadError);
+          if (uploadError.message?.includes('timeout') || uploadError.message?.includes('network')) {
+            setVideoStatus('Error: Upload timed out. Please check your internet connection and try again.');
+          } else {
+            setVideoStatus(`Error: Upload failed - ${uploadError.message || 'Unknown error'}`);
+          }
+          return;
+        }
       }
 
-      setUploadedVideoUrl(videoBlob.url);
+      setUploadedVideoUrl(videoUrl);
       setUploadedThumbnailUrl(thumbnailUrl);
 
       // Step 4: Add video to The Vault
@@ -407,7 +497,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           title: videoTitle,
           description: videoDescription,
-          videoUrl: videoBlob.url,
+          videoUrl: videoUrl,
           videoType: 'exclusive',
           category: videoCategory,
           thumbnailUrl: thumbnailUrl || '',
