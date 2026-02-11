@@ -99,6 +99,8 @@ export default function VideosPage() {
     // Database videos first (newest), then static videos
     const combined = [...dbVideos, ...initialVideos];
     
+    console.log('Combining videos - DB videos:', dbVideos.length, 'Static videos:', initialVideos.length);
+    
     // Remove duplicates based on videoUrl (database videos take priority)
     const seen = new Set<string>();
     const unique: VideoEntry[] = [];
@@ -108,9 +110,12 @@ export default function VideosPage() {
       if (url && !seen.has(url)) {
         seen.add(url);
         unique.push(video);
+      } else if (url) {
+        console.log('Skipping duplicate video:', video.title, 'URL:', url);
       }
     }
     
+    console.log('Total unique videos:', unique.length);
     return unique;
   }, [dbVideos]);
 
