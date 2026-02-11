@@ -52,10 +52,11 @@ export default function VideosPage() {
   useEffect(() => {
     const fetchVideos = async () => {
       try {
-        const res = await fetch('/api/videos');
+        const res = await fetch('/api/videos', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          console.log('Fetched videos from database:', data.videos?.length || 0);
+          console.log('Fetched videos from database:', data.videos?.length || 0, 'videos');
+          console.log('Video titles:', data.videos?.map((v: any) => v.title));
           setDbVideos(data.videos || []);
           
           // Store exclusive video view counts (by video ID)
@@ -77,6 +78,20 @@ export default function VideosPage() {
       }
     };
     fetchVideos();
+    
+    // Also refetch when page becomes visible (in case video was just uploaded)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchVideos();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', fetchVideos);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', fetchVideos);
+    };
   }, []);
 
   // Combine static videos (from data file) with database videos, removing duplicates

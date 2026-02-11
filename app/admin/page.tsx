@@ -360,10 +360,12 @@ export default function AdminPage() {
       const addData = await addRes.json();
 
       if (!addRes.ok) {
-        setVideoStatus(`Error: Video uploaded but failed to add to vault: ${addData.error}`);
+        console.error('Failed to add video to vault:', addData);
+        setVideoStatus(`Error: Video uploaded but failed to add to vault: ${addData.error || 'Unknown error'}`);
         return;
       }
 
+      console.log('Video successfully added to vault:', addData);
       setVideoStatus('✅ Video uploaded and added to The Vault successfully!');
       
       // Reset form
@@ -383,6 +385,7 @@ export default function AdminPage() {
       if (videoInput) videoInput.value = '';
       if (thumbnailInput) thumbnailInput.value = '';
     } catch (error: any) {
+      console.error('Video upload error:', error);
       setVideoStatus(`Error: ${error.message || 'Failed to upload video'}`);
     } finally {
       setVideoUploading(false);

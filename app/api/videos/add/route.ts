@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     // Insert video into database
     const sql = getDb();
-    await sql`
+    const result = await sql`
       INSERT INTO videos (
         title,
         description,
@@ -60,11 +60,15 @@ export async function POST(request: Request) {
         ${videoData.duration || null},
         ${videoData.isExclusive !== false}
       )
+      RETURNING id, title
     `;
+
+    console.log('Video inserted into database:', result[0]);
 
     return NextResponse.json({
       success: true,
       message: 'Video added to The Vault successfully',
+      videoId: result[0]?.id,
     });
   } catch (error: any) {
     console.error('Add video error:', error);
