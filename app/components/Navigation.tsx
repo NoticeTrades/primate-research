@@ -23,6 +23,8 @@ export default function Navigation() {
   const [notifications, setNotifications] = useState<{ id: number; title: string; description: string; link: string; type: string; created_at: string; is_read: boolean }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showToolsDropdown, setShowToolsDropdown] = useState(false);
+  const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
+  const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const toolsDropdownRef = useRef<HTMLDivElement>(null);
@@ -39,11 +41,31 @@ export default function Navigation() {
     checkAuth();
   }, [pathname]);
 
+  // Fetch browser notification preference
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const fetchPreferences = async () => {
+      try {
+        const res = await fetch('/api/notifications/preferences');
+        if (res.ok) {
+          const data = await res.json();
+          setBrowserNotificationsEnabled(data.browserNotificationsEnabled || false);
+        }
+      } catch {
+        // silently fail
+      }
+    };
+    
+    fetchPreferences();
+  }, [isAuthenticated]);
+
   // Fetch notifications when authenticated
   useEffect(() => {
     if (!isAuthenticated) {
       setNotifications([]);
       setUnreadCount(0);
+      setPreviousUnreadCount(0);
       return;
     }
     const fetchNotifications = async () => {
@@ -51,8 +73,41 @@ export default function Navigation() {
         const res = await fetch('/api/notifications');
         if (res.ok) {
           const data = await res.json();
-          setNotifications(data.notifications || []);
-          setUnreadCount(data.unreadCount || 0);
+          const newNotifications = data.notifications || [];
+          const newUnreadCount = data.unreadCount || 0;
+          
+          // Show browser notification if new unread notifications arrived
+          if (browserNotificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+            if (newUnreadCount > previousUnreadCount && previousUnreadCount > 0) {
+              // New unread notifications arrived
+              const newUnread = newNotifications
+                .filter((n) => !n.is_read)
+                .slice(0, newUnreadCount - previousUnreadCount);
+              
+              newUnread.forEach((notification) => {
+                const browserNotification = new Notification(notification.title, {
+                  body: notification.description || '',
+                  icon: '/favicon.ico',
+                  badge: '/favicon.ico',
+                  tag: `notification-${notification.id}`,
+                  requireInteraction: false,
+                });
+                
+                // Open the notification link when clicked
+                if (notification.link) {
+                  browserNotification.onclick = () => {
+                    window.focus();
+                    window.location.href = notification.link;
+                    browserNotification.close();
+                  };
+                }
+              });
+            }
+          }
+          
+          setNotifications(newNotifications);
+          setUnreadCount(newUnreadCount);
+          setPreviousUnreadCount(newUnreadCount);
         }
       } catch {
         // silently fail
@@ -80,7 +135,7 @@ export default function Navigation() {
       window.removeEventListener('focus', fetchNotifications);
       window.removeEventListener('notificationsCleared', handleNotificationsCleared);
     };
-  }, [isAuthenticated, pathname]);
+  }, [isAuthenticated, pathname, browserNotificationsEnabled, previousUnreadCount]);
 
   useEffect(() => {
     const handleScroll = () => {
