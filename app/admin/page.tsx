@@ -351,8 +351,9 @@ export default function AdminPage() {
         setVideoStatus('Uploading video to storage... (Large file - this is normal, please wait)');
       }, 120000); // 2 minutes
       
+      let videoBlob;
       try {
-        const videoBlob = await put(videoFileName, videoFile, {
+        videoBlob = await put(videoFileName, videoFile, {
           access: 'public',
           token: tokenData.token,
         });
