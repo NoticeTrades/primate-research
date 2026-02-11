@@ -61,6 +61,13 @@ export default function AdminPage() {
   // DB setup state
   const [dbStatus, setDbStatus] = useState('');
 
+  // Video management state
+  const [videosList, setVideosList] = useState<{ id: number; title: string; videoUrl: string; created_at: string }[]>([]);
+  const [videosLoading, setVideosLoading] = useState(false);
+  const [videosLoaded, setVideosLoaded] = useState(false);
+  const [deleteVideoId, setDeleteVideoId] = useState<number | null>(null);
+  const [deleteVideoStatus, setDeleteVideoStatus] = useState('');
+
   const handleLogin = async () => {
     setLoading(true);
     setError('');
@@ -774,6 +781,68 @@ export default function AdminPage() {
                   <p className="text-sm text-zinc-300 leading-relaxed">{item.message}</p>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Video Management */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
+          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">🎬 Manage Videos</h2>
+            <button
+              onClick={fetchVideos}
+              disabled={videosLoading}
+              className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
+            >
+              {videosLoading ? 'Loading...' : videosLoaded ? 'Refresh' : 'Load Videos'}
+            </button>
+          </div>
+          {!videosLoaded ? (
+            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+              Click &quot;Load Videos&quot; to view uploaded videos.
+            </div>
+          ) : videosList.length === 0 ? (
+            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+              No videos uploaded yet.
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-800/50">
+              {videosList.map((video) => (
+                <div key={video.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-medium text-zinc-200 mb-1 truncate">{video.title}</h3>
+                      <p className="text-xs text-zinc-500 truncate">{video.videoUrl}</p>
+                      <p className="text-xs text-zinc-600 mt-1">
+                        {new Date(video.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteVideo(video.id)}
+                      className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                        deleteVideoId === video.id
+                          ? 'bg-red-600 hover:bg-red-700 text-white'
+                          : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'
+                      }`}
+                    >
+                      {deleteVideoId === video.id ? 'Confirm Delete' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {deleteVideoStatus && (
+            <div className={`px-6 py-3 border-t border-zinc-800 ${
+              deleteVideoStatus.startsWith('Error') ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'
+            }`}>
+              <p className="text-sm">{deleteVideoStatus}</p>
             </div>
           )}
         </div>
