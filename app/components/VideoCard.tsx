@@ -59,9 +59,11 @@ export default function VideoCard({
 
   // Get YouTube thumbnail if no thumbnail provided
   const getThumbnailUrl = () => {
-    if (thumbnailUrl) return thumbnailUrl;
+    // Return thumbnail if provided and not empty
+    if (thumbnailUrl && thumbnailUrl.trim() !== '') return thumbnailUrl;
     
     if (videoUrl) {
+      // For YouTube videos, generate thumbnail URL
       const youtubeWatchRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
       const match = videoUrl.match(youtubeWatchRegex);
       if (match) {
@@ -122,40 +124,74 @@ export default function VideoCard({
             Your browser does not support the video tag.
           </video>
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="w-full h-full flex items-center justify-center relative bg-gradient-to-br from-zinc-800 to-zinc-900 dark:from-zinc-900 dark:to-zinc-950">
             {getThumbnailUrl() ? (
-              <img
-                src={getThumbnailUrl()}
-                alt={title}
-                className="w-full h-full object-cover"
-              />
+              <>
+                <img
+                  src={getThumbnailUrl()}
+                  alt={title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // If thumbnail fails to load, hide it and show placeholder
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                {videoUrl && (
+                  <button
+                    onClick={() => setIsPlaying(true)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors"
+                    suppressHydrationWarning
+                  >
+                    <div className={`w-16 h-16 ${isExclusiveVideo ? 'bg-blue-500/90 hover:bg-blue-600/90' : 'bg-white/90 dark:bg-zinc-800/90'} rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110`}>
+                      <svg
+                        className={`w-8 h-8 ${isExclusiveVideo ? 'text-white' : 'text-black dark:text-white'} ml-1`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
+                    </div>
+                  </button>
+                )}
+              </>
             ) : (
-              <div className="text-zinc-400 dark:text-zinc-600">
-                <svg
-                  className="w-16 h-16"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                </svg>
-              </div>
-            )}
-            {videoUrl && (
-              <button
-                onClick={() => setIsPlaying(true)}
-                className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors"
-                suppressHydrationWarning
-              >
-                <div className={`w-16 h-16 ${isExclusiveVideo ? 'bg-blue-500/90' : 'bg-white/90 dark:bg-zinc-800/90'} rounded-full flex items-center justify-center`}>
+              <>
+                {/* Placeholder for videos without thumbnails */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                  {isExclusiveVideo && (
+                    <div className="mb-4 px-3 py-1 text-xs font-bold text-blue-400 bg-blue-500/20 border border-blue-500/30 rounded-full">
+                      EXCLUSIVE
+                    </div>
+                  )}
                   <svg
-                    className={`w-8 h-8 ${isExclusiveVideo ? 'text-white' : 'text-black dark:text-white'} ml-1`}
+                    className={`w-20 h-20 mb-3 ${isExclusiveVideo ? 'text-blue-400' : 'text-zinc-400 dark:text-zinc-600'}`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
                     <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
                   </svg>
+                  <p className={`text-sm font-medium ${isExclusiveVideo ? 'text-blue-300' : 'text-zinc-400 dark:text-zinc-500'}`}>
+                    {title}
+                  </p>
                 </div>
-              </button>
+                {videoUrl && (
+                  <button
+                    onClick={() => setIsPlaying(true)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors"
+                    suppressHydrationWarning
+                  >
+                    <div className={`w-20 h-20 ${isExclusiveVideo ? 'bg-blue-500/90 hover:bg-blue-600/90' : 'bg-white/90 dark:bg-zinc-800/90'} rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110`}>
+                      <svg
+                        className={`w-10 h-10 ${isExclusiveVideo ? 'text-white' : 'text-black dark:text-white'} ml-1`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
+                    </div>
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
