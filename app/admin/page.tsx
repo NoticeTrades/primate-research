@@ -310,47 +310,61 @@ export default function AdminPage() {
       return;
     }
 
+    // Validate file size (max 500MB)
+    const maxSize = 500 * 1024 * 1024; // 500MB
+    if (videoFile.size > maxSize) {
+      setVideoStatus('Error: Video file too large. Maximum size is 500MB.');
+      return;
+    }
+
     setVideoUploading(true);
-    setVideoStatus('');
+    setVideoStatus('Uploading video...');
 
     try {
-      // Step 1: Upload video and thumbnail to Vercel Blob
-      const formData = new FormData();
-      formData.append('video', videoFile);
-      if (thumbnailFile) {
-        formData.append('thumbnail', thumbnailFile);
-      }
-
-      const uploadRes = await fetch('/api/videos/upload', {
+      // Step 1: Get upload token from server
+      const tokenRes = await fetch('/api/videos/upload-url', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: videoFile.name,
+          contentType: videoFile.type,
+        }),
       });
 
-      // Check if response is JSON before parsing
-      const contentType = uploadRes.headers.get('content-type');
-      let uploadData;
+      const tokenData = await tokenRes.json();
+      if (!tokenRes.ok) {
+        setVideoStatus(`Error: ${tokenData.error || 'Failed to get upload token'}`);
+        return;
+      }
+
+      // Step 2: Upload video directly to Vercel Blob from client
+      const { put } = await import('@vercel/blob');
       
-      if (contentType && contentType.includes('application/json')) {
-        uploadData = await uploadRes.json();
-      } else {
-        // If not JSON, get text response
-        const textResponse = await uploadRes.text();
-        console.error('Non-JSON response from upload API:', textResponse);
-        setVideoStatus(`Error: Upload failed - ${textResponse.substring(0, 100)}`);
-        return;
+      const timestamp = Date.now();
+      const sanitizedName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const videoFileName = `videos/${timestamp}-${sanitizedName}`;
+
+      setVideoStatus('Uploading video to storage...');
+      const videoBlob = await put(videoFileName, videoFile, {
+        access: 'public',
+        token: tokenData.token,
+      });
+
+      let thumbnailUrl = '';
+
+      // Step 3: Upload thumbnail if provided
+      if (thumbnailFile && thumbnailFile.size > 0) {
+        setVideoStatus('Uploading thumbnail...');
+        const thumbnailFileName = `videos/thumbnails/${timestamp}-${sanitizedName.replace(/\.[^/.]+$/, '')}.jpg`;
+        const thumbnailBlob = await put(thumbnailFileName, thumbnailFile, {
+          access: 'public',
+          token: tokenData.token,
+        });
+        thumbnailUrl = thumbnailBlob.url;
       }
 
-      if (!uploadRes.ok) {
-        if (uploadData.setupRequired) {
-          setVideoStatus('Error: Vercel Blob not configured. Please add BLOB_READ_WRITE_TOKEN to your Vercel environment variables. See VIDEO_STORAGE_GUIDE.md for setup instructions.');
-        } else {
-          setVideoStatus(`Error: ${uploadData.error || 'Upload failed'}`);
-        }
-        return;
-      }
-
-      setUploadedVideoUrl(uploadData.videoUrl);
-      setUploadedThumbnailUrl(uploadData.thumbnailUrl || '');
+      setUploadedVideoUrl(videoBlob.url);
+      setUploadedThumbnailUrl(thumbnailUrl);
 
       // Step 2: Add video to The Vault
       const addRes = await fetch('/api/videos/add', {
