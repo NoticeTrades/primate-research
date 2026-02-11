@@ -37,13 +37,32 @@ export default function NotificationsPage() {
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+  const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
+  const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
+  const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
 
-  // Check authentication
+  // Check authentication and fetch preferences
   useEffect(() => {
     const email = getCookie('user_email');
     if (!email) {
       router.push('/signup?redirect=/notifications');
+      return;
     }
+    
+    // Fetch browser notification preference
+    const fetchPreferences = async () => {
+      try {
+        const res = await fetch('/api/notifications/preferences');
+        if (res.ok) {
+          const data = await res.json();
+          setBrowserNotificationsEnabled(data.browserNotificationsEnabled || false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch preferences:', err);
+      }
+    };
+    
+    fetchPreferences();
   }, [router]);
 
   // Fetch notifications (silent background refresh after initial load)
@@ -62,7 +81,34 @@ export default function NotificationsPage() {
         throw new Error('Failed to fetch notifications');
       }
       const data = await res.json();
-      setNotifications(data.notifications || []);
+      const newNotifications = data.notifications || [];
+      
+      // Check for new notifications and show browser notification if enabled
+      if (!isInitial && browserNotificationsEnabled && 'Notification' in window) {
+        const unreadCount = newNotifications.filter((n: Notification) => !n.is_read).length;
+        const previousUnreadCount = notifications.filter((n) => !n.is_read).length;
+        
+        if (unreadCount > previousUnreadCount) {
+          // New unread notifications arrived
+          const newUnread = newNotifications
+            .filter((n: Notification) => !n.is_read)
+            .slice(0, unreadCount - previousUnreadCount);
+          
+          newUnread.forEach((notification: Notification) => {
+            if (Notification.permission === 'granted') {
+              new Notification(notification.title, {
+                body: notification.description || '',
+                icon: '/favicon.ico',
+                badge: '/favicon.ico',
+                tag: `notification-${notification.id}`,
+                requireInteraction: false,
+              });
+            }
+          });
+        }
+      }
+      
+      setNotifications(newNotifications);
     } catch (err) {
       // Only show error on initial load, not on background refreshes
       if (isInitial) {
@@ -178,6 +224,50 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
+  // Handle browser notification toggle
+  const handleToggleBrowserNotifications = async () => {
+    if (!('Notification' in window)) {
+      alert('Your browser does not support notifications');
+      return;
+    }
+
+    const newValue = !browserNotificationsEnabled;
+
+    // If enabling, request permission first
+    if (newValue) {
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          alert('Notification permission denied. Please enable it in your browser settings.');
+          return;
+        }
+      } else if (Notification.permission === 'denied') {
+        alert('Notification permission is denied. Please enable it in your browser settings.');
+        return;
+      }
+    }
+
+    setIsUpdatingPreferences(true);
+    try {
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: newValue }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update preferences');
+      }
+
+      setBrowserNotificationsEnabled(newValue);
+    } catch (err) {
+      console.error('Failed to update preferences:', err);
+      alert('Failed to update notification preferences');
+    } finally {
+      setIsUpdatingPreferences(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -265,6 +355,48 @@ export default function NotificationsPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Browser Notifications Toggle */}
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600/20 rounded-lg">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-100">Browser Notifications</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Get notified in your browser when new notifications arrive
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleToggleBrowserNotifications}
+                disabled={isUpdatingPreferences || !('Notification' in window)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  browserNotificationsEnabled ? 'bg-blue-600' : 'bg-zinc-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    browserNotificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            {!('Notification' in window) && (
+              <p className="text-xs text-yellow-400 mt-2">
+                Your browser does not support notifications
+              </p>
+            )}
+            {Notification.permission === 'denied' && (
+              <p className="text-xs text-yellow-400 mt-2">
+                Notifications are blocked. Please enable them in your browser settings.
+              </p>
+            )}
           </div>
 
           {/* Actions Bar */}

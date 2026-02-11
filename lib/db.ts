@@ -45,6 +45,9 @@ export async function initDb() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_cleared_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
   `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS browser_notifications_enabled BOOLEAN DEFAULT FALSE
+  `;
 
   // Mark all existing users (who signed up before email verification) as verified
   await sql`
