@@ -37,14 +37,17 @@ export default function VideoCard({
   const [isHovering, setIsHovering] = useState(false);
   const [currentViewCount, setCurrentViewCount] = useState<number | null>(viewCount ?? null);
   const [hasTrackedView, setHasTrackedView] = useState(false);
+  const [isTrackingView, setIsTrackingView] = useState(false);
 
-  // Track view when exclusive video starts playing (only once per session)
+  // Track view when exclusive video starts playing (only once per page load)
   const handlePlay = async () => {
     setIsPlaying(true);
     
-    // Track view for exclusive videos (only once per play session)
-    if (isExclusive && videoDbId && videoType === 'exclusive' && !hasTrackedView) {
-      setHasTrackedView(true); // Prevent duplicate tracking
+    // Track view for exclusive videos (only once per page load, prevent duplicate calls)
+    if (isExclusive && videoDbId && videoType === 'exclusive' && !hasTrackedView && !isTrackingView) {
+      setHasTrackedView(true); // Mark as tracked immediately to prevent duplicate calls
+      setIsTrackingView(true); // Prevent concurrent API calls
+      
       try {
         const res = await fetch(`/api/videos/${videoDbId}/view`, {
           method: 'POST',
@@ -52,18 +55,24 @@ export default function VideoCard({
         if (res.ok) {
           const data = await res.json();
           setCurrentViewCount(data.viewCount);
+        } else {
+          // If API call failed, reset so it can retry
+          setHasTrackedView(false);
         }
       } catch (error) {
         console.error('Failed to track video view:', error);
-        setHasTrackedView(false); // Reset on error so it can retry
+        // Reset on error so it can retry
+        setHasTrackedView(false);
+      } finally {
+        setIsTrackingView(false);
       }
     }
   };
   
-  // Reset tracking when video is paused/stopped (for new play session)
+  // Reset tracking when video is paused/stopped
   const handlePause = () => {
     setIsPlaying(false);
-    // Don't reset hasTrackedView here - we want to track once per page load, not per play
+    // Don't reset hasTrackedView - we want to track once per page load
   };
 
   // Build YouTube embed URL with optional autoplay and mute (mute allows autoplay on hover)
