@@ -113,12 +113,14 @@ export default function VideosPage() {
         title: v.title,
         description: v.description,
         videoUrl: v.videoUrl,
+        videoType: v.videoType,
         thumbnailUrl: v.thumbnailUrl,
         date: v.date,
         duration: v.duration,
         videoId,
         dateNum: parseDate(v.date),
         viewCount: videoId ? (viewCounts[videoId] ?? null) : null,
+        isExclusive: v.isExclusive,
       };
     });
     const order = [...withViews];
