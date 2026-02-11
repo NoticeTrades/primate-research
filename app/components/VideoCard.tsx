@@ -34,6 +34,8 @@ export default function VideoCard({
   videoDbId = null,
 }: VideoCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false); // Track if video has been loaded/started
+  const [isLoading, setIsLoading] = useState(false);
   const [currentViewCount, setCurrentViewCount] = useState<number | null>(viewCount ?? null);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isTrackingView, setIsTrackingView] = useState(false);
@@ -52,6 +54,8 @@ export default function VideoCard({
   // Track view when exclusive video starts playing (only once per page load)
   const handlePlay = async () => {
     setIsPlaying(true);
+    setHasStarted(true); // Mark that video has started
+    setIsLoading(false);
     
     // Track view for exclusive videos (only once per page load, prevent duplicate calls)
     if (isExclusive && videoDbId && videoType === 'exclusive' && !hasTrackedView && !isTrackingView) {
@@ -79,10 +83,18 @@ export default function VideoCard({
     }
   };
   
-  // Reset tracking when video is paused/stopped
+  // Handle pause - keep video visible, just pause it
   const handlePause = () => {
     setIsPlaying(false);
+    // Don't reset hasStarted - keep video element visible
     // Don't reset hasTrackedView - we want to track once per page load
+  };
+  
+  // Handle when user clicks play button
+  const handlePlayClick = () => {
+    setIsLoading(true);
+    setIsPlaying(true);
+    setHasStarted(true);
   };
 
   // Build YouTube embed URL with optional autoplay and mute (mute allows autoplay on hover)
@@ -127,10 +139,10 @@ export default function VideoCard({
 
   const isYouTube = videoType === 'youtube' || (!videoType && videoUrl?.includes('youtube'));
   const isExclusiveVideo = videoType === 'exclusive' || isExclusive;
-  const showIframe = videoUrl && isYouTube && isPlaying;
-  const showVideo = videoUrl && isExclusiveVideo && isPlaying;
+  const showIframe = videoUrl && isYouTube && (isPlaying || hasStarted);
+  const showVideo = videoUrl && isExclusiveVideo && (isPlaying || hasStarted); // Keep video visible once started
   const embedUrl = showIframe
-    ? getEmbedUrl(videoUrl!, { autoplay: true, mute: false })
+    ? getEmbedUrl(videoUrl!, { autoplay: isPlaying, mute: false })
     : '';
 
   return (
@@ -151,7 +163,7 @@ export default function VideoCard({
             allowFullScreen
             title={title}
           />
-        ) : showVideo && isExclusiveVideo ? (
+        ) : showVideo ? (
           videoError ? (
             <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900 dark:from-zinc-900 dark:to-zinc-950 p-8 text-center">
               <svg className="w-16 h-16 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,34 +173,62 @@ export default function VideoCard({
               <p className="text-zinc-400 text-sm">Please check your connection or try again later.</p>
             </div>
           ) : (
-            <video
-              src={videoUrl}
-              controls
-              autoPlay
-              preload="metadata"
-              crossOrigin="anonymous"
-              className="w-full h-full"
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onEnded={handlePause}
-              onError={(e) => {
-                console.error('Video playback error:', e);
-                setVideoError(true);
-                setIsPlaying(false);
-              }}
-              onLoadedData={() => {
-                setVideoError(false);
-                console.log('Video loaded successfully');
-              }}
-              onLoadStart={() => {
-                setVideoError(false);
-                console.log('Video loading started');
-              }}
-            >
-              <source src={videoUrl} type="video/mp4" />
-              <source src={videoUrl} type="video/webm" />
-              Your browser does not support the video tag.
-            </video>
+            <div className="relative w-full h-full">
+              {isLoading && !hasStarted && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-white text-sm">Loading video...</p>
+                  </div>
+                </div>
+              )}
+              <video
+                src={videoUrl}
+                controls
+                autoPlay={isPlaying}
+                preload="metadata"
+                crossOrigin="anonymous"
+                playsInline
+                className="w-full h-full"
+                onPlay={handlePlay}
+                onPause={handlePause}
+                onEnded={handlePause}
+                onWaiting={() => {
+                  // Only show loading if video hasn't started playing yet
+                  if (!hasStarted) setIsLoading(true);
+                }}
+                onCanPlay={() => {
+                  setIsLoading(false);
+                  setHasStarted(true);
+                }}
+                onPlaying={() => {
+                  setIsLoading(false);
+                  setHasStarted(true);
+                }}
+                onError={(e) => {
+                  console.error('Video playback error:', e);
+                  setVideoError(true);
+                  setIsPlaying(false);
+                  setIsLoading(false);
+                }}
+                onLoadedData={() => {
+                  setVideoError(false);
+                  setIsLoading(false);
+                  setHasStarted(true);
+                  console.log('Video loaded successfully');
+                }}
+                onLoadStart={() => {
+                  setVideoError(false);
+                  // Only show loading spinner on initial load
+                  if (!hasStarted) setIsLoading(true);
+                  console.log('Video loading started');
+                }}
+              >
+                <source src={videoUrl} type="video/mp4" />
+                <source src={videoUrl} type="video/webm" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
           )
         ) : (
           <div className="w-full h-full flex items-center justify-center relative bg-gradient-to-br from-zinc-800 to-zinc-900 dark:from-zinc-900 dark:to-zinc-950">
@@ -205,7 +245,7 @@ export default function VideoCard({
                 />
                 {videoUrl && (
                   <button
-                    onClick={() => setIsPlaying(true)}
+                    onClick={handlePlayClick}
                     className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors"
                     suppressHydrationWarning
                   >
@@ -243,7 +283,7 @@ export default function VideoCard({
                 </div>
             {videoUrl && (
               <button
-                onClick={handlePlay}
+                onClick={handlePlayClick}
                 className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors z-20"
                 suppressHydrationWarning
               >
