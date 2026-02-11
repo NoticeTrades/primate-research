@@ -371,44 +371,31 @@ export default function AdminPage() {
           // Upload thumbnail if provided
           if (thumbnailFile && thumbnailFile.size > 0) {
             setVideoStatus('Uploading thumbnail to R2...');
-            const thumbnailR2Res = await fetch('/api/videos/upload-r2-client', {
+            const timestamp = Date.now();
+            const sanitizedName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const thumbnailFileName = `videos/thumbnails/${timestamp}-${sanitizedName.replace(/\.[^/.]+$/, '')}.jpg`;
+            
+            // Get presigned URL for thumbnail
+            const thumbR2Res = await fetch('/api/videos/upload-r2-client', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                filename: thumbnailFile.name,
+                filename: thumbnailFileName,
                 contentType: thumbnailFile.type,
                 fileSize: thumbnailFile.size,
               }),
             });
 
-            if (thumbnailR2Res.ok) {
-              const thumbnailR2Data = await thumbnailR2Res.json();
-              const timestamp = Date.now();
-              const sanitizedName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-              const thumbnailFileName = `videos/thumbnails/${timestamp}-${sanitizedName.replace(/\.[^/.]+$/, '')}.jpg`;
-              
-              // Get presigned URL for thumbnail
-              const thumbR2Res = await fetch('/api/videos/upload-r2-client', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  filename: thumbnailFileName,
-                  contentType: thumbnailFile.type,
-                  fileSize: thumbnailFile.size,
-                }),
+            if (thumbR2Res.ok) {
+              const thumbR2Data = await thumbR2Res.json();
+              await fetch(thumbR2Data.presignedUrl, {
+                method: 'PUT',
+                body: thumbnailFile,
+                headers: {
+                  'Content-Type': thumbnailFile.type,
+                },
               });
-
-              if (thumbR2Res.ok) {
-                const thumbR2Data = await thumbR2Res.json();
-                await fetch(thumbR2Data.presignedUrl, {
-                  method: 'PUT',
-                  body: thumbnailFile,
-                  headers: {
-                    'Content-Type': thumbnailFile.type,
-                  },
-                });
-                thumbnailUrl = thumbR2Data.publicUrl;
-              }
+              thumbnailUrl = thumbR2Data.publicUrl;
             }
           }
         } catch (uploadError: any) {
