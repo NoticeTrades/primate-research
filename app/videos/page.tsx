@@ -319,6 +319,69 @@ export default function VideosPage() {
                 </svg>
               </div>
               
+              {/* Source Filter Dropdown (YouTube/Exclusive) */}
+              <div
+                className="relative pt-2"
+                onMouseEnter={() => setShowSourceDropdown(true)}
+                onMouseLeave={() => setShowSourceDropdown(false)}
+                ref={sourceDropdownRef}
+              >
+                <button
+                  onClick={() => setShowSourceDropdown(!showSourceDropdown)}
+                  className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors whitespace-nowrap"
+                  suppressHydrationWarning
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  <span>
+                    {sourceFilter === 'all'
+                      ? 'All Sources'
+                      : sourceFilter === 'youtube'
+                      ? 'YouTube'
+                      : 'Exclusive'}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${showSourceDropdown ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showSourceDropdown && (
+                  <div className="absolute top-full left-0 pt-2 w-48 z-50">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
+                      <div className="py-1">
+                        {(['all', 'youtube', 'exclusive'] as SourceFilter[]).map((source) => (
+                          <button
+                            key={source}
+                            onClick={() => {
+                              setSourceFilter(source);
+                              setShowSourceDropdown(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                              sourceFilter === source
+                                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                            }`}
+                            suppressHydrationWarning
+                          >
+                            {source === 'all'
+                              ? 'All Sources'
+                              : source === 'youtube'
+                              ? 'YouTube'
+                              : 'Exclusive'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               {/* Category Filter Dropdown */}
               <div
                 className="relative pt-2"
