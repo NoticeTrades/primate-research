@@ -6,10 +6,12 @@ interface VideoCardProps {
   title: string;
   description: string;
   videoUrl?: string;
+  videoType?: 'youtube' | 'exclusive' | 'external';
   thumbnailUrl?: string;
   date?: string;
   duration?: string;
   viewCount?: number | null;
+  isExclusive?: boolean;
 }
 
 function formatViews(n: number): string {
@@ -22,10 +24,12 @@ export default function VideoCard({
   title,
   description,
   videoUrl,
+  videoType = 'youtube',
   thumbnailUrl,
   date,
   duration,
   viewCount,
+  isExclusive = false,
 }: VideoCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -68,15 +72,22 @@ export default function VideoCard({
     return '';
   };
 
-  const showIframe = videoUrl && (isPlaying || isHovering);
+  const isYouTube = videoType === 'youtube' || (!videoType && videoUrl?.includes('youtube'));
+  const isExclusiveVideo = videoType === 'exclusive' || isExclusive;
+  const showIframe = videoUrl && isYouTube && (isPlaying || isHovering);
+  const showVideo = videoUrl && isExclusiveVideo && isPlaying;
   const embedUrl = showIframe
     ? getEmbedUrl(videoUrl!, { autoplay: true, mute: isHovering && !isPlaying })
     : '';
 
   return (
     <div
-      className="group flex flex-col bg-white dark:bg-zinc-900 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 border border-zinc-200 dark:border-zinc-800"
-      onMouseEnter={() => videoUrl && setIsHovering(true)}
+      className={`group flex flex-col bg-white dark:bg-zinc-900 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 border ${
+        isExclusiveVideo
+          ? 'border-blue-500/30 dark:border-blue-500/30 shadow-blue-500/10'
+          : 'border-zinc-200 dark:border-zinc-800'
+      }`}
+      onMouseEnter={() => videoUrl && isYouTube && setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       <div className="relative aspect-video bg-zinc-100 dark:bg-zinc-800 shrink-0 overflow-hidden rounded-t-lg">
@@ -99,6 +110,17 @@ export default function VideoCard({
               />
             )}
           </>
+        ) : showVideo && isExclusiveVideo ? (
+          <video
+            src={videoUrl}
+            controls
+            autoPlay
+            className="w-full h-full"
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          >
+            Your browser does not support the video tag.
+          </video>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             {getThumbnailUrl() ? (
@@ -124,9 +146,9 @@ export default function VideoCard({
                 className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors"
                 suppressHydrationWarning
               >
-                <div className="w-16 h-16 bg-white/90 dark:bg-zinc-800/90 rounded-full flex items-center justify-center">
+                <div className={`w-16 h-16 ${isExclusiveVideo ? 'bg-blue-500/90' : 'bg-white/90 dark:bg-zinc-800/90'} rounded-full flex items-center justify-center`}>
                   <svg
-                    className="w-8 h-8 text-black dark:text-white ml-1"
+                    className={`w-8 h-8 ${isExclusiveVideo ? 'text-white' : 'text-black dark:text-white'} ml-1`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -149,9 +171,16 @@ export default function VideoCard({
         )}
       </div>
       <div className="p-5 flex flex-col flex-1 min-h-0 border-t border-zinc-100 dark:border-zinc-800">
-        <h3 className="text-lg font-semibold text-black dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-500 transition-colors mb-2">
-          {title}
-        </h3>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3 className="text-lg font-semibold text-black dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-500 transition-colors flex-1">
+            {title}
+          </h3>
+          {isExclusiveVideo && (
+            <span className="px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded whitespace-nowrap shrink-0">
+              EXCLUSIVE
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-500 dark:text-zinc-400 mb-3">
           {date && <span>{date}</span>}
           {(date && viewCount != null && viewCount > 0) && <span aria-hidden>·</span>}

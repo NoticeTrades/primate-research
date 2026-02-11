@@ -9,7 +9,8 @@ import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
 import VideoCard from '../components/VideoCard';
 import { videos as initialVideos, getYouTubeVideoId } from '../../data/videos';
-import type { VideoEntry } from '../../data/videos';
+import type { VideoEntry, VideoCategory } from '../../data/videos';
+import { useRef } from 'react';
 
 type SortOption = 'newest' | 'oldest' | 'most_views' | 'least_views';
 
@@ -39,7 +40,10 @@ function parseDate(dateStr: string | undefined): number {
 export default function VideosPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [categoryFilter, setCategoryFilter] = useState<VideoCategory>('all');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [viewCounts, setViewCounts] = useState<Record<string, number | null>>({});
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
   const videoIds = useMemo(
     () =>
@@ -77,9 +81,30 @@ export default function VideosPage() {
     fetchViewCounts();
   }, [videoIds.join(',')]);
 
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        categoryDropdownRef.current &&
+        !categoryDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowCategoryDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const filtered = useMemo(() => {
-    return initialVideos.filter((v) => matchSearch(v, searchQuery));
-  }, [searchQuery]);
+    let result = initialVideos.filter((v) => matchSearch(v, searchQuery));
+    
+    // Apply category filter
+    if (categoryFilter !== 'all') {
+      result = result.filter((v) => v.category === categoryFilter || !v.category);
+    }
+    
+    return result;
+  }, [searchQuery, categoryFilter]);
 
   const sorted = useMemo(() => {
     const withViews = filtered.map((v) => {
@@ -124,7 +149,7 @@ export default function VideosPage() {
   const clearSearch = () => setSearchQuery('');
 
   return (
-    <div className="min-h-screen bg-black dark:bg-zinc-950 relative">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 relative">
       <CursorGlow />
       <CursorHover />
       <DiscordSign />
@@ -138,35 +163,101 @@ export default function VideosPage() {
         <div className="max-w-7xl mx-auto">
           {/* Header + search */}
           <div className="mb-8">
-            <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-zinc-50 mb-2">
-              Video Content
-            </h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-zinc-50">
+                The Vault
+              </h1>
+              <span className="px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-full">
+                EXCLUSIVE
+              </span>
+            </div>
             <p className="text-lg text-zinc-700 dark:text-zinc-300 mb-6">
-              Educational videos and market analysis
+              Exclusive video content and educational market analysis
             </p>
 
-            <div className="relative max-w-2xl">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search videos (e.g. market structure, SFP, traders)..."
-                className="w-full px-4 py-3 pl-11 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-black dark:text-zinc-50 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
-                suppressHydrationWarning
-              />
-              <svg
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            <div className="flex flex-col sm:flex-row gap-4 max-w-4xl">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search videos (e.g. market structure, SFP, traders)..."
+                  className="w-full px-4 py-3 pl-11 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-black dark:text-zinc-50 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                  suppressHydrationWarning
                 />
-              </svg>
+                <svg
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              
+              {/* Category Filter Dropdown */}
+              <div
+                className="relative pt-2"
+                onMouseEnter={() => setShowCategoryDropdown(true)}
+                onMouseLeave={() => setShowCategoryDropdown(false)}
+                ref={categoryDropdownRef}
+              >
+                <button
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors whitespace-nowrap"
+                  suppressHydrationWarning
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  <span>
+                    {categoryFilter === 'all'
+                      ? 'All Categories'
+                      : categoryFilter.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showCategoryDropdown && (
+                  <div className="absolute top-full left-0 pt-2 w-56 z-50">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
+                      <div className="py-1">
+                        {(['all', 'market-analysis', 'trading-strategies', 'educational', 'live-trading', 'market-structure', 'risk-management'] as VideoCategory[]).map((cat) => (
+                          <button
+                            key={cat}
+                            onClick={() => {
+                              setCategoryFilter(cat);
+                              setShowCategoryDropdown(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+                              categoryFilter === cat
+                                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                            }`}
+                            suppressHydrationWarning
+                          >
+                            {cat === 'all'
+                              ? 'All Categories'
+                              : cat.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -225,10 +316,12 @@ export default function VideosPage() {
                       title={video.title}
                       description={video.description}
                       videoUrl={video.videoUrl}
+                      videoType={video.videoType}
                       thumbnailUrl={video.thumbnailUrl}
                       date={video.date}
                       duration={video.duration}
                       viewCount={video.viewCount}
+                      isExclusive={video.isExclusive}
                     />
                   ))}
                 </div>
