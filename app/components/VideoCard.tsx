@@ -37,6 +37,17 @@ export default function VideoCard({
   const [currentViewCount, setCurrentViewCount] = useState<number | null>(viewCount ?? null);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isTrackingView, setIsTrackingView] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  
+  // Truncate description if it's longer than 50 words
+  const WORD_LIMIT = 50;
+  const words = description ? description.split(/\s+/) : [];
+  const shouldTruncate = words.length > WORD_LIMIT;
+  const truncatedDescription = shouldTruncate 
+    ? words.slice(0, WORD_LIMIT).join(' ') + '...'
+    : description;
+  const displayDescription = isDescriptionExpanded ? description : truncatedDescription;
 
   // Track view when exclusive video starts playing (only once per page load)
   const handlePlay = async () => {
@@ -141,17 +152,44 @@ export default function VideoCard({
             title={title}
           />
         ) : showVideo && isExclusiveVideo ? (
-          <video
-            src={videoUrl}
-            controls
-            autoPlay
-            className="w-full h-full"
-            onPlay={handlePlay}
-            onPause={handlePause}
-            onEnded={handlePause}
-          >
-            Your browser does not support the video tag.
-          </video>
+          videoError ? (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900 dark:from-zinc-900 dark:to-zinc-950 p-8 text-center">
+              <svg className="w-16 h-16 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-red-400 font-medium mb-2">Video failed to load</p>
+              <p className="text-zinc-400 text-sm">Please check your connection or try again later.</p>
+            </div>
+          ) : (
+            <video
+              src={videoUrl}
+              controls
+              autoPlay
+              preload="metadata"
+              crossOrigin="anonymous"
+              className="w-full h-full"
+              onPlay={handlePlay}
+              onPause={handlePause}
+              onEnded={handlePause}
+              onError={(e) => {
+                console.error('Video playback error:', e);
+                setVideoError(true);
+                setIsPlaying(false);
+              }}
+              onLoadedData={() => {
+                setVideoError(false);
+                console.log('Video loaded successfully');
+              }}
+              onLoadStart={() => {
+                setVideoError(false);
+                console.log('Video loading started');
+              }}
+            >
+              <source src={videoUrl} type="video/mp4" />
+              <source src={videoUrl} type="video/webm" />
+              Your browser does not support the video tag.
+            </video>
+          )
         ) : (
           <div className="w-full h-full flex items-center justify-center relative bg-gradient-to-br from-zinc-800 to-zinc-900 dark:from-zinc-900 dark:to-zinc-950">
             {getThumbnailUrl() ? (
@@ -261,8 +299,16 @@ export default function VideoCard({
             Description
           </p>
           <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-line break-words">
-            {description ?? 'No description.'}
+            {displayDescription ?? 'No description.'}
           </p>
+          {shouldTruncate && (
+            <button
+              onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+              className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+            >
+              {isDescriptionExpanded ? 'Read less' : 'Read more'}
+            </button>
+          )}
         </div>
       </div>
     </div>
