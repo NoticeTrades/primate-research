@@ -344,11 +344,29 @@ export default function AdminPage() {
       const sanitizedName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const videoFileName = `videos/${timestamp}-${sanitizedName}`;
 
-      setVideoStatus('Uploading video to storage...');
-      const videoBlob = await put(videoFileName, videoFile, {
-        access: 'public',
-        token: tokenData.token,
-      });
+      setVideoStatus('Uploading video to storage... (This may take 10-30 minutes for large files)');
+      
+      // Add timeout warning after 2 minutes
+      const timeoutWarning = setTimeout(() => {
+        setVideoStatus('Uploading video to storage... (Large file - this is normal, please wait)');
+      }, 120000); // 2 minutes
+      
+      try {
+        const videoBlob = await put(videoFileName, videoFile, {
+          access: 'public',
+          token: tokenData.token,
+        });
+        clearTimeout(timeoutWarning);
+      } catch (uploadError: any) {
+        clearTimeout(timeoutWarning);
+        console.error('Video upload error:', uploadError);
+        if (uploadError.message?.includes('timeout') || uploadError.message?.includes('network')) {
+          setVideoStatus('Error: Upload timed out. Please check your internet connection and try again with a smaller file or better connection.');
+        } else {
+          setVideoStatus(`Error: Upload failed - ${uploadError.message || 'Unknown error'}`);
+        }
+        return;
+      }
 
       let thumbnailUrl = '';
 
