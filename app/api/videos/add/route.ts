@@ -38,38 +38,62 @@ export async function POST(request: Request) {
 
     // Insert video into database
     const sql = getDb();
-    const result = await sql`
-      INSERT INTO videos (
-        title,
-        description,
-        video_url,
-        video_type,
-        category,
-        thumbnail_url,
-        date,
-        duration,
-        is_exclusive
-      ) VALUES (
-        ${videoData.title},
-        ${videoData.description},
-        ${videoData.videoUrl},
-        ${videoData.videoType || 'exclusive'},
-        ${videoData.category || 'educational'},
-        ${videoData.thumbnailUrl || null},
-        ${videoData.date || null},
-        ${videoData.duration || null},
-        ${videoData.isExclusive !== false}
-      )
-      RETURNING id, title
-    `;
-
-    console.log('Video inserted into database:', result[0]);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Video added to The Vault successfully',
-      videoId: result[0]?.id,
+    
+    console.log('Attempting to insert video:', {
+      title: videoData.title,
+      videoUrl: videoData.videoUrl,
+      category: videoData.category,
     });
+    
+    try {
+      const result = await sql`
+        INSERT INTO videos (
+          title,
+          description,
+          video_url,
+          video_type,
+          category,
+          thumbnail_url,
+          date,
+          duration,
+          is_exclusive
+        ) VALUES (
+          ${videoData.title},
+          ${videoData.description},
+          ${videoData.videoUrl},
+          ${videoData.videoType || 'exclusive'},
+          ${videoData.category || 'educational'},
+          ${videoData.thumbnailUrl || null},
+          ${videoData.date || null},
+          ${videoData.duration || null},
+          ${videoData.isExclusive !== false}
+        )
+        RETURNING id, title, video_url
+      `;
+
+      console.log('Video inserted into database successfully:', result[0]);
+
+      // Verify it was inserted by fetching it back
+      const verify = await sql`
+        SELECT id, title, video_url FROM videos WHERE id = ${result[0].id}
+      `;
+      console.log('Verified video in database:', verify[0]);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Video added to The Vault successfully',
+        videoId: result[0]?.id,
+        video: result[0],
+      });
+    } catch (dbError: any) {
+      console.error('Database insertion error:', dbError);
+      console.error('Error details:', {
+        message: dbError.message,
+        code: dbError.code,
+        detail: dbError.detail,
+      });
+      throw dbError;
+    }
   } catch (error: any) {
     console.error('Add video error:', error);
     return NextResponse.json(
