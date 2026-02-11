@@ -244,6 +244,62 @@ export default function AdminPage() {
     }
   };
 
+  const fetchVideos = async () => {
+    setVideosLoading(true);
+    setDeleteVideoStatus('');
+    try {
+      const res = await fetch('/api/videos');
+      if (res.ok) {
+        const data = await res.json();
+        // Map videos with IDs from the API response
+        const videosWithIds = data.videos
+          .filter((v: any) => v.id) // Only include videos with database IDs
+          .map((v: any) => ({
+            id: v.id,
+            title: v.title,
+            videoUrl: v.videoUrl,
+            created_at: v.createdAt || new Date().toISOString(),
+          }));
+        setVideosList(videosWithIds);
+        setVideosLoaded(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch videos:', error);
+    } finally {
+      setVideosLoading(false);
+    }
+  };
+
+  const handleDeleteVideo = async (videoId: number) => {
+    if (deleteVideoId !== videoId) {
+      setDeleteVideoId(videoId);
+      setDeleteVideoStatus('Click again to confirm deletion');
+      setTimeout(() => {
+        setDeleteVideoId(null);
+        setDeleteVideoStatus('');
+      }, 4000);
+      return;
+    }
+
+    setDeleteVideoStatus('Deleting...');
+    try {
+      const res = await fetch(`/api/videos/${videoId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDeleteVideoStatus(data.message || 'Video deleted successfully');
+        // Refresh videos list
+        await fetchVideos();
+        setDeleteVideoId(null);
+      } else {
+        setDeleteVideoStatus(`Error: ${data.error || 'Failed to delete video'}`);
+      }
+    } catch (error: any) {
+      setDeleteVideoStatus(`Error: ${error.message || 'Failed to delete video'}`);
+    }
+  };
+
   const handleVideoUpload = async () => {
     if (!videoFile) {
       setVideoStatus('Error: Please select a video file');

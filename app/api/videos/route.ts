@@ -27,6 +27,7 @@ export async function GET() {
 
     return NextResponse.json({
       videos: videos.map((v: any) => ({
+        id: v.id,
         title: v.title,
         description: v.description,
         videoUrl: v.videoUrl,
@@ -36,6 +37,7 @@ export async function GET() {
         date: v.date || null,
         duration: v.duration || null,
         isExclusive: v.isExclusive !== false,
+        createdAt: v.createdAt,
       })),
     });
   } catch (error: any) {
