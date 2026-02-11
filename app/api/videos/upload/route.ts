@@ -30,11 +30,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File must be a video' }, { status: 400 });
     }
 
-    // Validate file size (max 500MB)
-    const maxSize = 500 * 1024 * 1024; // 500MB
+    // Validate file size (max 4GB - Vercel Blob limit)
+    const maxSize = 4 * 1024 * 1024 * 1024; // 4GB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'Video file too large. Maximum size is 500MB.' },
+        { error: 'Video file too large. Maximum size is 4GB.' },
         { status: 400 }
       );
     }

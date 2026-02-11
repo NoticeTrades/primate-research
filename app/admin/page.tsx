@@ -310,10 +310,10 @@ export default function AdminPage() {
       return;
     }
 
-    // Validate file size (max 500MB)
-    const maxSize = 500 * 1024 * 1024; // 500MB
+    // Validate file size (max 4GB - Vercel Blob limit)
+    const maxSize = 4 * 1024 * 1024 * 1024; // 4GB
     if (videoFile.size > maxSize) {
-      setVideoStatus('Error: Video file too large. Maximum size is 500MB.');
+      setVideoStatus('Error: Video file too large. Maximum size is 4GB.');
       return;
     }
 
