@@ -18,6 +18,14 @@ export async function POST(
       );
     }
 
+    // Get user session to prevent duplicate views from same user in short time
+    const cookieStore = await cookies();
+    const userEmail = cookieStore.get('user_email')?.value;
+    
+    // Use a simple rate limit: track views per user per video
+    // For now, we'll just increment - but we could add a views table later for per-user tracking
+    // For simplicity, we'll use a session-based approach: one view per user per video per session
+    
     // Increment view count
     const sql = getDb();
     const result = await sql`

@@ -36,13 +36,15 @@ export default function VideoCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [currentViewCount, setCurrentViewCount] = useState<number | null>(viewCount ?? null);
+  const [hasTrackedView, setHasTrackedView] = useState(false);
 
-  // Track view when exclusive video starts playing
+  // Track view when exclusive video starts playing (only once per session)
   const handlePlay = async () => {
     setIsPlaying(true);
     
-    // Track view for exclusive videos
-    if (isExclusive && videoDbId && videoType === 'exclusive') {
+    // Track view for exclusive videos (only once per play session)
+    if (isExclusive && videoDbId && videoType === 'exclusive' && !hasTrackedView) {
+      setHasTrackedView(true); // Prevent duplicate tracking
       try {
         const res = await fetch(`/api/videos/${videoDbId}/view`, {
           method: 'POST',
@@ -53,8 +55,15 @@ export default function VideoCard({
         }
       } catch (error) {
         console.error('Failed to track video view:', error);
+        setHasTrackedView(false); // Reset on error so it can retry
       }
     }
+  };
+  
+  // Reset tracking when video is paused/stopped (for new play session)
+  const handlePause = () => {
+    setIsPlaying(false);
+    // Don't reset hasTrackedView here - we want to track once per page load, not per play
   };
 
   // Build YouTube embed URL with optional autoplay and mute (mute allows autoplay on hover)
@@ -142,7 +151,8 @@ export default function VideoCard({
             autoPlay
             className="w-full h-full"
             onPlay={handlePlay}
-            onPause={() => setIsPlaying(false)}
+            onPause={handlePause}
+            onEnded={handlePause}
           >
             Your browser does not support the video tag.
           </video>

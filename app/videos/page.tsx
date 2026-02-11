@@ -79,6 +79,9 @@ export default function VideosPage() {
     };
     fetchVideos();
     
+    // Poll for new videos every 10 seconds (for faster updates after upload)
+    const interval = setInterval(fetchVideos, 10000);
+    
     // Also refetch when page becomes visible (in case video was just uploaded)
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
@@ -89,6 +92,7 @@ export default function VideosPage() {
     window.addEventListener('focus', fetchVideos);
     
     return () => {
+      clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', fetchVideos);
     };
