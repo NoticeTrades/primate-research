@@ -157,7 +157,7 @@ export default function VideoCard({
             ) : (
               <>
                 {/* Placeholder for videos without thumbnails */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center z-10">
                   {isExclusiveVideo && (
                     <div className="mb-4 px-3 py-1 text-xs font-bold text-blue-400 bg-blue-500/20 border border-blue-500/30 rounded-full">
                       EXCLUSIVE
@@ -177,7 +177,7 @@ export default function VideoCard({
                 {videoUrl && (
                   <button
                     onClick={() => setIsPlaying(true)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors"
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors z-20"
                     suppressHydrationWarning
                   >
                     <div className={`w-20 h-20 ${isExclusiveVideo ? 'bg-blue-500/90 hover:bg-blue-600/90' : 'bg-white/90 dark:bg-zinc-800/90'} rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110`}>
