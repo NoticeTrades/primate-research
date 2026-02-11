@@ -81,10 +81,10 @@ export default function Navigation() {
             if (newUnreadCount > previousUnreadCount && previousUnreadCount > 0) {
               // New unread notifications arrived
               const newUnread = newNotifications
-                .filter((n) => !n.is_read)
+                .filter((n: { is_read: boolean }) => !n.is_read)
                 .slice(0, newUnreadCount - previousUnreadCount);
               
-              newUnread.forEach((notification) => {
+              newUnread.forEach((notification: { id: number; title: string; description: string; link: string }) => {
                 const browserNotification = new Notification(notification.title, {
                   body: notification.description || '',
                   icon: '/favicon.ico',
