@@ -310,10 +310,24 @@ export default function AdminPage() {
       return;
     }
 
-    // Validate file size (max 4GB - Vercel Blob limit)
-    const maxSize = 4 * 1024 * 1024 * 1024; // 4GB
-    if (videoFile.size > maxSize) {
-      setVideoStatus('Error: Video file too large. Maximum size is 4GB.');
+    // Validate file size
+    // Vercel Blob limits: Free tier = 500MB, Pro tier = 4.5GB
+    const freeTierLimit = 500 * 1024 * 1024; // 500MB
+    const proTierLimit = 4.5 * 1024 * 1024 * 1024; // 4.5GB
+    
+    if (videoFile.size > freeTierLimit) {
+      const fileSizeGB = (videoFile.size / (1024 * 1024 * 1024)).toFixed(2);
+      setVideoStatus(
+        `Error: File size (${fileSizeGB}GB) exceeds Vercel Blob Free tier limit (500MB). ` +
+        `Your file is ${fileSizeGB}GB. You need to either: ` +
+        `1) Upgrade to Vercel Pro plan (supports up to 4.5GB), or ` +
+        `2) Compress/reduce the video file size to under 500MB.`
+      );
+      return;
+    }
+    
+    if (videoFile.size > proTierLimit) {
+      setVideoStatus('Error: Video file too large. Maximum size is 4.5GB (Vercel Blob Pro tier limit).');
       return;
     }
 
