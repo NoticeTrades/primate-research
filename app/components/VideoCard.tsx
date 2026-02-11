@@ -222,11 +222,11 @@ export default function VideoCard({
           {(date && viewCount != null && viewCount > 0) && <span aria-hidden>·</span>}
           {viewCount != null && viewCount > 0 && <span>{formatViews(viewCount)}</span>}
         </div>
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-visible">
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-500 mb-1.5">
             Description
           </p>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-line">
+          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-line break-words overflow-visible">
             {description ?? 'No description.'}
           </p>
         </div>
