@@ -366,17 +366,18 @@ export default function AdminPage() {
       setUploadedVideoUrl(videoBlob.url);
       setUploadedThumbnailUrl(thumbnailUrl);
 
-      // Step 2: Add video to The Vault
+      // Step 4: Add video to The Vault
+      setVideoStatus('Adding video to database...');
       const addRes = await fetch('/api/videos/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: videoTitle,
           description: videoDescription,
-          videoUrl: uploadData.videoUrl,
+          videoUrl: videoBlob.url,
           videoType: 'exclusive',
           category: videoCategory,
-          thumbnailUrl: uploadData.thumbnailUrl || '',
+          thumbnailUrl: thumbnailUrl || '',
           date: videoDate || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
           duration: videoDuration || '',
           isExclusive: true,
