@@ -117,10 +117,10 @@ export default function VideoCard({
 
   const isYouTube = videoType === 'youtube' || (!videoType && videoUrl?.includes('youtube'));
   const isExclusiveVideo = videoType === 'exclusive' || isExclusive;
-  const showIframe = videoUrl && isYouTube && (isPlaying || isHovering);
+  const showIframe = videoUrl && isYouTube && isPlaying;
   const showVideo = videoUrl && isExclusiveVideo && isPlaying;
   const embedUrl = showIframe
-    ? getEmbedUrl(videoUrl!, { autoplay: true, mute: isHovering && !isPlaying })
+    ? getEmbedUrl(videoUrl!, { autoplay: true, mute: false })
     : '';
 
   return (
@@ -130,29 +130,17 @@ export default function VideoCard({
           ? 'border-blue-500/30 dark:border-blue-500/30 shadow-blue-500/10'
           : 'border-zinc-200 dark:border-zinc-800'
       }`}
-      onMouseEnter={() => videoUrl && isYouTube && setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
     >
       <div className="relative aspect-video bg-zinc-100 dark:bg-zinc-800 shrink-0 overflow-hidden rounded-t-lg">
         {showIframe ? (
-          <>
-            <iframe
-              key={isHovering ? 'hover' : 'play'}
-              src={embedUrl}
-              className={`w-full h-full ${isHovering && !isPlaying ? 'pointer-events-none' : ''}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title={title}
-            />
-            {isHovering && !isPlaying && (
-              <button
-                type="button"
-                className="absolute inset-0 cursor-pointer"
-                onClick={() => setIsPlaying(true)}
-                aria-label="Play with sound"
-              />
-            )}
-          </>
+          <iframe
+            key="play"
+            src={embedUrl}
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={title}
+          />
         ) : showVideo && isExclusiveVideo ? (
           <video
             src={videoUrl}
@@ -240,11 +228,6 @@ export default function VideoCard({
         {duration && !showIframe && (
           <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
             {duration}
-          </div>
-        )}
-        {isHovering && !isPlaying && (
-          <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-            Muted · click for sound
           </div>
         )}
       </div>
