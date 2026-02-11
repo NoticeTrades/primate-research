@@ -12,30 +12,21 @@
 6. Give it a name (e.g., "primate-videos")
 7. Click **Create**
 
-### Step 2: Get Your Token
+### Step 2: Verify Token (Usually Automatic!)
 
 1. In your Vercel project, go to **Settings** → **Environment Variables**
-2. You should see `BLOB_READ_WRITE_TOKEN` automatically added
-3. If not, go to **Storage** → Your Blob store → **Settings**
-4. Copy the `BLOB_READ_WRITE_TOKEN`
+2. Check if `BLOB_READ_WRITE_TOKEN` is already there
+3. **If it's already there** → You're all set! Skip to Step 3.
+4. **If it's missing** → Go to **Storage** → Your Blob store → **Settings** → Copy the token and add it manually
 
-### Step 3: Add Environment Variable
-
-1. In Vercel dashboard: **Settings** → **Environment Variables**
-2. Add a new variable:
-   - **Name**: `BLOB_READ_WRITE_TOKEN`
-   - **Value**: (paste your token from Step 2)
-   - **Environment**: Production, Preview, Development (check all)
-3. Click **Save**
-
-### Step 4: Redeploy
+### Step 3: Redeploy (If Token Was Just Added)
 
 1. Go to **Deployments** tab
 2. Click the **⋯** menu on the latest deployment
 3. Click **Redeploy**
 4. Wait for deployment to complete
 
-### Step 5: Test Upload
+### Step 4: Test Upload
 
 1. Go to `/admin` on your site
 2. Scroll to **"Upload Video to The Vault"** section
