@@ -34,7 +34,6 @@ export default function VideoCard({
   videoDbId = null,
 }: VideoCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
   const [currentViewCount, setCurrentViewCount] = useState<number | null>(viewCount ?? null);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isTrackingView, setIsTrackingView] = useState(false);
