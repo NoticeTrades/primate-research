@@ -37,16 +37,21 @@ function parseDate(dateStr: string | undefined): number {
   return year * 12 + month;
 }
 
+type SourceFilter = 'all' | 'youtube' | 'exclusive';
+
 export default function VideosPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [categoryFilter, setCategoryFilter] = useState<VideoCategory>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showSourceDropdown, setShowSourceDropdown] = useState(false);
   const [viewCounts, setViewCounts] = useState<Record<string, number | null>>({});
   const [exclusiveViewCounts, setExclusiveViewCounts] = useState<Record<number, number>>({});
   const [dbVideos, setDbVideos] = useState<VideoEntry[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const sourceDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch videos from database
   useEffect(() => {
@@ -159,7 +164,7 @@ export default function VideosPage() {
     fetchViewCounts();
   }, [videoIds.join(',')]);
 
-  // Close category dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -167,6 +172,12 @@ export default function VideosPage() {
         !categoryDropdownRef.current.contains(e.target as Node)
       ) {
         setShowCategoryDropdown(false);
+      }
+      if (
+        sourceDropdownRef.current &&
+        !sourceDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowSourceDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -181,8 +192,23 @@ export default function VideosPage() {
       result = result.filter((v) => v.category === categoryFilter || !v.category);
     }
     
+    // Apply source filter (YouTube vs Exclusive)
+    if (sourceFilter !== 'all') {
+      if (sourceFilter === 'youtube') {
+        result = result.filter((v) => {
+          const isYouTube = v.videoType === 'youtube' || (!v.videoType && v.videoUrl?.includes('youtube'));
+          return isYouTube;
+        });
+      } else if (sourceFilter === 'exclusive') {
+        result = result.filter((v) => {
+          const isExclusive = v.isExclusive || v.videoType === 'exclusive';
+          return isExclusive;
+        });
+      }
+    }
+    
     return result;
-  }, [searchQuery, categoryFilter, allVideos]);
+  }, [searchQuery, categoryFilter, sourceFilter, allVideos]);
 
   const sorted = useMemo(() => {
     const withViews = filtered.map((v) => {
