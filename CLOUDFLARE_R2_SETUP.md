@@ -29,7 +29,45 @@ Cloudflare R2 is now integrated as the primary video storage solution. It suppor
    - Look at the URL in your browser when on the R2 page: `https://dash.cloudflare.com/[ACCOUNT_ID]/r2`
    - OR go to your Cloudflare account settings → find "Account ID" in the right sidebar
 
-### Step 3: Configure Public Access (Optional but Recommended)
+### Step 3: Configure CORS (Required for Browser Uploads)
+
+**This is critical!** Without CORS, you'll get "Failed to fetch" errors.
+
+1. In your R2 bucket, go to **Settings**
+2. Scroll down to **CORS Policy**
+3. Click **Edit CORS Policy**
+4. Add this CORS configuration:
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://www.primatetrading.com",
+      "https://primatetrading.com",
+      "http://localhost:3000"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "PUT",
+      "POST",
+      "HEAD"
+    ],
+    "AllowedHeaders": [
+      "*"
+    ],
+    "ExposeHeaders": [
+      "ETag"
+    ],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+**Important**: Replace `primatetrading.com` with your actual domain, and add `localhost:3000` for local development.
+
+5. Click **Save**
+
+### Step 4: Configure Public Access (Optional but Recommended)
 
 1. In your R2 bucket, go to **Settings**
 2. Under **Public Access**, click **Allow Access**
@@ -40,7 +78,7 @@ Cloudflare R2 is now integrated as the primary video storage solution. It suppor
 2. Add your domain (e.g., `videos.primatetrading.com`)
 3. Follow DNS setup instructions
 
-### Step 4: Add Environment Variables
+### Step 5: Add Environment Variables
 
 Add these to your Vercel project:
 
@@ -61,7 +99,7 @@ R2_PUBLIC_URL=https://pub-xxxxx.r2.dev/primate-trading-videos
 R2_PUBLIC_URL=https://videos.primatetrading.com
 ```
 
-### Step 5: Redeploy
+### Step 6: Redeploy
 
 After adding environment variables:
 1. Go to **Deployments** tab
@@ -104,10 +142,13 @@ The system automatically:
 - Check that all environment variables are set in Vercel
 - Make sure you redeployed after adding variables
 
-**Error: "Failed to upload to R2"**
+**Error: "Failed to upload to R2" or "Failed to fetch"**
+- **Most common issue**: CORS not configured! Go to R2 bucket → Settings → CORS Policy and add your domain
 - Check R2 bucket permissions
 - Verify API token has correct permissions
 - Check bucket name matches `R2_BUCKET_NAME`
+- Verify all environment variables are set correctly
+- Check browser console for detailed error messages
 
 **Videos not loading**
 - Verify `R2_PUBLIC_URL` is correct

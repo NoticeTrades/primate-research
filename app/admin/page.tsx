@@ -362,7 +362,9 @@ export default function AdminPage() {
           });
 
           if (!uploadRes.ok) {
-            throw new Error('Failed to upload to R2');
+            const errorText = await uploadRes.text().catch(() => 'Unknown error');
+            console.error('R2 upload response:', uploadRes.status, errorText);
+            throw new Error(`Failed to upload to R2: ${uploadRes.status} ${errorText}`);
           }
 
           videoUrl = r2Data.publicUrl;
@@ -401,11 +403,16 @@ export default function AdminPage() {
         } catch (uploadError: any) {
           clearTimeout(timeoutWarning);
           console.error('R2 upload error:', uploadError);
-          if (uploadError.message?.includes('timeout') || uploadError.message?.includes('network')) {
-            setVideoStatus('Error: Upload timed out. Please check your internet connection and try again.');
-          } else {
-            setVideoStatus(`Error: R2 upload failed - ${uploadError.message || 'Unknown error'}`);
+          let errorMessage = uploadError.message || 'Unknown error';
+          
+          // Check for CORS errors
+          if (errorMessage.includes('Failed to fetch') || errorMessage.includes('CORS') || errorMessage.includes('NetworkError')) {
+            errorMessage = 'CORS error: Please configure CORS on your R2 bucket. See CLOUDFLARE_R2_SETUP.md for instructions.';
+          } else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+            errorMessage = 'Upload timed out. Please check your internet connection and try again.';
           }
+          
+          setVideoStatus(`Error: R2 upload failed - ${errorMessage}`);
           return;
         }
       } else {
