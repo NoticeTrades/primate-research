@@ -14,17 +14,20 @@ Cloudflare R2 is now integrated as the primary video storage solution. It suppor
 
 ### Step 2: Get R2 Credentials
 
-1. In the R2 dashboard, click **Manage R2 API Tokens**
-2. Click **Create API Token**
-3. Select your bucket
+1. In the R2 dashboard, look for **Manage R2 API Tokens** or **API Tokens** (usually in the top right or in Settings)
+2. Click **Create API Token** (this is specifically for R2, not the general Cloudflare API tokens)
+3. Give it a name (e.g., "Primate Trading Videos")
 4. Set permissions:
    - **Object Read & Write** (for uploads)
    - **Object Read** (for public access)
-5. Click **Create API Token**
-6. **Save these credentials** (you won't see them again):
-   - **Account ID** (found in R2 dashboard URL or account settings)
-   - **Access Key ID**
-   - **Secret Access Key**
+5. **Important**: The token applies to all buckets by default, OR you can restrict it to specific buckets if that option appears
+6. Click **Create API Token**
+7. **CRITICAL: Save these credentials immediately** (you won't see them again):
+   - **Access Key ID** (copy this)
+   - **Secret Access Key** (copy this - this is shown only once!)
+8. **Get your Account ID**:
+   - Look at the URL in your browser when on the R2 page: `https://dash.cloudflare.com/[ACCOUNT_ID]/r2`
+   - OR go to your Cloudflare account settings → find "Account ID" in the right sidebar
 
 ### Step 3: Configure Public Access (Optional but Recommended)
 
