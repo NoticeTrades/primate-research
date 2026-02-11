@@ -326,7 +326,19 @@ export default function AdminPage() {
         body: formData,
       });
 
-      const uploadData = await uploadRes.json();
+      // Check if response is JSON before parsing
+      const contentType = uploadRes.headers.get('content-type');
+      let uploadData;
+      
+      if (contentType && contentType.includes('application/json')) {
+        uploadData = await uploadRes.json();
+      } else {
+        // If not JSON, get text response
+        const textResponse = await uploadRes.text();
+        console.error('Non-JSON response from upload API:', textResponse);
+        setVideoStatus(`Error: Upload failed - ${textResponse.substring(0, 100)}`);
+        return;
+      }
 
       if (!uploadRes.ok) {
         if (uploadData.setupRequired) {
@@ -357,7 +369,19 @@ export default function AdminPage() {
         }),
       });
 
-      const addData = await addRes.json();
+      // Check if response is JSON before parsing
+      const addContentType = addRes.headers.get('content-type');
+      let addData;
+      
+      if (addContentType && addContentType.includes('application/json')) {
+        addData = await addRes.json();
+      } else {
+        // If not JSON, get text response
+        const textResponse = await addRes.text();
+        console.error('Non-JSON response from add API:', textResponse);
+        setVideoStatus(`Error: Video uploaded but failed to add to vault - ${textResponse.substring(0, 100)}`);
+        return;
+      }
 
       if (!addRes.ok) {
         console.error('Failed to add video to vault:', addData);
