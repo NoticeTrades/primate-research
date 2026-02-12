@@ -627,3 +627,15 @@ function VideosPageContent() {
     </div>
   );
 }
+
+export default function VideosPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <VideosPageContent />
+    </Suspense>
+  );
+}
