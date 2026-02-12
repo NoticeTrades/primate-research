@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactElement } from 'react';
 
 interface Comment {
   id: number;
@@ -229,7 +229,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     isSubmitting: boolean;
     collapsedThreads: Set<number>;
     setCollapsedThreads: (set: Set<number> | ((prev: Set<number>) => Set<number>)) => void;
-    getUserBadge: (userRole?: string, username?: string) => JSX.Element | null;
+    getUserBadge: (userRole?: string, username?: string) => ReactElement | null;
     formatDate: (dateString: string) => string;
   }) => {
     const isCollapsed = collapsedThreads.has(comment.id);
