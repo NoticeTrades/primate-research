@@ -10,6 +10,7 @@ interface Comment {
   parentId: number | null;
   createdAt: string;
   isOwnComment: boolean;
+  profilePictureUrl?: string | null;
   replies: Comment[];
 }
 
@@ -237,8 +238,16 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
           {comments.map((comment) => (
             <div key={comment.id} className="border-b border-zinc-200 dark:border-zinc-800 pb-6 last:border-0">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                  {comment.username.charAt(0).toUpperCase()}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold overflow-hidden shrink-0">
+                  {comment.profilePictureUrl ? (
+                    <img
+                      src={comment.profilePictureUrl}
+                      alt={comment.username}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{comment.username.charAt(0).toUpperCase()}</span>
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -294,8 +303,16 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
                     <div className="mt-4 ml-4 pl-4 border-l-2 border-zinc-200 dark:border-zinc-700 space-y-4">
                       {comment.replies.map((reply) => (
                         <div key={reply.id} className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-500/70 flex items-center justify-center text-white text-sm font-semibold">
-                            {reply.username.charAt(0).toUpperCase()}
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/70 to-purple-600/70 flex items-center justify-center text-white text-sm font-semibold overflow-hidden shrink-0">
+                            {reply.profilePictureUrl ? (
+                              <img
+                                src={reply.profilePictureUrl}
+                                alt={reply.username}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span>{reply.username.charAt(0).toUpperCase()}</span>
+                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">

@@ -156,7 +156,8 @@ export default function ProfilePage() {
 
           if (res.ok) {
             const data = await res.json();
-            setProfile(prev => prev ? { ...prev, profilePictureUrl: data.profilePictureUrl } : null);
+            // Reload profile to get updated data
+            await loadProfile();
             alert('Profile picture updated!');
           } else {
             alert('Failed to upload profile picture');
@@ -325,7 +326,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-lg mb-6">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-lg mb-6 relative z-10">
           <div className="border-b border-zinc-200 dark:border-zinc-800">
             <div className="flex">
               <button

@@ -23,35 +23,39 @@ export async function GET(
     const url = new URL(request.url);
     const videoType = url.searchParams.get('videoType') || 'exclusive';
 
-    // Get all top-level comments (no parent_id)
+    // Get all top-level comments (no parent_id) with profile pictures
     const comments = await sql`
       SELECT 
-        id,
-        user_email,
-        username,
-        comment_text,
-        parent_id,
-        created_at
-      FROM video_comments
-      WHERE video_id = ${videoId} AND video_type = ${videoType} AND parent_id IS NULL
-      ORDER BY created_at DESC
+        vc.id,
+        vc.user_email,
+        vc.username,
+        vc.comment_text,
+        vc.parent_id,
+        vc.created_at,
+        u.profile_picture_url
+      FROM video_comments vc
+      LEFT JOIN users u ON vc.user_email = u.email
+      WHERE vc.video_id = ${videoId} AND vc.video_type = ${videoType} AND vc.parent_id IS NULL
+      ORDER BY vc.created_at DESC
     `;
 
-    // Get all replies for each comment
+    // Get all replies for each comment with profile pictures
     const commentIds = comments.map((c: any) => c.id);
     let replies: any[] = [];
     if (commentIds.length > 0) {
       const repliesResult = await sql`
         SELECT 
-          id,
-          user_email,
-          username,
-          comment_text,
-          parent_id,
-          created_at
-        FROM video_comments
-        WHERE parent_id = ANY(${commentIds})
-        ORDER BY created_at ASC
+          vc.id,
+          vc.user_email,
+          vc.username,
+          vc.comment_text,
+          vc.parent_id,
+          vc.created_at,
+          u.profile_picture_url
+        FROM video_comments vc
+        LEFT JOIN users u ON vc.user_email = u.email
+        WHERE vc.parent_id = ANY(${commentIds})
+        ORDER BY vc.created_at ASC
       `;
       replies = repliesResult;
     }
@@ -74,7 +78,17 @@ export async function GET(
       parentId: comment.parent_id,
       createdAt: comment.created_at,
       isOwnComment: userEmail === comment.user_email,
-      replies: repliesByParent[comment.id] || [],
+      profilePictureUrl: comment.profile_picture_url,
+      replies: (repliesByParent[comment.id] || []).map((reply: any) => ({
+        id: reply.id,
+        userEmail: reply.user_email,
+        username: reply.username,
+        commentText: reply.comment_text,
+        parentId: reply.parent_id,
+        createdAt: reply.created_at,
+        isOwnComment: userEmail === reply.user_email,
+        profilePictureUrl: reply.profile_picture_url,
+      })),
     }));
 
     return NextResponse.json({
