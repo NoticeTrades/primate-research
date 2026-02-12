@@ -93,6 +93,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
 
       if (res.ok) {
         const data = await res.json();
+        console.log('Comment posted:', data.comment);
         if (parentId) {
           // Add reply to the parent comment
           setComments(prev =>
@@ -113,6 +114,8 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
             onCommentAdded();
           }
         }
+        // Reload comments to get fresh data with profile pictures
+        await loadComments();
       } else if (res.status === 401) {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       }

@@ -22,18 +22,37 @@ export async function POST(request: Request) {
 
     const sql = getDb();
 
+    // Check if user exists first
+    const userCheck = await sql`
+      SELECT email FROM users WHERE email = ${userEmail} LIMIT 1
+    `;
+    
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Update profile picture
     const result = await sql`
       UPDATE users
       SET profile_picture_url = ${imageUrl}
       WHERE email = ${userEmail}
-      RETURNING profile_picture_url
+      RETURNING profile_picture_url, email
     `;
 
     if (result.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      console.error('Profile picture update failed - no rows affected for:', userEmail);
+      return NextResponse.json({ error: 'Failed to update profile picture' }, { status: 500 });
     }
 
-    console.log('Profile picture updated for:', userEmail, 'URL:', result[0].profile_picture_url);
+    console.log('Profile picture updated successfully for:', userEmail);
+    console.log('Profile picture URL length:', (result[0].profile_picture_url || '').length);
+
+    // Verify the update by fetching the user again
+    const verify = await sql`
+      SELECT profile_picture_url FROM users WHERE email = ${userEmail} LIMIT 1
+    `;
+    
+    console.log('Verification - Profile picture URL exists:', !!verify[0]?.profile_picture_url);
 
     return NextResponse.json({
       success: true,

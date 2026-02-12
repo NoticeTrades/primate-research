@@ -164,6 +164,15 @@ export async function POST(
         RETURNING id, user_email, username, comment_text, parent_id, created_at
       `;
 
+      // Get user's profile picture
+      const userProfile = await sql`
+        SELECT profile_picture_url
+        FROM users
+        WHERE email = ${userEmail}
+        LIMIT 1
+      `;
+      const profilePictureUrl = userProfile.length > 0 ? userProfile[0].profile_picture_url : null;
+
       // If this is a reply, send notification to the parent comment author
       if (parentId) {
         try {
@@ -212,6 +221,7 @@ export async function POST(
           parentId: result[0].parent_id,
           createdAt: result[0].created_at,
           isOwnComment: true,
+          profilePictureUrl: profilePictureUrl,
           replies: [],
         },
       });
