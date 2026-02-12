@@ -31,6 +31,7 @@ Primate Research is a premium trading and investment research platform built wit
   - My comments view
   - Account settings
   - Accessible via username dropdown in navigation
+  - **User Badge Display**: Gold "Founder" badge for `noticetrades`, blue "PREMIUM" for others
 
 ### 2. Notification System
 - **Location**: `/app/notifications/page.tsx`, `/app/api/notifications/*`
@@ -128,6 +129,7 @@ Primate Research is a premium trading and investment research platform built wit
 - `users.profile_picture_url`: Base64 or URL for profile pictures
 - `users.bio`: User biography
 - `users.browser_notifications_enabled`: Browser notification preference
+- `users.user_role`: User role ('owner' for noticetrades, 'premium' for others)
 - `video_comments.parent_id`: Enables nested replies
 
 ## API Routes
@@ -178,7 +180,10 @@ Primate Research is a premium trading and investment research platform built wit
 - Username dropdown (links to profile)
 - "The Jungle" dropdown (Videos, Trades, Calendar)
 - X (Twitter) link
-- Premium badge
+- **User Badge System**:
+  - Gold "Founder" badge for `noticetrades` account (with gold glow effect on hover)
+  - Blue "Premium" badge for all other users
+  - Badge appears next to username in navigation
 
 ### VideoCard (`/app/components/VideoCard.tsx`)
 - Video playback (YouTube iframe or HTML5 video)
@@ -193,6 +198,7 @@ Primate Research is a premium trading and investment research platform built wit
 - Reply functionality
 - Delete own comments
 - Character limit (2000)
+- **User Badge Display**: Shows "Founder" (gold) or "PREMIUM" (blue) badges next to usernames
 
 ### FeedbackWidget (`/app/components/FeedbackWidget.tsx`)
 - Floating button (bottom right)
@@ -257,6 +263,11 @@ Routes requiring authentication:
 3. **Video Engagement**: Like, save, and comment features
 4. **Notifications**: Comment reply notifications
 5. **UI Fixes**: Z-index issues, profile picture persistence, date formatting
+6. **User Badge System**: 
+   - Gold "Founder" badge for `noticetrades` account (gold glow effect)
+   - Blue "Premium" badge for all other users
+   - Displayed in navigation, profile page, and video comments
+   - Badge colors: Gold (#FFD700) for Founder, Blue (#1DA1F2) for Premium
 
 ## Known Limitations & Future Enhancements
 
@@ -281,6 +292,8 @@ Routes requiring authentication:
 - Notification system uses both global and user-specific notifications
 - Video uploads use R2 as primary, Vercel Blob as fallback
 - SEO is fully implemented with dynamic OG images
+- User badge system: Gold for Founder (`noticetrades`), Blue for Premium users
+- Badge CSS classes: `.verified-badge` (blue glow), `.founder-badge` (gold glow)
 
 ## Contact & Support
 
@@ -291,6 +304,16 @@ For questions or issues, refer to:
 
 ---
 
-**Last Updated**: Current session
+**Last Updated**: February 2025
 **Status**: Production-ready with active development
+
+## User Role System
+
+- **Owner Role**: Assigned to `noticetrades` username
+  - Displays gold "Founder" badge in navigation, profile, and comments
+  - Gold glow effect on hover in navigation
+- **Premium Role**: Default for all other users
+  - Displays blue "PREMIUM" badge
+- Role is stored in `users.user_role` column
+- Badge logic checks both `username === 'noticetrades'` and `userRole === 'owner'`
 
