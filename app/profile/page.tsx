@@ -100,7 +100,14 @@ export default function ProfilePage() {
         const userData = {
           ...data.user,
           profilePictureUrl: data.user.profilePictureUrl || data.user.profile_picture_url || null,
+          userRole: data.user.userRole || data.user.user_role || 'premium',
         };
+        console.log('Profile loaded:', {
+          username: userData.username,
+          hasProfilePicture: !!userData.profilePictureUrl,
+          profilePictureLength: userData.profilePictureUrl?.length || 0,
+          userRole: userData.userRole,
+        });
         setProfile(userData);
         setBioText(userData.bio || '');
       } else {
