@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ReactElement } from 'react';
+import { useState, useEffect, useRef, ReactElement } from 'react';
 
 interface Comment {
   id: number;
@@ -232,10 +232,24 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     getUserBadge: (userRole?: string, username?: string) => ReactElement | null;
     formatDate: (dateString: string) => string;
   }) => {
+    const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const wasReplyingRef = useRef(false);
     const isCollapsed = collapsedThreads.has(comment.id);
     const replyCount = comment.replies.length;
     const maxDepth = 5; // Maximum nesting depth before collapsing
     const shouldCollapse = depth >= maxDepth || replyCount > 10; // Collapse if too deep or too many replies
+
+    // Focus the textarea when reply form first opens (not on every render)
+    const isReplying = replyingTo === comment.id;
+    useEffect(() => {
+      if (isReplying && !wasReplyingRef.current && replyTextareaRef.current) {
+        // Small delay to ensure the textarea is rendered
+        setTimeout(() => {
+          replyTextareaRef.current?.focus();
+        }, 0);
+      }
+      wasReplyingRef.current = isReplying;
+    }, [isReplying]);
 
     const toggleCollapse = () => {
       setCollapsedThreads(prev => {
@@ -308,10 +322,17 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
               <form
                 onSubmit={(e) => handleSubmitComment(e, comment.id)}
                 className="mt-3 flex gap-2"
+                onClick={(e) => e.stopPropagation()}
               >
                 <textarea
+                  ref={replyTextareaRef}
                   value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setReplyText(e.target.value);
+                  }}
+                  onFocus={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   placeholder={`Reply to ${comment.username}...`}
                   rows={2}
                   maxLength={2000}
@@ -359,19 +380,6 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {onClose && (
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-black dark:text-white">Comments</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Comment form */}
       {isAuthenticated ? (
