@@ -26,8 +26,18 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Map snake_case to camelCase for frontend
+    const user = users[0];
     return NextResponse.json({
-      user: users[0],
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        profilePictureUrl: user.profile_picture_url, // Map to camelCase
+        bio: user.bio,
+        createdAt: user.created_at,
+      },
     });
   } catch (error: any) {
     console.error('Get profile error:', error);
@@ -81,9 +91,19 @@ export async function POST(request: Request) {
       LIMIT 1
     `;
 
+    // Map snake_case to camelCase for frontend
+    const user = users[0];
     return NextResponse.json({
       success: true,
-      user: users[0],
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        profilePictureUrl: user.profile_picture_url, // Map to camelCase
+        bio: user.bio,
+        createdAt: user.created_at,
+      },
     });
   } catch (error: any) {
     console.error('Update profile error:', error);

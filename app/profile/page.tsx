@@ -89,9 +89,18 @@ export default function ProfilePage() {
       const res = await fetch('/api/user/profile', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        console.log('Profile loaded:', data.user);
-        setProfile(data.user);
-        setBioText(data.user.bio || '');
+        console.log('Profile loaded:', {
+          username: data.user?.username,
+          hasProfilePicture: !!data.user?.profilePictureUrl,
+          profilePictureLength: data.user?.profilePictureUrl?.length || 0,
+        });
+        // Ensure profilePictureUrl is set (handle both snake_case and camelCase)
+        const userData = {
+          ...data.user,
+          profilePictureUrl: data.user.profilePictureUrl || data.user.profile_picture_url || null,
+        };
+        setProfile(userData);
+        setBioText(userData.bio || '');
       } else {
         const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
         console.error('Failed to load profile:', errorData);
