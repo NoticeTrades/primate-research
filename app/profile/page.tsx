@@ -148,8 +148,22 @@ export default function ProfilePage() {
     try {
       // Convert to base64 for now (in production, upload to R2/Blob)
       const reader = new FileReader();
+      reader.onerror = () => {
+        console.error('FileReader error');
+        alert('Failed to read image file');
+        setUploadingPicture(false);
+      };
       reader.onloadend = async () => {
         const base64String = reader.result as string;
+        
+        if (!base64String || typeof base64String !== 'string') {
+          console.error('Invalid base64 string');
+          alert('Failed to process image');
+          setUploadingPicture(false);
+          return;
+        }
+        
+        console.log('Uploading profile picture, base64 length:', base64String.length);
         
         try {
           const res = await fetch('/api/user/profile-picture', {
@@ -158,21 +172,22 @@ export default function ProfilePage() {
             body: JSON.stringify({ imageUrl: base64String }),
           });
 
-          if (res.ok) {
-            const data = await res.json();
+          const responseData = await res.json().catch(() => ({}));
+          
+          if (res.ok && responseData.success) {
+            console.log('Profile picture uploaded successfully:', responseData.profilePictureUrl);
             // Update profile state immediately
-            setProfile(prev => prev ? { ...prev, profilePictureUrl: data.profilePictureUrl } : null);
+            setProfile(prev => prev ? { ...prev, profilePictureUrl: responseData.profilePictureUrl } : null);
             // Also reload profile to ensure consistency
             await loadProfile();
             alert('Profile picture updated!');
           } else {
-            const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('Upload failed:', errorData);
-            alert(`Failed to upload profile picture: ${errorData.error || 'Unknown error'}`);
+            console.error('Upload failed:', res.status, responseData);
+            alert(`Failed to upload profile picture: ${responseData.error || 'Unknown error'}`);
           }
         } catch (error) {
           console.error('Upload error:', error);
-          alert('Failed to upload profile picture');
+          alert('Failed to upload profile picture. Please check console for details.');
         } finally {
           setUploadingPicture(false);
         }
@@ -181,6 +196,7 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('File read error:', error);
       setUploadingPicture(false);
+      alert('Failed to read image file');
     }
   };
 
