@@ -436,8 +436,64 @@ export default function NotificationsPage() {
         return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
       case 'comment_reply':
         return 'bg-green-500/15 text-green-400 border-green-500/30';
+      case 'alert':
+        return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30';
       default:
         return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30';
+    }
+  };
+
+  const getTypeBorderColor = (type: string, isRead: boolean) => {
+    if (isRead) {
+      switch (type.toLowerCase()) {
+        case 'article':
+        case 'research':
+          return 'border-blue-500/30';
+        case 'update':
+          return 'border-yellow-500/30';
+        case 'video':
+          return 'border-purple-500/30';
+        case 'comment_reply':
+          return 'border-green-500/30';
+        case 'alert':
+          return 'border-zinc-500/30';
+        default:
+          return 'border-zinc-500/30';
+      }
+    } else {
+      switch (type.toLowerCase()) {
+        case 'article':
+        case 'research':
+          return 'border-blue-500/50';
+        case 'update':
+          return 'border-yellow-500/50';
+        case 'video':
+          return 'border-purple-500/50';
+        case 'comment_reply':
+          return 'border-green-500/50';
+        case 'alert':
+          return 'border-zinc-500/50';
+        default:
+          return 'border-zinc-500/50';
+      }
+    }
+  };
+
+  const getTypeGlowColor = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'article':
+      case 'research':
+        return 'shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-500/5';
+      case 'update':
+        return 'shadow-[0_0_15px_rgba(234,179,8,0.15)] bg-yellow-500/5';
+      case 'video':
+        return 'shadow-[0_0_15px_rgba(168,85,247,0.15)] bg-purple-500/5';
+      case 'comment_reply':
+        return 'shadow-[0_0_20px_rgba(34,197,94,0.15)] bg-green-500/5';
+      case 'alert':
+        return 'shadow-[0_0_15px_rgba(161,161,170,0.08)]';
+      default:
+        return 'shadow-[0_0_15px_rgba(161,161,170,0.08)]';
     }
   };
 
@@ -697,14 +753,10 @@ export default function NotificationsPage() {
               {filteredNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`bg-zinc-900/80 border rounded-xl overflow-hidden transition-all hover:border-zinc-600 ${
+                  className={`bg-zinc-900/80 border rounded-xl overflow-hidden transition-all hover:opacity-90 ${
                     notification.is_read
-                      ? notification.type === 'comment_reply'
-                        ? 'border-green-500/30 opacity-75'
-                        : 'border-zinc-800/60 opacity-75'
-                      : notification.type === 'comment_reply'
-                        ? 'border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.15)] bg-green-500/5'
-                        : 'border-zinc-800 shadow-[0_0_15px_rgba(59,130,246,0.08)]'
+                      ? `${getTypeBorderColor(notification.type, true)} opacity-75`
+                      : `${getTypeBorderColor(notification.type, false)} ${getTypeGlowColor(notification.type)}`
                   }`}
                 >
                   <div className="flex items-start gap-4 p-4">
