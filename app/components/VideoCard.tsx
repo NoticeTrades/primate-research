@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface VideoCardProps {
   title: string;
@@ -52,6 +52,7 @@ export default function VideoCard({
   const [isSaving, setIsSaving] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   
   // Truncate description if it's longer than 50 words
   const WORD_LIMIT = 50;
@@ -228,6 +229,13 @@ export default function VideoCard({
     setIsBuffering(true);
     setIsPlaying(true);
     setHasStarted(true);
+    
+    // Switch to aggressive preloading when user clicks play
+    if (videoRef.current && isExclusiveVideo) {
+      videoRef.current.preload = 'auto';
+      // Force browser to start loading aggressively
+      videoRef.current.load();
+    }
   };
 
   // Build YouTube embed URL with optional autoplay and mute (mute allows autoplay on hover)
@@ -329,10 +337,11 @@ export default function VideoCard({
                 </div>
               )}
               <video
+                ref={videoRef}
                 src={videoUrl}
                 controls
                 autoPlay={isPlaying}
-                preload="auto"
+                preload="metadata"
                 crossOrigin="anonymous"
                 playsInline
                 className="w-full h-full"
@@ -347,7 +356,7 @@ export default function VideoCard({
                   }
                 }}
                 onCanPlay={() => {
-                  // Video can start playing
+                  // Video can start playing - start playing immediately if user clicked play
                   setIsLoading(false);
                   setIsBuffering(false);
                   setHasStarted(true);
@@ -365,15 +374,25 @@ export default function VideoCard({
                   setHasStarted(true);
                 }}
                 onProgress={(e) => {
-                  // Track loading progress
+                  // Track loading progress and optimize buffering
                   const video = e.currentTarget;
                   if (video.buffered.length > 0 && video.duration > 0) {
                     const bufferedEnd = video.buffered.end(video.buffered.length - 1);
                     const progress = (bufferedEnd / video.duration) * 100;
                     setLoadProgress(progress);
-                    // If we have enough buffered, stop showing loading
-                    if (progress > 10 && !hasStarted) {
+                    
+                    // If we have enough buffered (5%), allow playback
+                    if (progress > 5 && !hasStarted && isPlaying) {
                       setIsLoading(false);
+                    }
+                    
+                    // Monitor buffering ahead - if low, switch to aggressive preload
+                    if (isPlaying && video.currentTime > 0) {
+                      const bufferedAhead = bufferedEnd - video.currentTime;
+                      if (bufferedAhead < 5 && video.preload !== 'auto') {
+                        // Less than 5 seconds buffered - switch to aggressive loading
+                        video.preload = 'auto';
+                      }
                     }
                   }
                 }}
@@ -388,14 +407,16 @@ export default function VideoCard({
                   setVideoError(false);
                   setIsLoading(false);
                   setHasStarted(true);
-                  console.log('Video loaded successfully');
                 }}
                 onLoadStart={() => {
                   setVideoError(false);
                   setIsLoading(true);
                   setIsBuffering(true);
                   setLoadProgress(0);
-                  console.log('Video loading started');
+                }}
+                onLoadedMetadata={() => {
+                  // Metadata loaded - video is ready to start buffering
+                  setIsLoading(false);
                 }}
               >
                 <source src={videoUrl} type="video/mp4" />
