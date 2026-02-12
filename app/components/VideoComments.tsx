@@ -245,7 +245,13 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
       if (isReplying && !wasReplyingRef.current && replyTextareaRef.current) {
         // Small delay to ensure the textarea is rendered
         setTimeout(() => {
-          replyTextareaRef.current?.focus();
+          const textarea = replyTextareaRef.current;
+          if (textarea) {
+            textarea.focus();
+            // Set cursor to end of text to prevent backwards typing
+            const length = textarea.value.length;
+            textarea.setSelectionRange(length, length);
+          }
         }, 0);
       }
       wasReplyingRef.current = isReplying;
@@ -331,8 +337,20 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
                     e.stopPropagation();
                     setReplyText(e.target.value);
                   }}
-                  onFocus={(e) => e.stopPropagation()}
+                  onFocus={(e) => {
+                    e.stopPropagation();
+                    // Set cursor to end when focused to prevent backwards typing
+                    const textarea = e.target;
+                    const length = textarea.value.length;
+                    textarea.setSelectionRange(length, length);
+                  }}
                   onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    // Prevent cursor from jumping to beginning
+                    if (e.key === 'ArrowLeft' && e.target.selectionStart === 0 && e.target.selectionEnd === 0) {
+                      // Allow normal left arrow behavior
+                    }
+                  }}
                   placeholder={`Reply to ${comment.username}...`}
                   rows={2}
                   maxLength={2000}
