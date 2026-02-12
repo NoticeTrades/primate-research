@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Navigation from '../components/Navigation';
 import CursorGlow from '../components/CursorGlow';
 import CursorHover from '../components/CursorHover';
@@ -41,6 +42,7 @@ function parseDate(dateStr: string | undefined): number {
 type SourceFilter = 'all' | 'youtube' | 'exclusive';
 
 export default function VideosPage() {
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [categoryFilter, setCategoryFilter] = useState<VideoCategory>('all');
@@ -56,6 +58,7 @@ export default function VideosPage() {
   const [selectedVideoType, setSelectedVideoType] = useState<'youtube' | 'exclusive' | 'external'>('exclusive');
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const sourceDropdownRef = useRef<HTMLDivElement>(null);
+  const [hasCheckedUrlParams, setHasCheckedUrlParams] = useState(false);
 
   // Fetch videos from database
   useEffect(() => {
