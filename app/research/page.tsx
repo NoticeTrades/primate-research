@@ -103,7 +103,7 @@ function ResearchPageContent() {
     selectedTags.length > 0;
 
   return (
-    <div className="min-h-screen bg-black dark:bg-zinc-950 relative">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/30 to-zinc-950 relative">
       <CursorGlow />
       <CursorHover />
       <DiscordSign />

@@ -141,7 +141,7 @@ export default function TickerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-zinc-50">
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/30 to-zinc-950 text-zinc-50">
         <Navigation />
         <div className="fixed top-[72px] left-0 right-0 z-40">
           <MarketTicker />
@@ -155,7 +155,7 @@ export default function TickerPage() {
 
   if (error || !cryptoData) {
     return (
-      <div className="min-h-screen bg-black text-zinc-50">
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/30 to-zinc-950 text-zinc-50">
         <Navigation />
         <div className="fixed top-[72px] left-0 right-0 z-40">
           <MarketTicker />
