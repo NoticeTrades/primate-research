@@ -86,11 +86,15 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const res = await fetch('/api/user/profile');
+      const res = await fetch('/api/user/profile', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
+        console.log('Profile loaded:', data.user);
         setProfile(data.user);
         setBioText(data.user.bio || '');
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Failed to load profile:', errorData);
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
