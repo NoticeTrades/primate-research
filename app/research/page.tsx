@@ -6,7 +6,6 @@ import Navigation from '../components/Navigation';
 import CursorGlow from '../components/CursorGlow';
 import CursorHover from '../components/CursorHover';
 import DiscordSign from '../components/DiscordSign';
-import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
 import ResearchCard from '../components/ResearchCard';
 import { researchArticles } from '../../data/research';
@@ -103,11 +102,10 @@ function ResearchPageContent() {
     selectedTags.length > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/50 to-zinc-950 relative">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-950 relative">
       <CursorGlow />
       <CursorHover />
       <DiscordSign />
-      <ScrollFade />
       <Navigation />
       <div className="fixed top-[72px] left-0 right-0 z-40">
         <MarketTicker />
