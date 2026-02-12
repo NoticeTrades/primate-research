@@ -36,6 +36,8 @@ export default function VideoCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(false); // Track if video has been loaded/started
   const [isLoading, setIsLoading] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false); // Track when video is buffering
+  const [loadProgress, setLoadProgress] = useState(0); // Track loading progress
   const [currentViewCount, setCurrentViewCount] = useState<number | null>(viewCount ?? null);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isTrackingView, setIsTrackingView] = useState(false);
@@ -93,6 +95,7 @@ export default function VideoCard({
   // Handle when user clicks play button
   const handlePlayClick = () => {
     setIsLoading(true);
+    setIsBuffering(true);
     setIsPlaying(true);
     setHasStarted(true);
   };
@@ -174,11 +177,24 @@ export default function VideoCard({
             </div>
           ) : (
             <div className="relative w-full h-full">
+              {/* Initial loading spinner */}
               {isLoading && !hasStarted && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-white text-sm">Loading video...</p>
+                    {loadProgress > 0 && (
+                      <p className="text-white/70 text-xs mt-1">{Math.round(loadProgress)}% loaded</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Buffering indicator (shows when video is playing but buffering) */}
+              {isBuffering && hasStarted && isPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10 pointer-events-none">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-10 h-10 border-3 border-white/80 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-white text-xs">Buffering...</p>
                   </div>
                 </div>
               )}
@@ -186,7 +202,7 @@ export default function VideoCard({
                 src={videoUrl}
                 controls
                 autoPlay={isPlaying}
-                preload="metadata"
+                preload="auto"
                 crossOrigin="anonymous"
                 playsInline
                 className="w-full h-full"
@@ -194,22 +210,49 @@ export default function VideoCard({
                 onPause={handlePause}
                 onEnded={handlePause}
                 onWaiting={() => {
-                  // Only show loading if video hasn't started playing yet
-                  if (!hasStarted) setIsLoading(true);
+                  // Video is waiting for data (buffering)
+                  setIsBuffering(true);
+                  if (!hasStarted) {
+                    setIsLoading(true);
+                  }
                 }}
                 onCanPlay={() => {
+                  // Video can start playing
+                  setIsLoading(false);
+                  setIsBuffering(false);
+                  setHasStarted(true);
+                }}
+                onCanPlayThrough={() => {
+                  // Video has buffered enough to play through
+                  setIsBuffering(false);
                   setIsLoading(false);
                   setHasStarted(true);
                 }}
                 onPlaying={() => {
+                  // Video is actually playing
                   setIsLoading(false);
+                  setIsBuffering(false);
                   setHasStarted(true);
+                }}
+                onProgress={(e) => {
+                  // Track loading progress
+                  const video = e.currentTarget;
+                  if (video.buffered.length > 0 && video.duration > 0) {
+                    const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                    const progress = (bufferedEnd / video.duration) * 100;
+                    setLoadProgress(progress);
+                    // If we have enough buffered, stop showing loading
+                    if (progress > 10 && !hasStarted) {
+                      setIsLoading(false);
+                    }
+                  }
                 }}
                 onError={(e) => {
                   console.error('Video playback error:', e);
                   setVideoError(true);
                   setIsPlaying(false);
                   setIsLoading(false);
+                  setIsBuffering(false);
                 }}
                 onLoadedData={() => {
                   setVideoError(false);
@@ -219,8 +262,9 @@ export default function VideoCard({
                 }}
                 onLoadStart={() => {
                   setVideoError(false);
-                  // Only show loading spinner on initial load
-                  if (!hasStarted) setIsLoading(true);
+                  setIsLoading(true);
+                  setIsBuffering(true);
+                  setLoadProgress(0);
                   console.log('Video loading started');
                 }}
               >
