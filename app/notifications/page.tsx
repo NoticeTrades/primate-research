@@ -127,7 +127,7 @@ export default function NotificationsPage() {
         );
         
         if (newUnreadNotifications.length > 0) {
-          console.log('New notifications detected:', newUnreadNotifications.length, 'Sound enabled:', soundNotificationsEnabled);
+          console.log('New notifications detected:', newUnreadNotifications.length, 'Sound enabled:', soundNotificationsEnabled, 'Browser notifications enabled:', browserNotificationsEnabled);
           // Play sound notification if enabled (only once per new notification)
           if (soundNotificationsEnabled && typeof window !== 'undefined') {
             try {
@@ -151,17 +151,32 @@ export default function NotificationsPage() {
           
           // Show browser notification if enabled
           if (browserNotificationsEnabled && typeof window !== 'undefined' && 'Notification' in window) {
-            newUnreadNotifications.forEach((notification: Notification) => {
-              if (typeof window !== 'undefined' && Notification.permission === 'granted') {
-                new Notification(notification.title, {
-                  body: notification.description || '',
-                  icon: '/favicon.ico',
-                  badge: '/favicon.ico',
-                  tag: `notification-${notification.id}`,
-                  requireInteraction: false,
-                });
-              }
-            });
+            if (Notification.permission === 'granted') {
+              newUnreadNotifications.forEach((notification: Notification) => {
+                try {
+                  const browserNotification = new Notification(notification.title, {
+                    body: notification.description || '',
+                    icon: '/favicon.ico',
+                    badge: '/favicon.ico',
+                    tag: `notification-${notification.id}`,
+                    requireInteraction: false,
+                  });
+                  
+                  // Open the notification link when clicked
+                  if (notification.link) {
+                    browserNotification.onclick = () => {
+                      window.focus();
+                      window.location.href = notification.link;
+                      browserNotification.close();
+                    };
+                  }
+                } catch (error) {
+                  console.error('Failed to create browser notification:', error);
+                }
+              });
+            } else {
+              console.log('Browser notification permission not granted:', Notification.permission);
+            }
           }
         }
       }

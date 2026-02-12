@@ -133,25 +133,33 @@ export default function Navigation() {
             }
             
             // Show browser notification if enabled
-            if (browserNotificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
-              newUnreadNotifications.forEach((notification: { id: number; title: string; description: string; link: string }) => {
-                const browserNotification = new Notification(notification.title, {
-                  body: notification.description || '',
-                  icon: '/favicon.ico',
-                  badge: '/favicon.ico',
-                  tag: `notification-${notification.id}`,
-                  requireInteraction: false,
+            if (browserNotificationsEnabled && typeof window !== 'undefined' && 'Notification' in window) {
+              if (Notification.permission === 'granted') {
+                newUnreadNotifications.forEach((notification: { id: number; title: string; description: string; link: string }) => {
+                  try {
+                    const browserNotification = new Notification(notification.title, {
+                      body: notification.description || '',
+                      icon: '/favicon.ico',
+                      badge: '/favicon.ico',
+                      tag: `notification-${notification.id}`,
+                      requireInteraction: false,
+                    });
+                    
+                    // Open the notification link when clicked
+                    if (notification.link) {
+                      browserNotification.onclick = () => {
+                        window.focus();
+                        window.location.href = notification.link;
+                        browserNotification.close();
+                      };
+                    }
+                  } catch (error) {
+                    console.error('Failed to create browser notification:', error);
+                  }
                 });
-                
-                // Open the notification link when clicked
-                if (notification.link) {
-                  browserNotification.onclick = () => {
-                    window.focus();
-                    window.location.href = notification.link;
-                    browserNotification.close();
-                  };
-                }
-              });
+              } else {
+                console.log('Browser notification permission not granted:', Notification.permission);
+              }
             }
           }
           
