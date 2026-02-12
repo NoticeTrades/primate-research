@@ -25,6 +25,7 @@ export default function Navigation() {
   const [showToolsDropdown, setShowToolsDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
+  const [soundNotificationsEnabled, setSoundNotificationsEnabled] = useState(true);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -43,7 +44,7 @@ export default function Navigation() {
     checkAuth();
   }, [pathname]);
 
-  // Fetch browser notification preference
+  // Fetch notification preferences
   useEffect(() => {
     if (!isAuthenticated) return;
     
@@ -53,6 +54,7 @@ export default function Navigation() {
         if (res.ok) {
           const data = await res.json();
           setBrowserNotificationsEnabled(data.browserNotificationsEnabled || false);
+          setSoundNotificationsEnabled(data.soundNotificationsEnabled !== false); // Default to true
         }
       } catch {
         // silently fail
@@ -78,9 +80,16 @@ export default function Navigation() {
           const newNotifications = data.notifications || [];
           const newUnreadCount = data.unreadCount || 0;
           
-          // Show browser notification if new unread notifications arrived
-          if (browserNotificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
-            if (newUnreadCount > previousUnreadCount && previousUnreadCount > 0) {
+          // Check if new notifications arrived
+          if (newUnreadCount > previousUnreadCount && previousUnreadCount > 0) {
+            // Play sound notification if enabled
+            if (soundNotificationsEnabled && typeof window !== 'undefined') {
+              const { playNotificationSound } = await import('../../utils/sound');
+              playNotificationSound();
+            }
+            
+            // Show browser notification if enabled
+            if (browserNotificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
               // New unread notifications arrived
               const newUnread = newNotifications
                 .filter((n: { is_read: boolean }) => !n.is_read)

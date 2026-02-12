@@ -48,6 +48,9 @@ export async function initDb() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS browser_notifications_enabled BOOLEAN DEFAULT FALSE
   `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS sound_notifications_enabled BOOLEAN DEFAULT TRUE
+  `;
   // Use TEXT type which can store up to 1GB in Postgres (plenty for base64 images)
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT

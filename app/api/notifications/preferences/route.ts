@@ -16,7 +16,7 @@ export async function GET() {
 
     const sql = getDb();
     const result = await sql`
-      SELECT browser_notifications_enabled
+      SELECT browser_notifications_enabled, sound_notifications_enabled
       FROM users
       WHERE email = ${userEmail}
     `;
@@ -27,6 +27,7 @@ export async function GET() {
 
     return NextResponse.json({
       browserNotificationsEnabled: result[0].browser_notifications_enabled || false,
+      soundNotificationsEnabled: result[0].sound_notifications_enabled !== false, // Default to true
     });
   } catch (error) {
     console.error('Get notification preferences error:', error);
@@ -47,49 +48,91 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { enabled } = await request.json();
+    const body = await request.json();
+    const { enabled, soundEnabled } = body;
 
-    if (typeof enabled !== 'boolean') {
+    // Support both old format (just enabled) and new format (enabled and soundEnabled)
+    if (typeof enabled === 'boolean') {
+      // Update browser notifications
+      const sql = getDb();
+      
+      // First check if user exists
+      const userCheck = await sql`
+        SELECT id FROM users WHERE email = ${userEmail}
+      `;
+      
+      if (userCheck.length === 0) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      
+      // Try to update - if column doesn't exist, it will throw an error
+      try {
+        await sql`
+          UPDATE users
+          SET browser_notifications_enabled = ${enabled}
+          WHERE email = ${userEmail}
+        `;
+      } catch (dbError: any) {
+        // Check if the error is because the column doesn't exist
+        if (dbError?.message?.includes('browser_notifications_enabled') || dbError?.code === '42703') {
+          console.error('Database column browser_notifications_enabled does not exist. Please run database setup.');
+          return NextResponse.json(
+            { 
+              error: 'Database setup required',
+              message: 'The browser_notifications_enabled column does not exist. Please run database setup from the admin page.'
+            },
+            { status: 500 }
+          );
+        }
+        throw dbError; // Re-throw if it's a different error
+      }
+
+      return NextResponse.json({
+        success: true,
+        browserNotificationsEnabled: enabled,
+      });
+    } else if (typeof soundEnabled === 'boolean') {
+      // Update sound notifications
+      const sql = getDb();
+      
+      // First check if user exists
+      const userCheck = await sql`
+        SELECT id FROM users WHERE email = ${userEmail}
+      `;
+      
+      if (userCheck.length === 0) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      
+      // Try to update - if column doesn't exist, it will throw an error
+      try {
+        await sql`
+          UPDATE users
+          SET sound_notifications_enabled = ${soundEnabled}
+          WHERE email = ${userEmail}
+        `;
+      } catch (dbError: any) {
+        // Check if the error is because the column doesn't exist
+        if (dbError?.message?.includes('sound_notifications_enabled') || dbError?.code === '42703') {
+          console.error('Database column sound_notifications_enabled does not exist. Please run database setup.');
+          return NextResponse.json(
+            { 
+              error: 'Database setup required',
+              message: 'The sound_notifications_enabled column does not exist. Please run database setup from the admin page.'
+            },
+            { status: 500 }
+          );
+        }
+        throw dbError; // Re-throw if it's a different error
+      }
+
+      return NextResponse.json({
+        success: true,
+        soundNotificationsEnabled: soundEnabled,
+      });
+    } else {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
-
-    const sql = getDb();
-    
-    // First check if user exists
-    const userCheck = await sql`
-      SELECT id FROM users WHERE email = ${userEmail}
-    `;
-    
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    
-    // Try to update - if column doesn't exist, it will throw an error
-    try {
-      await sql`
-        UPDATE users
-        SET browser_notifications_enabled = ${enabled}
-        WHERE email = ${userEmail}
-      `;
-    } catch (dbError: any) {
-      // Check if the error is because the column doesn't exist
-      if (dbError?.message?.includes('browser_notifications_enabled') || dbError?.code === '42703') {
-        console.error('Database column browser_notifications_enabled does not exist. Please run database setup.');
-        return NextResponse.json(
-          { 
-            error: 'Database setup required',
-            message: 'The browser_notifications_enabled column does not exist. Please run database setup from the admin page.'
-          },
-          { status: 500 }
-        );
-      }
-      throw dbError; // Re-throw if it's a different error
-    }
-
-    return NextResponse.json({
-      success: true,
-      browserNotificationsEnabled: enabled,
-    });
   } catch (error: any) {
     console.error('Update notification preferences error:', error);
     return NextResponse.json(

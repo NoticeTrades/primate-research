@@ -38,7 +38,9 @@ export default function NotificationsPage() {
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
+  const [soundNotificationsEnabled, setSoundNotificationsEnabled] = useState(true);
   const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
+  const [isUpdatingSoundPreferences, setIsUpdatingSoundPreferences] = useState(false);
   const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
 
@@ -55,13 +57,14 @@ export default function NotificationsPage() {
       return;
     }
     
-    // Fetch browser notification preference
+    // Fetch notification preferences
     const fetchPreferences = async () => {
       try {
         const res = await fetch('/api/notifications/preferences');
         if (res.ok) {
           const data = await res.json();
           setBrowserNotificationsEnabled(data.browserNotificationsEnabled || false);
+          setSoundNotificationsEnabled(data.soundNotificationsEnabled !== false); // Default to true
         }
       } catch (err) {
         console.error('Failed to fetch preferences:', err);
@@ -89,28 +92,37 @@ export default function NotificationsPage() {
       const data = await res.json();
       const newNotifications = data.notifications || [];
       
-      // Check for new notifications and show browser notification if enabled
-      if (!isInitial && browserNotificationsEnabled && typeof window !== 'undefined' && 'Notification' in window) {
+      // Check for new notifications
+      if (!isInitial) {
         const unreadCount = newNotifications.filter((n: Notification) => !n.is_read).length;
         const previousUnreadCount = notifications.filter((n) => !n.is_read).length;
         
         if (unreadCount > previousUnreadCount) {
-          // New unread notifications arrived
-          const newUnread = newNotifications
-            .filter((n: Notification) => !n.is_read)
-            .slice(0, unreadCount - previousUnreadCount);
+          // Play sound notification if enabled
+          if (soundNotificationsEnabled && typeof window !== 'undefined') {
+            const { playNotificationSound } = await import('../utils/sound');
+            playNotificationSound();
+          }
           
-          newUnread.forEach((notification: Notification) => {
-            if (typeof window !== 'undefined' && Notification.permission === 'granted') {
-              new Notification(notification.title, {
-                body: notification.description || '',
-                icon: '/favicon.ico',
-                badge: '/favicon.ico',
-                tag: `notification-${notification.id}`,
-                requireInteraction: false,
-              });
-            }
-          });
+          // Show browser notification if enabled
+          if (browserNotificationsEnabled && typeof window !== 'undefined' && 'Notification' in window) {
+            // New unread notifications arrived
+            const newUnread = newNotifications
+              .filter((n: Notification) => !n.is_read)
+              .slice(0, unreadCount - previousUnreadCount);
+            
+            newUnread.forEach((notification: Notification) => {
+              if (typeof window !== 'undefined' && Notification.permission === 'granted') {
+                new Notification(notification.title, {
+                  body: notification.description || '',
+                  icon: '/favicon.ico',
+                  badge: '/favicon.ico',
+                  tag: `notification-${notification.id}`,
+                  requireInteraction: false,
+                });
+              }
+            });
+          }
         }
       }
       
@@ -229,6 +241,35 @@ export default function NotificationsPage() {
   });
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  // Handle sound notification toggle
+  const handleToggleSoundNotifications = async () => {
+    const newValue = !soundNotificationsEnabled;
+
+    setIsUpdatingSoundPreferences(true);
+    try {
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soundEnabled: newValue }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Failed to update preferences';
+        throw new Error(errorMessage);
+      }
+
+      const data = await res.json();
+      setSoundNotificationsEnabled(data.soundNotificationsEnabled ?? newValue);
+    } catch (err) {
+      console.error('Failed to update sound preferences:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update sound notification preferences';
+      alert(errorMessage);
+    } finally {
+      setIsUpdatingSoundPreferences(false);
+    }
+  };
 
   // Handle browser notification toggle
   const handleToggleBrowserNotifications = async () => {
@@ -367,46 +408,81 @@ export default function NotificationsPage() {
             </div>
           </div>
 
-          {/* Browser Notifications Toggle */}
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-4 mb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600/20 rounded-lg">
-                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
+          {/* Notification Preferences */}
+          <div className="space-y-3 mb-4">
+            {/* Sound Notifications Toggle */}
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-600/20 rounded-lg">
+                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-100">Sound Notifications</h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Play a sound when new notifications arrive
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-zinc-100">Browser Notifications</h3>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    Get notified in your browser when new notifications arrive
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleToggleBrowserNotifications}
-                disabled={isUpdatingPreferences || !isClient || (typeof window !== 'undefined' && !('Notification' in window))}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  browserNotificationsEnabled ? 'bg-blue-600' : 'bg-zinc-700'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    browserNotificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                <button
+                  onClick={handleToggleSoundNotifications}
+                  disabled={isUpdatingSoundPreferences || !isClient}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    soundNotificationsEnabled ? 'bg-green-600' : 'bg-zinc-700'
                   }`}
-                />
-              </button>
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      soundNotificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
-            {isClient && typeof window !== 'undefined' && !('Notification' in window) && (
-              <p className="text-xs text-yellow-400 mt-2">
-                Your browser does not support notifications
-              </p>
-            )}
-            {isClient && typeof window !== 'undefined' && Notification.permission === 'denied' && (
-              <p className="text-xs text-yellow-400 mt-2">
-                Notifications are blocked. Please enable them in your browser settings.
-              </p>
-            )}
+
+            {/* Browser Notifications Toggle */}
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-600/20 rounded-lg">
+                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-100">Browser Notifications</h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Get notified in your browser when new notifications arrive
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleToggleBrowserNotifications}
+                  disabled={isUpdatingPreferences || !isClient || (typeof window !== 'undefined' && !('Notification' in window))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    browserNotificationsEnabled ? 'bg-blue-600' : 'bg-zinc-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      browserNotificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              {isClient && typeof window !== 'undefined' && !('Notification' in window) && (
+                <p className="text-xs text-yellow-400 mt-2">
+                  Your browser does not support notifications
+                </p>
+              )}
+              {isClient && typeof window !== 'undefined' && Notification.permission === 'denied' && (
+                <p className="text-xs text-yellow-400 mt-2">
+                  Notifications are blocked. Please enable them in your browser settings.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Actions Bar */}
