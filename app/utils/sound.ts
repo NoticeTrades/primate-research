@@ -1,8 +1,17 @@
 // Utility function to play a gentle ding sound for notifications
 export function playNotificationSound() {
   try {
-    // Create audio context
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Create audio context (resume if suspended - browsers require user interaction first)
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const audioContext = new AudioContextClass();
+    
+    // Resume audio context if suspended (required by some browsers)
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch((err) => {
+        console.warn('Could not resume audio context:', err);
+        return;
+      });
+    }
     
     // Create oscillator for the ding sound
     const oscillator = audioContext.createOscillator();
@@ -30,9 +39,11 @@ export function playNotificationSound() {
     oscillator.onended = () => {
       audioContext.close();
     };
+    
+    console.log('Notification sound played');
   } catch (error) {
-    // Silently fail if audio context is not available
-    console.debug('Could not play notification sound:', error);
+    // Log error for debugging
+    console.error('Could not play notification sound:', error);
   }
 }
 

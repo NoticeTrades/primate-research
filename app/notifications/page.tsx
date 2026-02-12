@@ -45,9 +45,19 @@ export default function NotificationsPage() {
   const playedSoundForIdsRef = useRef<Set<number>>(new Set());
   const [isClient, setIsClient] = useState(false);
 
-  // Set client-side flag
+  // Set client-side flag and load played sound IDs from sessionStorage
   useEffect(() => {
     setIsClient(true);
+    // Load played sound IDs from sessionStorage to persist across page navigations
+    try {
+      const stored = sessionStorage.getItem('playedSoundNotificationIds');
+      if (stored) {
+        const ids = JSON.parse(stored);
+        playedSoundForIdsRef.current = new Set(ids);
+      }
+    } catch (error) {
+      console.error('Failed to load played sound IDs:', error);
+    }
   }, []);
 
   // Check authentication and fetch preferences
@@ -93,6 +103,19 @@ export default function NotificationsPage() {
       const data = await res.json();
       const newNotifications = data.notifications || [];
       
+      // On initial load, mark all existing notifications as "already played sound for" to prevent sound on page load
+      if (isInitial) {
+        newNotifications.forEach((n: Notification) => {
+          playedSoundForIdsRef.current.add(n.id);
+        });
+        // Save to sessionStorage
+        try {
+          sessionStorage.setItem('playedSoundNotificationIds', JSON.stringify(Array.from(playedSoundForIdsRef.current)));
+        } catch (error) {
+          console.error('Failed to save played sound IDs:', error);
+        }
+      }
+      
       // Check for new notifications that we haven't played sound for yet
       if (!isInitial) {
         // Get IDs of previous notifications
@@ -104,15 +127,23 @@ export default function NotificationsPage() {
         );
         
         if (newUnreadNotifications.length > 0) {
+          console.log('New notifications detected:', newUnreadNotifications.length, 'Sound enabled:', soundNotificationsEnabled);
           // Play sound notification if enabled (only once per new notification)
           if (soundNotificationsEnabled && typeof window !== 'undefined') {
             try {
               const { playNotificationSound } = await import('../utils/sound');
+              console.log('Playing notification sound...');
               playNotificationSound();
               // Mark these notification IDs as having played sound (using ref to avoid stale closure)
               newUnreadNotifications.forEach((n: Notification) => {
                 playedSoundForIdsRef.current.add(n.id);
               });
+              // Persist to sessionStorage so it survives page navigation
+              try {
+                sessionStorage.setItem('playedSoundNotificationIds', JSON.stringify(Array.from(playedSoundForIdsRef.current)));
+              } catch (error) {
+                console.error('Failed to save played sound IDs:', error);
+              }
             } catch (error) {
               console.error('Failed to play notification sound:', error);
             }
