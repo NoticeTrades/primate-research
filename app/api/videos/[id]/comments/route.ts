@@ -23,7 +23,7 @@ export async function GET(
     const url = new URL(request.url);
     const videoType = url.searchParams.get('videoType') || 'exclusive';
 
-    // Get all top-level comments (no parent_id) with profile pictures
+    // Get all top-level comments (no parent_id) with profile pictures and user roles
     const comments = await sql`
       SELECT 
         vc.id,
@@ -32,7 +32,8 @@ export async function GET(
         vc.comment_text,
         vc.parent_id,
         vc.created_at,
-        u.profile_picture_url
+        u.profile_picture_url,
+        u.user_role
       FROM video_comments vc
       LEFT JOIN users u ON vc.user_email = u.email
       WHERE vc.video_id = ${videoId} AND vc.video_type = ${videoType} AND vc.parent_id IS NULL
@@ -51,7 +52,8 @@ export async function GET(
           vc.comment_text,
           vc.parent_id,
           vc.created_at,
-          u.profile_picture_url
+          u.profile_picture_url,
+          u.user_role
         FROM video_comments vc
         LEFT JOIN users u ON vc.user_email = u.email
         WHERE vc.parent_id = ANY(${commentIds})
@@ -79,6 +81,7 @@ export async function GET(
       createdAt: comment.created_at,
       isOwnComment: userEmail === comment.user_email,
       profilePictureUrl: comment.profile_picture_url,
+      userRole: comment.user_role || 'premium',
       replies: (repliesByParent[comment.id] || []).map((reply: any) => ({
         id: reply.id,
         userEmail: reply.user_email,
@@ -88,6 +91,7 @@ export async function GET(
         createdAt: reply.created_at,
         isOwnComment: userEmail === reply.user_email,
         profilePictureUrl: reply.profile_picture_url,
+        userRole: reply.user_role || 'premium',
       })),
     }));
 
@@ -164,14 +168,15 @@ export async function POST(
         RETURNING id, user_email, username, comment_text, parent_id, created_at
       `;
 
-      // Get user's profile picture
+      // Get user's profile picture and role
       const userProfile = await sql`
-        SELECT profile_picture_url
+        SELECT profile_picture_url, user_role
         FROM users
         WHERE email = ${userEmail}
         LIMIT 1
       `;
       const profilePictureUrl = userProfile.length > 0 ? userProfile[0].profile_picture_url : null;
+      const userRole = userProfile.length > 0 ? (userProfile[0].user_role || 'premium') : 'premium';
 
       // If this is a reply, send notification to the parent comment author
       if (parentId) {
@@ -222,6 +227,7 @@ export async function POST(
           createdAt: result[0].created_at,
           isOwnComment: true,
           profilePictureUrl: profilePictureUrl,
+          userRole: userRole,
           replies: [],
         },
       });

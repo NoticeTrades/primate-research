@@ -67,6 +67,16 @@ export async function initDb() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT
   `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS user_role TEXT DEFAULT 'premium'
+  `;
+  
+  // Set noticetrades as owner/founder
+  await sql`
+    UPDATE users 
+    SET user_role = 'owner' 
+    WHERE username = 'noticetrades' AND (user_role IS NULL OR user_role != 'owner')
+  `;
 
   // Mark all existing users (who signed up before email verification) as verified
   await sql`

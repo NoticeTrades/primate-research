@@ -11,6 +11,7 @@ interface Comment {
   createdAt: string;
   isOwnComment: boolean;
   profilePictureUrl?: string | null;
+  userRole?: string;
   replies: Comment[];
 }
 
@@ -173,6 +174,26 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     }
   };
 
+  const getUserBadge = (userRole?: string, username?: string) => {
+    // Owner/Founder badge for noticetrades
+    if (username === 'noticetrades' || userRole === 'owner') {
+      return (
+        <span className="px-2 py-0.5 text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-full">
+          Owner / Founder
+        </span>
+      );
+    }
+    // Premium badge for premium users
+    if (userRole === 'premium' || !userRole) {
+      return (
+        <span className="px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-full">
+          PREMIUM
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto">
       {onClose && (
@@ -253,8 +274,9 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold text-black dark:text-white">{comment.username}</span>
+                    {getUserBadge(comment.userRole, comment.username)}
                     <span className="text-xs text-zinc-500">{formatDate(comment.createdAt)}</span>
                     {comment.isOwnComment && (
                       <button
@@ -318,8 +340,9 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
                             )}
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className="font-semibold text-sm text-black dark:text-white">{reply.username}</span>
+                              {getUserBadge(reply.userRole, reply.username)}
                               <span className="text-xs text-zinc-500">{formatDate(reply.createdAt)}</span>
                               {reply.isOwnComment && (
                                 <button

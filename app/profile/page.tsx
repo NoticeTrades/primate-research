@@ -19,6 +19,7 @@ interface UserProfile {
   profile_picture_url?: string | null; // Support both naming conventions
   bio: string | null;
   createdAt: string;
+  userRole?: string;
 }
 
 interface SavedVideo {

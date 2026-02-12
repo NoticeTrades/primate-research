@@ -37,6 +37,7 @@ export async function GET() {
         profilePictureUrl: user.profile_picture_url, // Map to camelCase
         bio: user.bio,
         createdAt: user.created_at,
+        userRole: user.user_role || 'premium', // Include user role
       },
     });
   } catch (error: any) {
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
         profilePictureUrl: user.profile_picture_url, // Map to camelCase
         bio: user.bio,
         createdAt: user.created_at,
+        userRole: user.user_role || 'premium', // Include user role
       },
     });
   } catch (error: any) {
