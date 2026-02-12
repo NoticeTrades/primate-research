@@ -699,8 +699,12 @@ export default function NotificationsPage() {
                   key={notification.id}
                   className={`bg-zinc-900/80 border rounded-xl overflow-hidden transition-all hover:border-zinc-600 ${
                     notification.is_read
-                      ? 'border-zinc-800/60 opacity-75'
-                      : 'border-zinc-800 shadow-[0_0_15px_rgba(59,130,246,0.08)]'
+                      ? notification.type === 'comment_reply'
+                        ? 'border-green-500/30 opacity-75'
+                        : 'border-zinc-800/60 opacity-75'
+                      : notification.type === 'comment_reply'
+                        ? 'border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.15)] bg-green-500/5'
+                        : 'border-zinc-800 shadow-[0_0_15px_rgba(59,130,246,0.08)]'
                   }`}
                 >
                   <div className="flex items-start gap-4 p-4">
