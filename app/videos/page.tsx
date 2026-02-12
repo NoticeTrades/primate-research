@@ -110,6 +110,48 @@ export default function VideosPage() {
     };
   }, []);
 
+  // Check URL parameters to auto-open comments when coming from notification
+  useEffect(() => {
+    if (hasCheckedUrlParams || videosLoading) return;
+    
+    const videoIdParam = searchParams.get('videoId');
+    const openComments = searchParams.get('openComments');
+    
+    if (videoIdParam && openComments === 'true') {
+      const videoId = parseInt(videoIdParam, 10);
+      if (!isNaN(videoId)) {
+        // Find the video to determine its type
+        const allVideos = [...dbVideos, ...initialVideos];
+        const video = allVideos.find((v) => {
+          if (v.videoDbId === videoId) return true;
+          // For YouTube videos, we need to check by URL
+          if (v.videoType === 'youtube' || v.videoType === 'external') {
+            const ytId = getYouTubeVideoId(v.videoUrl);
+            // This won't match for YouTube videos by ID, so we'll default to exclusive
+            return false;
+          }
+          return false;
+        });
+        
+        // Determine video type - if not found, assume exclusive (database video)
+        const videoType = video?.videoType || 'exclusive';
+        
+        setSelectedVideoId(videoId);
+        setSelectedVideoType(videoType as 'youtube' | 'exclusive' | 'external');
+        setCommentModalOpen(true);
+        setHasCheckedUrlParams(true);
+        
+        // Clean up URL parameters after opening
+        const url = new URL(window.location.href);
+        url.searchParams.delete('videoId');
+        url.searchParams.delete('openComments');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } else {
+      setHasCheckedUrlParams(true);
+    }
+  }, [searchParams, videosLoading, dbVideos, hasCheckedUrlParams]);
+
   // Combine static videos (from data file) with database videos, removing duplicates
   const allVideos = useMemo(() => {
     // Database videos first (newest), then static videos
