@@ -312,7 +312,7 @@ export default function MarketTicker() {
   const duplicatedTickers = [...tickers, ...tickers];
 
   return (
-    <div className="bg-zinc-900 dark:bg-black text-white border-b border-zinc-800 overflow-hidden">
+    <div className="bg-zinc-900 dark:bg-black text-white border-b border-zinc-800 overflow-hidden relative z-40">
       <div className="relative py-3">
         <div className="flex items-center animate-scroll">
           {duplicatedTickers.map((ticker, index) => (

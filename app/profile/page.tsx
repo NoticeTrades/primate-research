@@ -156,11 +156,15 @@ export default function ProfilePage() {
 
           if (res.ok) {
             const data = await res.json();
-            // Reload profile to get updated data
+            // Update profile state immediately
+            setProfile(prev => prev ? { ...prev, profilePictureUrl: data.profilePictureUrl } : null);
+            // Also reload profile to ensure consistency
             await loadProfile();
             alert('Profile picture updated!');
           } else {
-            alert('Failed to upload profile picture');
+            const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Upload failed:', errorData);
+            alert(`Failed to upload profile picture: ${errorData.error || 'Unknown error'}`);
           }
         } catch (error) {
           console.error('Upload error:', error);
