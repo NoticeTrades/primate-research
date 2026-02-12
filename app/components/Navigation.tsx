@@ -643,17 +643,17 @@ export default function Navigation() {
                 </div>
               )}
             </div>
-            <span className="relative group/badge cursor-default flex items-center verified-badge" title="Premium">
+            <span className="relative group/badge cursor-default flex items-center verified-badge" title={username === 'noticetrades' ? 'Founder' : 'Premium'}>
               <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 {/* Three rotated rounded rectangles form the seal/flower shape */}
-                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#1DA1F2" />
-                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#1DA1F2" transform="rotate(30 12 12)" />
-                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#1DA1F2" transform="rotate(60 12 12)" />
+                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} />
+                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} transform="rotate(30 12 12)" />
+                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} transform="rotate(60 12 12)" />
                 {/* White checkmark */}
                 <path d="M7.5 12.5l3 3 6-6" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>
               <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-zinc-800 border border-zinc-700 rounded-md opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50 shadow-lg">
-                Premium
+                {username === 'noticetrades' ? 'Founder' : 'Premium'}
               </span>
             </span>
 
