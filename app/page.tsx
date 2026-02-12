@@ -145,7 +145,7 @@ export default function Home() {
     name: 'Primate Trading',
     alternateName: ['Primate Research', 'primatetrading', 'PrimateTrading'],
     url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.primatetrading.com',
-    description: 'Real-time market analysis, weekly research reports, and trading insights across equities, crypto, and macroeconomic trends.',
+    description: 'Weekly market outlooks, daily research reports, and actionable trade ideas across equities, crypto, and macro markets.',
     sameAs: [
       'https://x.com/primatetrading',
     ],
@@ -190,7 +190,7 @@ export default function Home() {
               Edge Through the Regime
             </h1>
             <p className="text-xl md:text-2xl text-zinc-700 dark:text-zinc-300 mb-8 leading-relaxed max-w-3xl mx-auto">
-              Real-time market analysis, comprehensive research, and video insights across equities, crypto, and macro markets. Built for traders and investors who demand clarity.
+              Weekly market outlooks, daily research reports, and actionable trade ideas across equities, crypto, and macro markets. Everything you need to stay ahead of the markets.
             </p>
             <div className="flex flex-wrap gap-4 mb-8 justify-center">
               <ScrollButton targetId="research" variant="primary">
@@ -405,7 +405,7 @@ export default function Home() {
                 Primate Trading is designed to be your one-stop shop for traders and investors to get their daily overview of the market, helping prepare you for your trading day. My mission is to provide the knowledge and analytical framework needed to navigate today's complex market landscape—breaking down how markets work, how the machine runs, and what drives price action across equities, crypto, and macro markets.
               </p>
               <p className="text-lg text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                Primate Trading serves as an educational hub designed to help traders and investors understand the current regime in financial markets. Through real-time market analysis, comprehensive research reports, and educational video content, I focus on regime identification, active investing strategies, trade execution, and comprehensive risk management. The goal is to bridge the gap between institutional-level research and accessible, practical guidance, helping traders understand not just what's happening in markets, but why it's happening and how to position accordingly. My aim is to empower active market participants with the clarity, context, and analytical tools needed to make informed decisions and manage risk effectively in any market environment.
+                Primate Trading delivers weekly market outlooks, daily research reports, and actionable trade ideas across equities, crypto, and macro markets. Through comprehensive analysis and educational video content, I focus on regime identification, active investing strategies, trade execution, and risk management. The goal is to bridge the gap between institutional-level research and accessible, practical guidance—helping traders understand not just what's happening in markets, but why it's happening and how to position accordingly. My aim is to empower active market participants with the clarity, context, and analytical tools needed to make informed decisions and manage risk effectively in any market environment.
               </p>
             </div>
           </div>
