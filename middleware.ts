@@ -32,6 +32,7 @@ export const config = {
     '/ticker/:path*',
     '/calendar/:path*',
     '/notifications/:path*',
+    '/profile/:path*',
   ],
 };
 
