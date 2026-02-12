@@ -15,7 +15,8 @@ interface UserProfile {
   name: string;
   email: string;
   username: string;
-  profilePictureUrl: string | null;
+  profilePictureUrl?: string | null;
+  profile_picture_url?: string | null; // Support both naming conventions
   bio: string | null;
   createdAt: string;
 }
@@ -301,11 +302,18 @@ export default function ProfilePage() {
             {/* Profile Picture */}
             <div className="relative">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden">
-                {profile.profilePictureUrl ? (
+                {(profile.profilePictureUrl || profile.profile_picture_url) ? (
                   <img
-                    src={profile.profilePictureUrl}
+                    src={profile.profilePictureUrl || profile.profile_picture_url || ''}
                     alt={profile.username}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Profile picture failed to load');
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log('Profile picture loaded successfully');
+                    }}
                   />
                 ) : (
                   <span className="text-4xl font-bold text-white">
