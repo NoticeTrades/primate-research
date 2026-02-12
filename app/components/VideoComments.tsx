@@ -28,6 +28,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [collapsedThreads, setCollapsedThreads] = useState<Set<number>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
@@ -96,14 +97,19 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
         const data = await res.json();
         console.log('Comment posted:', data.comment);
         if (parentId) {
-          // Add reply to the parent comment
-          setComments(prev =>
-            prev.map(comment =>
-              comment.id === parentId
-                ? { ...comment, replies: [...comment.replies, data.comment] }
-                : comment
-            )
-          );
+          // Add reply to the parent (could be nested)
+          const addReplyToComment = (comments: Comment[], parentId: number, newReply: Comment): Comment[] => {
+            return comments.map(comment => {
+              if (comment.id === parentId) {
+                return { ...comment, replies: [...comment.replies, newReply] };
+              }
+              if (comment.replies.length > 0) {
+                return { ...comment, replies: addReplyToComment(comment.replies, parentId, newReply) };
+              }
+              return comment;
+            });
+          };
+          setComments(prev => addReplyToComment(prev, parentId, data.comment));
           setReplyText('');
           setReplyingTo(null);
         } else {
@@ -136,16 +142,16 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
       });
 
       if (res.ok) {
-        // Remove comment from state
-        setComments(prev => {
-          // Remove top-level comment
-          const filtered = prev.filter(c => c.id !== commentId);
-          // Remove reply from parent
-          return filtered.map(comment => ({
-            ...comment,
-            replies: comment.replies.filter(r => r.id !== commentId),
-          }));
-        });
+        // Remove comment from state (recursively)
+        const removeCommentRecursive = (comments: Comment[], id: number): Comment[] => {
+          return comments
+            .filter(c => c.id !== id)
+            .map(comment => ({
+              ...comment,
+              replies: removeCommentRecursive(comment.replies, id),
+            }));
+        };
+        setComments(prev => removeCommentRecursive(prev, commentId));
       }
     } catch (error) {
       console.error('Failed to delete comment:', error);
@@ -192,6 +198,163 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
       );
     }
     return null;
+  };
+
+  // Recursive component for rendering nested comment threads
+  const CommentThread = ({
+    comment,
+    depth,
+    replyingTo,
+    setReplyingTo,
+    replyText,
+    setReplyText,
+    handleSubmitComment,
+    handleDeleteComment,
+    isAuthenticated,
+    isSubmitting,
+    collapsedThreads,
+    setCollapsedThreads,
+    getUserBadge,
+    formatDate,
+  }: {
+    comment: Comment;
+    depth: number;
+    replyingTo: number | null;
+    setReplyingTo: (id: number | null) => void;
+    replyText: string;
+    setReplyText: (text: string) => void;
+    handleSubmitComment: (e: React.FormEvent, parentId: number | null) => Promise<void>;
+    handleDeleteComment: (id: number) => Promise<void>;
+    isAuthenticated: boolean;
+    isSubmitting: boolean;
+    collapsedThreads: Set<number>;
+    setCollapsedThreads: (set: Set<number> | ((prev: Set<number>) => Set<number>)) => void;
+    getUserBadge: (userRole?: string, username?: string) => JSX.Element | null;
+    formatDate: (dateString: string) => string;
+  }) => {
+    const isCollapsed = collapsedThreads.has(comment.id);
+    const replyCount = comment.replies.length;
+    const maxDepth = 5; // Maximum nesting depth before collapsing
+    const shouldCollapse = depth >= maxDepth || replyCount > 10; // Collapse if too deep or too many replies
+
+    const toggleCollapse = () => {
+      setCollapsedThreads(prev => {
+        const next = new Set(prev);
+        if (next.has(comment.id)) {
+          next.delete(comment.id);
+        } else {
+          next.add(comment.id);
+        }
+        return next;
+      });
+    };
+
+    const avatarSize = depth > 0 ? 'w-8 h-8' : 'w-10 h-10';
+    const textSize = depth > 0 ? 'text-sm' : 'text-base';
+    const indentClass = depth > 0 ? 'ml-4 pl-4 border-l-2 border-zinc-200 dark:border-zinc-700' : '';
+
+    return (
+      <div className={`${indentClass} ${depth === 0 ? 'border-b border-zinc-200 dark:border-zinc-800 pb-6 last:border-0' : ''}`}>
+        <div className="flex items-start gap-3">
+          <div className={`${avatarSize} rounded-full bg-gradient-to-br ${depth > 0 ? 'from-blue-500/70 to-purple-600/70' : 'from-blue-500 to-purple-600'} flex items-center justify-center text-white ${depth > 0 ? 'text-sm' : ''} font-semibold overflow-hidden shrink-0`}>
+            {comment.profilePictureUrl ? (
+              <img
+                src={comment.profilePictureUrl}
+                alt={comment.username}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span>{comment.username.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className={`font-semibold ${textSize} text-black dark:text-white`}>{comment.username}</span>
+              {getUserBadge(comment.userRole, comment.username)}
+              <span className="text-xs text-zinc-500">{formatDate(comment.createdAt)}</span>
+              {comment.isOwnComment && (
+                <button
+                  onClick={() => handleDeleteComment(comment.id)}
+                  className="ml-auto text-xs text-red-600 dark:text-red-400 hover:underline"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+            <p className={`${textSize} text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words mb-2`}>
+              {comment.commentText}
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {isAuthenticated && (
+                <button
+                  onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {replyingTo === comment.id ? 'Cancel' : 'Reply'}
+                </button>
+              )}
+              {replyCount > 0 && (
+                <button
+                  onClick={toggleCollapse}
+                  className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+                >
+                  {isCollapsed ? `Show ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : `Hide ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
+                </button>
+              )}
+            </div>
+
+            {/* Reply form */}
+            {replyingTo === comment.id && (
+              <form
+                onSubmit={(e) => handleSubmitComment(e, comment.id)}
+                className="mt-3 flex gap-2"
+              >
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder={`Reply to ${comment.username}...`}
+                  rows={2}
+                  maxLength={2000}
+                  className="flex-1 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-black dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!replyText.trim() || isSubmitting}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end"
+                >
+                  Reply
+                </button>
+              </form>
+            )}
+
+            {/* Nested Replies */}
+            {comment.replies.length > 0 && !isCollapsed && (
+              <div className="mt-4 space-y-4">
+                {comment.replies.map((reply) => (
+                  <CommentThread
+                    key={reply.id}
+                    comment={reply}
+                    depth={depth + 1}
+                    replyingTo={replyingTo}
+                    setReplyingTo={setReplyingTo}
+                    replyText={replyText}
+                    setReplyText={setReplyText}
+                    handleSubmitComment={handleSubmitComment}
+                    handleDeleteComment={handleDeleteComment}
+                    isAuthenticated={isAuthenticated}
+                    isSubmitting={isSubmitting}
+                    collapsedThreads={collapsedThreads}
+                    setCollapsedThreads={setCollapsedThreads}
+                    getUserBadge={getUserBadge}
+                    formatDate={formatDate}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (

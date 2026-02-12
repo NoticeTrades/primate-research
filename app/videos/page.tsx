@@ -123,7 +123,8 @@ export default function VideosPage() {
         // Find the video to determine its type
         const allVideos = [...dbVideos, ...initialVideos];
         const video = allVideos.find((v) => {
-          if (v.videoDbId === videoId) return true;
+          // Check if it's a database video (has id property)
+          if ((v as any).id === videoId) return true;
           // For YouTube videos, we need to check by URL
           if (v.videoType === 'youtube' || v.videoType === 'external') {
             const ytId = getYouTubeVideoId(v.videoUrl);

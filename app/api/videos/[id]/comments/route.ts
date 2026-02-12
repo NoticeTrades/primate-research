@@ -23,8 +23,8 @@ export async function GET(
     const url = new URL(request.url);
     const videoType = url.searchParams.get('videoType') || 'exclusive';
 
-    // Get all top-level comments (no parent_id) with profile pictures and user roles
-    const comments = await sql`
+    // Get ALL comments (both top-level and nested) with profile pictures and user roles
+    const allComments = await sql`
       SELECT 
         vc.id,
         vc.user_email,
@@ -36,64 +36,68 @@ export async function GET(
         u.user_role
       FROM video_comments vc
       LEFT JOIN users u ON vc.user_email = u.email
-      WHERE vc.video_id = ${videoId} AND vc.video_type = ${videoType} AND vc.parent_id IS NULL
-      ORDER BY vc.created_at DESC
+      WHERE vc.video_id = ${videoId} AND vc.video_type = ${videoType}
+      ORDER BY vc.created_at ASC
     `;
 
-    // Get all replies for each comment with profile pictures
-    const commentIds = comments.map((c: any) => c.id);
-    let replies: any[] = [];
-    if (commentIds.length > 0) {
-      const repliesResult = await sql`
-        SELECT 
-          vc.id,
-          vc.user_email,
-          vc.username,
-          vc.comment_text,
-          vc.parent_id,
-          vc.created_at,
-          u.profile_picture_url,
-          u.user_role
-        FROM video_comments vc
-        LEFT JOIN users u ON vc.user_email = u.email
-        WHERE vc.parent_id = ANY(${commentIds})
-        ORDER BY vc.created_at ASC
-      `;
-      replies = repliesResult;
-    }
+    // Build a tree structure from flat list
+    const commentMap = new Map<number, any>();
+    const rootComments: any[] = [];
 
-    // Group replies by parent_id
-    const repliesByParent: Record<number, any[]> = {};
-    replies.forEach((reply: any) => {
-      if (!repliesByParent[reply.parent_id]) {
-        repliesByParent[reply.parent_id] = [];
-      }
-      repliesByParent[reply.parent_id].push(reply);
+    // First pass: create comment objects
+    allComments.forEach((comment: any) => {
+      const commentObj = {
+        id: comment.id,
+        userEmail: comment.user_email,
+        username: comment.username,
+        commentText: comment.comment_text,
+        parentId: comment.parent_id,
+        createdAt: comment.created_at,
+        isOwnComment: userEmail === comment.user_email,
+        profilePictureUrl: comment.profile_picture_url,
+        userRole: comment.user_role || 'premium',
+        replies: [] as any[],
+      };
+      commentMap.set(comment.id, commentObj);
     });
 
-    // Attach replies to comments
-    const commentsWithReplies = comments.map((comment: any) => ({
-      id: comment.id,
-      userEmail: comment.user_email,
-      username: comment.username,
-      commentText: comment.comment_text,
-      parentId: comment.parent_id,
-      createdAt: comment.created_at,
-      isOwnComment: userEmail === comment.user_email,
-      profilePictureUrl: comment.profile_picture_url,
-      userRole: comment.user_role || 'premium',
-      replies: (repliesByParent[comment.id] || []).map((reply: any) => ({
-        id: reply.id,
-        userEmail: reply.user_email,
-        username: reply.username,
-        commentText: reply.comment_text,
-        parentId: reply.parent_id,
-        createdAt: reply.created_at,
-        isOwnComment: userEmail === reply.user_email,
-        profilePictureUrl: reply.profile_picture_url,
-        userRole: reply.user_role || 'premium',
-      })),
-    }));
+    // Second pass: build tree structure
+    allComments.forEach((comment: any) => {
+      const commentObj = commentMap.get(comment.id)!;
+      if (comment.parent_id === null) {
+        // Top-level comment
+        rootComments.push(commentObj);
+      } else {
+        // Nested reply - find parent and add to its replies
+        const parent = commentMap.get(comment.parent_id);
+        if (parent) {
+          parent.replies.push(commentObj);
+        } else {
+          // Orphaned comment (parent deleted) - treat as top-level
+          rootComments.push(commentObj);
+        }
+      }
+    });
+
+    // Sort root comments by newest first, replies by oldest first (conversation flow)
+    rootComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    // Recursively sort replies
+    const sortReplies = (replies: any[]) => {
+      replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      replies.forEach(reply => {
+        if (reply.replies.length > 0) {
+          sortReplies(reply.replies);
+        }
+      });
+    };
+    rootComments.forEach(comment => {
+      if (comment.replies.length > 0) {
+        sortReplies(comment.replies);
+      }
+    });
+
+    const commentsWithReplies = rootComments;
 
     return NextResponse.json({
       comments: commentsWithReplies,
