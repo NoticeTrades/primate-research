@@ -48,9 +48,22 @@ export async function initDb() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS browser_notifications_enabled BOOLEAN DEFAULT FALSE
   `;
+  // Use TEXT type which can store up to 1GB in Postgres (plenty for base64 images)
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT
   `;
+  
+  // Verify column was created (for debugging)
+  const columnCheck = await sql`
+    SELECT column_name, data_type 
+    FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'profile_picture_url'
+  `;
+  if (columnCheck.length === 0) {
+    console.warn('WARNING: profile_picture_url column may not exist!');
+  } else {
+    console.log('profile_picture_url column verified:', columnCheck[0]);
+  }
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT
   `;
