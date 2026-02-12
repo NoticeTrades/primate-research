@@ -423,110 +423,23 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
       ) : (
         <div className="space-y-6">
           {comments.map((comment) => (
-            <div key={comment.id} className="border-b border-zinc-200 dark:border-zinc-800 pb-6 last:border-0">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold overflow-hidden shrink-0">
-                  {comment.profilePictureUrl ? (
-                    <img
-                      src={comment.profilePictureUrl}
-                      alt={comment.username}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span>{comment.username.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="font-semibold text-black dark:text-white">{comment.username}</span>
-                    {getUserBadge(comment.userRole, comment.username)}
-                    <span className="text-xs text-zinc-500">{formatDate(comment.createdAt)}</span>
-                    {comment.isOwnComment && (
-                      <button
-                        onClick={() => handleDeleteComment(comment.id)}
-                        className="ml-auto text-xs text-red-600 dark:text-red-400 hover:underline"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words mb-2">
-                    {comment.commentText}
-                  </p>
-                  {isAuthenticated && (
-                    <button
-                      onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      {replyingTo === comment.id ? 'Cancel' : 'Reply'}
-                    </button>
-                  )}
-
-                  {/* Reply form */}
-                  {replyingTo === comment.id && (
-                    <form
-                      onSubmit={(e) => handleSubmitComment(e, comment.id)}
-                      className="mt-3 flex gap-2"
-                    >
-                      <textarea
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder={`Reply to ${comment.username}...`}
-                        rows={2}
-                        maxLength={2000}
-                        className="flex-1 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-black dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!replyText.trim() || isSubmitting}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end"
-                      >
-                        Reply
-                      </button>
-                    </form>
-                  )}
-
-                  {/* Replies */}
-                  {comment.replies.length > 0 && (
-                    <div className="mt-4 ml-4 pl-4 border-l-2 border-zinc-200 dark:border-zinc-700 space-y-4">
-                      {comment.replies.map((reply) => (
-                        <div key={reply.id} className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/70 to-purple-600/70 flex items-center justify-center text-white text-sm font-semibold overflow-hidden shrink-0">
-                            {reply.profilePictureUrl ? (
-                              <img
-                                src={reply.profilePictureUrl}
-                                alt={reply.username}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span>{reply.username.charAt(0).toUpperCase()}</span>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="font-semibold text-sm text-black dark:text-white">{reply.username}</span>
-                              {getUserBadge(reply.userRole, reply.username)}
-                              <span className="text-xs text-zinc-500">{formatDate(reply.createdAt)}</span>
-                              {reply.isOwnComment && (
-                                <button
-                                  onClick={() => handleDeleteComment(reply.id)}
-                                  className="ml-auto text-xs text-red-600 dark:text-red-400 hover:underline"
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </div>
-                            <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words">
-                              {reply.commentText}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <CommentThread
+              key={comment.id}
+              comment={comment}
+              depth={0}
+              replyingTo={replyingTo}
+              setReplyingTo={setReplyingTo}
+              replyText={replyText}
+              setReplyText={setReplyText}
+              handleSubmitComment={handleSubmitComment}
+              handleDeleteComment={handleDeleteComment}
+              isAuthenticated={isAuthenticated}
+              isSubmitting={isSubmitting}
+              collapsedThreads={collapsedThreads}
+              setCollapsedThreads={setCollapsedThreads}
+              getUserBadge={getUserBadge}
+              formatDate={formatDate}
+            />
           ))}
         </div>
       )}
