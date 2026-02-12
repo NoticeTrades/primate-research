@@ -42,6 +42,7 @@ export default function NotificationsPage() {
   const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
   const [isUpdatingSoundPreferences, setIsUpdatingSoundPreferences] = useState(false);
   const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
+  const [playedSoundForIds, setPlayedSoundForIds] = useState<Set<number>>(new Set());
   const [isClient, setIsClient] = useState(false);
 
   // Set client-side flag
@@ -92,26 +93,28 @@ export default function NotificationsPage() {
       const data = await res.json();
       const newNotifications = data.notifications || [];
       
-      // Check for new notifications
+      // Check for new notifications that we haven't played sound for yet
       if (!isInitial) {
-        const unreadCount = newNotifications.filter((n: Notification) => !n.is_read).length;
-        const previousUnreadCount = notifications.filter((n) => !n.is_read).length;
+        const newUnreadNotifications = newNotifications.filter(
+          (n: Notification) => !n.is_read && !playedSoundForIds.has(n.id)
+        );
         
-        if (unreadCount > previousUnreadCount) {
-          // Play sound notification if enabled
+        if (newUnreadNotifications.length > 0) {
+          // Play sound notification if enabled (only once per new notification)
           if (soundNotificationsEnabled && typeof window !== 'undefined') {
             const { playNotificationSound } = await import('../utils/sound');
             playNotificationSound();
+            // Mark these notification IDs as having played sound
+            setPlayedSoundForIds(prev => {
+              const updated = new Set(prev);
+              newUnreadNotifications.forEach((n: Notification) => updated.add(n.id));
+              return updated;
+            });
           }
           
           // Show browser notification if enabled
           if (browserNotificationsEnabled && typeof window !== 'undefined' && 'Notification' in window) {
-            // New unread notifications arrived
-            const newUnread = newNotifications
-              .filter((n: Notification) => !n.is_read)
-              .slice(0, unreadCount - previousUnreadCount);
-            
-            newUnread.forEach((notification: Notification) => {
+            newUnreadNotifications.forEach((notification: Notification) => {
               if (typeof window !== 'undefined' && Notification.permission === 'granted') {
                 new Notification(notification.title, {
                   body: notification.description || '',

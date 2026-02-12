@@ -27,6 +27,7 @@ export default function Navigation() {
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [soundNotificationsEnabled, setSoundNotificationsEnabled] = useState(true);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
+  const [playedSoundForIds, setPlayedSoundForIds] = useState<Set<number>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const toolsDropdownRef = useRef<HTMLDivElement>(null);
@@ -70,6 +71,7 @@ export default function Navigation() {
       setNotifications([]);
       setUnreadCount(0);
       setPreviousUnreadCount(0);
+      setPlayedSoundForIds(new Set());
       return;
     }
     const fetchNotifications = async () => {
@@ -80,22 +82,28 @@ export default function Navigation() {
           const newNotifications = data.notifications || [];
           const newUnreadCount = data.unreadCount || 0;
           
-          // Check if new notifications arrived
-          if (newUnreadCount > previousUnreadCount && previousUnreadCount > 0) {
-            // Play sound notification if enabled
+          // Find new unread notifications that we haven't played sound for yet
+          const newUnreadNotifications = newNotifications.filter(
+            (n: { id: number; is_read: boolean }) => !n.is_read && !playedSoundForIds.has(n.id)
+          );
+          
+          // Check if new notifications arrived that we haven't played sound for
+          if (newUnreadNotifications.length > 0) {
+            // Play sound notification if enabled (only once per new notification)
             if (soundNotificationsEnabled && typeof window !== 'undefined') {
               const { playNotificationSound } = await import('../utils/sound');
               playNotificationSound();
+              // Mark these notification IDs as having played sound
+              setPlayedSoundForIds(prev => {
+                const updated = new Set(prev);
+                newUnreadNotifications.forEach((n: { id: number }) => updated.add(n.id));
+                return updated;
+              });
             }
             
             // Show browser notification if enabled
             if (browserNotificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
-              // New unread notifications arrived
-              const newUnread = newNotifications
-                .filter((n: { is_read: boolean }) => !n.is_read)
-                .slice(0, newUnreadCount - previousUnreadCount);
-              
-              newUnread.forEach((notification: { id: number; title: string; description: string; link: string }) => {
+              newUnreadNotifications.forEach((notification: { id: number; title: string; description: string; link: string }) => {
                 const browserNotification = new Notification(notification.title, {
                   body: notification.description || '',
                   icon: '/favicon.ico',
