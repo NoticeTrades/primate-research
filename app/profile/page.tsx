@@ -193,11 +193,22 @@ export default function ProfilePage() {
           console.log('Upload response data:', responseData);
           
           if (res.ok && responseData.success) {
-            console.log('Profile picture uploaded successfully:', responseData.profilePictureUrl?.substring(0, 50));
-            // Update profile state immediately
-            setProfile(prev => prev ? { ...prev, profilePictureUrl: responseData.profilePictureUrl } : null);
-            // Also reload profile to ensure consistency
-            await loadProfile();
+            const newPictureUrl = responseData.profilePictureUrl;
+            console.log('Profile picture uploaded successfully:', newPictureUrl?.substring(0, 50));
+            // Update profile state immediately with the new picture
+            setProfile(prev => {
+              if (!prev) return null;
+              const updated = { ...prev, profilePictureUrl: newPictureUrl };
+              console.log('Updated profile state:', { 
+                hasPicture: !!updated.profilePictureUrl,
+                pictureLength: updated.profilePictureUrl?.length || 0 
+              });
+              return updated;
+            });
+            // Force a small delay then reload to ensure state is updated
+            setTimeout(async () => {
+              await loadProfile();
+            }, 100);
             alert('Profile picture updated!');
           } else {
             console.error('Upload failed:', res.status, responseData);
