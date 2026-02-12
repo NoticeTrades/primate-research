@@ -27,7 +27,7 @@ export default function Navigation() {
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [soundNotificationsEnabled, setSoundNotificationsEnabled] = useState(true);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
-  const [playedSoundForIds, setPlayedSoundForIds] = useState<Set<number>>(new Set());
+  const playedSoundForIdsRef = useRef<Set<number>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const toolsDropdownRef = useRef<HTMLDivElement>(null);
@@ -71,7 +71,7 @@ export default function Navigation() {
       setNotifications([]);
       setUnreadCount(0);
       setPreviousUnreadCount(0);
-      setPlayedSoundForIds(new Set());
+      playedSoundForIdsRef.current.clear();
       return;
     }
     const fetchNotifications = async () => {
@@ -84,7 +84,7 @@ export default function Navigation() {
           
           // Find new unread notifications that we haven't played sound for yet
           const newUnreadNotifications = newNotifications.filter(
-            (n: { id: number; is_read: boolean }) => !n.is_read && !playedSoundForIds.has(n.id)
+            (n: { id: number; is_read: boolean }) => !n.is_read && !playedSoundForIdsRef.current.has(n.id)
           );
           
           // Check if new notifications arrived that we haven't played sound for
@@ -93,11 +93,9 @@ export default function Navigation() {
             if (soundNotificationsEnabled && typeof window !== 'undefined') {
               const { playNotificationSound } = await import('../utils/sound');
               playNotificationSound();
-              // Mark these notification IDs as having played sound
-              setPlayedSoundForIds(prev => {
-                const updated = new Set(prev);
-                newUnreadNotifications.forEach((n: { id: number }) => updated.add(n.id));
-                return updated;
+              // Mark these notification IDs as having played sound (using ref to avoid stale closure)
+              newUnreadNotifications.forEach((n: { id: number }) => {
+                playedSoundForIdsRef.current.add(n.id);
               });
             }
             

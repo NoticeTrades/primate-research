@@ -42,7 +42,7 @@ export default function NotificationsPage() {
   const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
   const [isUpdatingSoundPreferences, setIsUpdatingSoundPreferences] = useState(false);
   const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
-  const [playedSoundForIds, setPlayedSoundForIds] = useState<Set<number>>(new Set());
+  const playedSoundForIdsRef = useRef<Set<number>>(new Set());
   const [isClient, setIsClient] = useState(false);
 
   // Set client-side flag
@@ -96,7 +96,7 @@ export default function NotificationsPage() {
       // Check for new notifications that we haven't played sound for yet
       if (!isInitial) {
         const newUnreadNotifications = newNotifications.filter(
-          (n: Notification) => !n.is_read && !playedSoundForIds.has(n.id)
+          (n: Notification) => !n.is_read && !playedSoundForIdsRef.current.has(n.id)
         );
         
         if (newUnreadNotifications.length > 0) {
@@ -104,11 +104,9 @@ export default function NotificationsPage() {
           if (soundNotificationsEnabled && typeof window !== 'undefined') {
             const { playNotificationSound } = await import('../utils/sound');
             playNotificationSound();
-            // Mark these notification IDs as having played sound
-            setPlayedSoundForIds(prev => {
-              const updated = new Set(prev);
-              newUnreadNotifications.forEach((n: Notification) => updated.add(n.id));
-              return updated;
+            // Mark these notification IDs as having played sound (using ref to avoid stale closure)
+            newUnreadNotifications.forEach((n: Notification) => {
+              playedSoundForIdsRef.current.add(n.id);
             });
           }
           
