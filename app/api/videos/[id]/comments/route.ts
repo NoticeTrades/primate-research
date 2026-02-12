@@ -150,19 +150,57 @@ export async function POST(
         RETURNING id, user_email, username, comment_text, parent_id, created_at
       `;
 
-    return NextResponse.json({
-      success: true,
-      comment: {
-        id: result[0].id,
-        userEmail: result[0].user_email,
-        username: result[0].username,
-        commentText: result[0].comment_text,
-        parentId: result[0].parent_id,
-        createdAt: result[0].created_at,
-        isOwnComment: true,
-        replies: [],
-      },
-    });
+      // If this is a reply, send notification to the parent comment author
+      if (parentId) {
+        try {
+          const parentComment = await sql`
+            SELECT user_email, username, comment_text
+            FROM video_comments
+            WHERE id = ${parentId}
+            LIMIT 1
+          `;
+
+          if (parentComment.length > 0 && parentComment[0].user_email !== userEmail) {
+            // Get video title for notification
+            const video = await sql`
+              SELECT title
+              FROM videos
+              WHERE id = ${videoId}
+              LIMIT 1
+            `;
+            const videoTitle = video.length > 0 ? video[0].title : 'a video';
+
+            // Create notification for the parent comment author
+            await sql`
+              INSERT INTO notifications (title, description, link, type, user_email)
+              VALUES (
+                ${`${username} replied to your comment`},
+                ${`"${commentText.trim().substring(0, 100)}${commentText.trim().length > 100 ? '...' : ''}" on ${videoTitle}`},
+                ${`/videos?videoId=${videoId}&openComments=true`},
+                ${'comment_reply'},
+                ${parentComment[0].user_email}
+              )
+            `;
+          }
+        } catch (notifError) {
+          console.error('Failed to send comment reply notification:', notifError);
+          // Don't fail the comment creation if notification fails
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        comment: {
+          id: result[0].id,
+          userEmail: result[0].user_email,
+          username: result[0].username,
+          commentText: result[0].comment_text,
+          parentId: result[0].parent_id,
+          createdAt: result[0].created_at,
+          isOwnComment: true,
+          replies: [],
+        },
+      });
   } catch (error: any) {
     console.error('Add comment error:', error);
     return NextResponse.json(

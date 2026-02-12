@@ -48,6 +48,12 @@ export async function initDb() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS browser_notifications_enabled BOOLEAN DEFAULT FALSE
   `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT
+  `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT
+  `;
 
   // Mark all existing users (who signed up before email verification) as verified
   await sql`

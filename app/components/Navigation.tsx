@@ -23,11 +23,13 @@ export default function Navigation() {
   const [notifications, setNotifications] = useState<{ id: number; title: string; description: string; link: string; type: string; created_at: string; is_read: boolean }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showToolsDropdown, setShowToolsDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const toolsDropdownRef = useRef<HTMLDivElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   // Check auth state on mount and when pathname changes (login/signup redirect)
   // Note: session_token is httpOnly so JS can't read it — use user_email instead
@@ -594,9 +596,53 @@ export default function Navigation() {
         {/* Auth buttons */}
         {isAuthenticated ? (
           <div className="flex items-center gap-0.5">
-            <span className="text-sm font-medium text-zinc-300 max-w-[120px] truncate">
-              {username}
-            </span>
+            <div
+              className="relative"
+              ref={profileDropdownRef}
+              onMouseEnter={() => setShowProfileDropdown(true)}
+              onMouseLeave={() => setShowProfileDropdown(false)}
+            >
+              <button
+                onClick={() => {
+                  router.push('/profile');
+                  setShowProfileDropdown(false);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors group"
+              >
+                <span className="text-sm font-medium text-zinc-300 max-w-[120px] truncate">
+                  {username}
+                </span>
+                <svg
+                  className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${showProfileDropdown ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showProfileDropdown && (
+                <div className="absolute top-full right-0 pt-2 w-56 z-50">
+                  <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          router.push('/profile');
+                          setShowProfileDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3"
+                      >
+                        <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Profile & Settings
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             <span className="relative group/badge cursor-default flex items-center verified-badge" title="Premium">
               <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 {/* Three rotated rounded rectangles form the seal/flower shape */}
