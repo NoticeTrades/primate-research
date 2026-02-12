@@ -643,7 +643,7 @@ export default function Navigation() {
                 </div>
               )}
             </div>
-            <span className="relative group/badge cursor-default flex items-center verified-badge" title={username === 'noticetrades' ? 'Founder' : 'Premium'}>
+            <span className={`relative group/badge cursor-default flex items-center verified-badge ${username === 'noticetrades' ? 'founder-badge' : ''}`} title={username === 'noticetrades' ? 'Founder' : 'Premium'}>
               <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 {/* Three rotated rounded rectangles form the seal/flower shape */}
                 <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} />
