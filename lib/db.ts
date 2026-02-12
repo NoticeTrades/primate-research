@@ -107,5 +107,58 @@ export async function initDb() {
   await sql`
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0
   `;
+
+  // Video likes table
+  await sql`
+    CREATE TABLE IF NOT EXISTS video_likes (
+      id SERIAL PRIMARY KEY,
+      user_email TEXT NOT NULL,
+      video_id INTEGER NOT NULL,
+      video_type TEXT DEFAULT 'exclusive',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(user_email, video_id, video_type)
+    )
+  `;
+
+  // Saved videos table
+  await sql`
+    CREATE TABLE IF NOT EXISTS saved_videos (
+      id SERIAL PRIMARY KEY,
+      user_email TEXT NOT NULL,
+      video_id INTEGER NOT NULL,
+      video_type TEXT DEFAULT 'exclusive',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(user_email, video_id, video_type)
+    )
+  `;
+
+  // Video comments table
+  await sql`
+    CREATE TABLE IF NOT EXISTS video_comments (
+      id SERIAL PRIMARY KEY,
+      user_email TEXT NOT NULL,
+      username TEXT NOT NULL,
+      video_id INTEGER NOT NULL,
+      video_type TEXT DEFAULT 'exclusive',
+      comment_text TEXT NOT NULL,
+      parent_id INTEGER,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      FOREIGN KEY (parent_id) REFERENCES video_comments(id) ON DELETE CASCADE
+    )
+  `;
+
+  // Create indexes for better performance
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_video_likes_video ON video_likes(video_id, video_type)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_saved_videos_user ON saved_videos(user_email)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_video_comments_video ON video_comments(video_id, video_type)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_video_comments_parent ON video_comments(parent_id)
+  `;
 }
 

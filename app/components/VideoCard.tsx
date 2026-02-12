@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface VideoCardProps {
   title: string;
@@ -13,6 +13,7 @@ interface VideoCardProps {
   viewCount?: number | null;
   isExclusive?: boolean;
   videoDbId?: number | null;
+  onShowComments?: () => void;
 }
 
 function formatViews(n: number): string {
@@ -32,6 +33,7 @@ export default function VideoCard({
   viewCount,
   isExclusive = false,
   videoDbId = null,
+  onShowComments,
 }: VideoCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(false); // Track if video has been loaded/started
@@ -43,6 +45,13 @@ export default function VideoCard({
   const [isTrackingView, setIsTrackingView] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [userLiked, setUserLiked] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Truncate description if it's longer than 50 words
   const WORD_LIMIT = 50;
@@ -52,6 +61,127 @@ export default function VideoCard({
     ? words.slice(0, WORD_LIMIT).join(' ') + '...'
     : description;
   const displayDescription = isDescriptionExpanded ? description : truncatedDescription;
+
+  // Check authentication and load initial data
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/check');
+        const data = await res.json();
+        setIsAuthenticated(data.authenticated);
+      } catch (error) {
+        setIsAuthenticated(false);
+      }
+    };
+    checkAuth();
+
+    // Load likes and save status if video has a database ID
+    if (videoDbId && (videoType === 'exclusive' || isExclusive)) {
+      loadLikeStatus();
+      loadSaveStatus();
+      loadCommentCount();
+    }
+
+    // Listen for comment updates
+    const handleCommentsUpdated = () => {
+      if (videoDbId && (videoType === 'exclusive' || isExclusive)) {
+        loadCommentCount();
+      }
+    };
+    window.addEventListener('commentsUpdated', handleCommentsUpdated);
+    return () => {
+      window.removeEventListener('commentsUpdated', handleCommentsUpdated);
+    };
+  }, [videoDbId, videoType, isExclusive]);
+
+  const loadLikeStatus = async () => {
+    if (!videoDbId) return;
+    try {
+      const res = await fetch(`/api/videos/${videoDbId}/like`);
+      if (res.ok) {
+        const data = await res.json();
+        setLikeCount(data.likeCount || 0);
+        setUserLiked(data.userLiked || false);
+      }
+    } catch (error) {
+      console.error('Failed to load like status:', error);
+    }
+  };
+
+  const loadSaveStatus = async () => {
+    if (!videoDbId) return;
+    try {
+      const res = await fetch(`/api/videos/${videoDbId}/save?videoType=${videoType || 'exclusive'}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSaved(data.saved || false);
+      }
+    } catch (error) {
+      console.error('Failed to load save status:', error);
+    }
+  };
+
+  const loadCommentCount = async () => {
+    if (!videoDbId) return;
+    try {
+      const res = await fetch(`/api/videos/${videoDbId}/comments?videoType=${videoType || 'exclusive'}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCommentCount(data.comments?.length || 0);
+      }
+    } catch (error) {
+      console.error('Failed to load comment count:', error);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!isAuthenticated || !videoDbId || isLiking) return;
+    
+    setIsLiking(true);
+    try {
+      const res = await fetch(`/api/videos/${videoDbId}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoType: videoType || 'exclusive' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLikeCount(data.likeCount || 0);
+        setUserLiked(data.userLiked || false);
+      } else if (res.status === 401) {
+        // Redirect to login
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      }
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!isAuthenticated || !videoDbId || isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/videos/${videoDbId}/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoType: videoType || 'exclusive' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSaved(data.saved || false);
+      } else if (res.status === 401) {
+        // Redirect to login
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      }
+    } catch (error) {
+      console.error('Failed to toggle save:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Track view when exclusive video starts playing (only once per page load)
   const handlePlay = async () => {
@@ -394,6 +524,87 @@ export default function VideoCard({
             </button>
           )}
         </div>
+        
+        {/* Like, Save, and Comment buttons */}
+        {videoDbId && (videoType === 'exclusive' || isExclusive) && (
+          <div className="flex items-center gap-4 pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <button
+              onClick={handleLike}
+              disabled={!isAuthenticated || isLiking}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+                userLiked
+                  ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+              } ${!isAuthenticated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              title={!isAuthenticated ? 'Sign in to like' : userLiked ? 'Unlike' : 'Like'}
+            >
+              <svg
+                className={`w-5 h-5 ${userLiked ? 'fill-current' : ''}`}
+                fill={userLiked ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+              <span className="text-sm font-medium">{likeCount}</span>
+            </button>
+
+            <button
+              onClick={handleSave}
+              disabled={!isAuthenticated || isSaving}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+                saved
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+              } ${!isAuthenticated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              title={!isAuthenticated ? 'Sign in to save' : saved ? 'Unsave' : 'Save video'}
+            >
+              <svg
+                className={`w-5 h-5 ${saved ? 'fill-current' : ''}`}
+                fill={saved ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                />
+              </svg>
+              <span className="text-sm font-medium">{saved ? 'Saved' : 'Save'}</span>
+            </button>
+
+            {onShowComments && (
+              <button
+                onClick={onShowComments}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <span className="text-sm font-medium">
+                  {commentCount > 0 ? `${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}` : 'Comment'}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

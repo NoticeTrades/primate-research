@@ -8,6 +8,7 @@ import DiscordSign from '../components/DiscordSign';
 import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
 import VideoCard from '../components/VideoCard';
+import VideoComments from '../components/VideoComments';
 import { videos as initialVideos, getYouTubeVideoId } from '../../data/videos';
 import type { VideoEntry, VideoCategory } from '../../data/videos';
 import { useRef } from 'react';
@@ -50,6 +51,9 @@ export default function VideosPage() {
   const [exclusiveViewCounts, setExclusiveViewCounts] = useState<Record<number, number>>({});
   const [dbVideos, setDbVideos] = useState<VideoEntry[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
+  const [selectedVideoType, setSelectedVideoType] = useState<'youtube' | 'exclusive' | 'external'>('exclusive');
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const sourceDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -505,6 +509,13 @@ export default function VideosPage() {
                       viewCount={video.viewCount}
                       isExclusive={video.isExclusive}
                       videoDbId={video.videoDbId}
+                      onShowComments={() => {
+                        if (video.videoDbId) {
+                          setSelectedVideoId(video.videoDbId);
+                          setSelectedVideoType(video.videoType || 'exclusive');
+                          setCommentModalOpen(true);
+                        }
+                      }}
                     />
                   ))}
                 </div>
@@ -527,6 +538,46 @@ export default function VideosPage() {
           </div>
         </div>
       </div>
+
+      {/* Comment Modal */}
+      {commentModalOpen && selectedVideoId && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setCommentModalOpen(false);
+            }
+          }}
+        >
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-black dark:text-white">Comments</h2>
+                <button
+                  onClick={() => setCommentModalOpen(false)}
+                  className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <VideoComments
+                videoId={selectedVideoId}
+                videoType={selectedVideoType}
+                onClose={() => setCommentModalOpen(false)}
+                onCommentAdded={() => {
+                  // Trigger a refresh of video cards to update comment counts
+                  // This will be handled by the VideoCard's useEffect
+                  window.dispatchEvent(new Event('commentsUpdated'));
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
