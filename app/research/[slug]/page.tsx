@@ -32,7 +32,7 @@ export default function ReportViewer() {
 
   if (!article) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/30 to-zinc-950 text-zinc-50">
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/50 to-zinc-950 text-zinc-50">
         <Navigation />
         <div className="fixed top-[72px] left-0 right-0 z-40">
           <MarketTicker />
