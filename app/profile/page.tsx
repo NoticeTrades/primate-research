@@ -349,7 +349,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold text-black dark:text-white">{profile.username}</h1>
                 {profile.username === 'noticetrades' || profile.userRole === 'owner' ? (
-                  <span className="px-3 py-1 text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-full">
+                  <span className="px-3 py-1 text-xs font-bold text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-full">
                     Founder
                   </span>
                 ) : (

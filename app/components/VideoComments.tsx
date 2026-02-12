@@ -178,7 +178,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     // Founder badge for noticetrades
     if (username === 'noticetrades' || userRole === 'owner') {
       return (
-        <span className="px-2 py-0.5 text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-full">
+        <span className="px-2 py-0.5 text-[10px] font-bold text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-full">
           Founder
         </span>
       );
