@@ -95,19 +95,27 @@ export default function NotificationsPage() {
       
       // Check for new notifications that we haven't played sound for yet
       if (!isInitial) {
+        // Get IDs of previous notifications
+        const previousNotificationIds = new Set(notifications.map((n: Notification) => n.id));
+        
+        // Find truly new notifications (not in previous list and unread)
         const newUnreadNotifications = newNotifications.filter(
-          (n: Notification) => !n.is_read && !playedSoundForIdsRef.current.has(n.id)
+          (n: Notification) => !n.is_read && !previousNotificationIds.has(n.id) && !playedSoundForIdsRef.current.has(n.id)
         );
         
         if (newUnreadNotifications.length > 0) {
           // Play sound notification if enabled (only once per new notification)
           if (soundNotificationsEnabled && typeof window !== 'undefined') {
-            const { playNotificationSound } = await import('../utils/sound');
-            playNotificationSound();
-            // Mark these notification IDs as having played sound (using ref to avoid stale closure)
-            newUnreadNotifications.forEach((n: Notification) => {
-              playedSoundForIdsRef.current.add(n.id);
-            });
+            try {
+              const { playNotificationSound } = await import('../utils/sound');
+              playNotificationSound();
+              // Mark these notification IDs as having played sound (using ref to avoid stale closure)
+              newUnreadNotifications.forEach((n: Notification) => {
+                playedSoundForIdsRef.current.add(n.id);
+              });
+            } catch (error) {
+              console.error('Failed to play notification sound:', error);
+            }
           }
           
           // Show browser notification if enabled

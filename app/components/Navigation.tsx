@@ -82,21 +82,28 @@ export default function Navigation() {
           const newNotifications = data.notifications || [];
           const newUnreadCount = data.unreadCount || 0;
           
-          // Find new unread notifications that we haven't played sound for yet
+          // Get IDs of previous notifications
+          const previousNotificationIds = new Set(notifications.map((n: { id: number }) => n.id));
+          
+          // Find truly new notifications (not in previous list, unread, and not already played sound for)
           const newUnreadNotifications = newNotifications.filter(
-            (n: { id: number; is_read: boolean }) => !n.is_read && !playedSoundForIdsRef.current.has(n.id)
+            (n: { id: number; is_read: boolean }) => !n.is_read && !previousNotificationIds.has(n.id) && !playedSoundForIdsRef.current.has(n.id)
           );
           
           // Check if new notifications arrived that we haven't played sound for
           if (newUnreadNotifications.length > 0) {
             // Play sound notification if enabled (only once per new notification)
             if (soundNotificationsEnabled && typeof window !== 'undefined') {
-              const { playNotificationSound } = await import('../utils/sound');
-              playNotificationSound();
-              // Mark these notification IDs as having played sound (using ref to avoid stale closure)
-              newUnreadNotifications.forEach((n: { id: number }) => {
-                playedSoundForIdsRef.current.add(n.id);
-              });
+              try {
+                const { playNotificationSound } = await import('../utils/sound');
+                playNotificationSound();
+                // Mark these notification IDs as having played sound (using ref to avoid stale closure)
+                newUnreadNotifications.forEach((n: { id: number }) => {
+                  playedSoundForIdsRef.current.add(n.id);
+                });
+              } catch (error) {
+                console.error('Failed to play notification sound:', error);
+              }
             }
             
             // Show browser notification if enabled
