@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, ReactElement } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, ReactElement } from 'react';
 
 interface Comment {
   id: number;
@@ -56,7 +56,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     }
   };
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/videos/${videoId}/comments?videoType=${videoType}`);
@@ -69,9 +69,20 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     } finally {
       setLoading(false);
     }
-  };
+  }, [videoId, videoType]);
 
-  const handleSubmitComment = async (e: React.FormEvent, parentId: number | null = null) => {
+  // Sanitize comment text for security
+  const sanitizeText = useCallback((text: string): string => {
+    // Remove potential XSS attempts while preserving legitimate content
+    return text
+      .trim()
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+      .slice(0, 2000); // Enforce max length
+  }, []);
+
+  const handleSubmitComment = useCallback(async (e: React.FormEvent, parentId: number | null = null) => {
     e.preventDefault();
     if (!isAuthenticated) {
       window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
@@ -79,7 +90,8 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     }
 
     const text = parentId ? replyText : commentText;
-    if (!text.trim()) return;
+    const sanitized = sanitizeText(text);
+    if (!sanitized) return;
 
     setIsSubmitting(true);
     try {
@@ -87,7 +99,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          commentText: text.trim(),
+          commentText: sanitized,
           parentId,
           videoType,
         }),
@@ -95,7 +107,6 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
 
       if (res.ok) {
         const data = await res.json();
-        console.log('Comment posted:', data.comment);
         if (parentId) {
           // Add reply to the parent (could be nested)
           const addReplyToComment = (comments: Comment[], parentId: number, newReply: Comment): Comment[] => {
@@ -114,7 +125,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
           setReplyingTo(null);
         } else {
           // Add new top-level comment
-          setComments([data.comment, ...comments]);
+          setComments(prev => [data.comment, ...prev]);
           setCommentText('');
           // Notify parent component to refresh comment count
           if (onCommentAdded) {
@@ -131,9 +142,9 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [isAuthenticated, replyText, commentText, videoId, videoType, sanitizeText, onCommentAdded, loadComments]);
 
-  const handleDeleteComment = async (commentId: number) => {
+  const handleDeleteComment = useCallback(async (commentId: number) => {
     if (!confirm('Are you sure you want to delete this comment?')) return;
 
     try {
@@ -156,7 +167,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     } catch (error) {
       console.error('Failed to delete comment:', error);
     }
-  };
+  }, [videoId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -243,16 +254,18 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
     const isReplying = replyingTo === comment.id;
     useEffect(() => {
       if (isReplying && !wasReplyingRef.current && replyTextareaRef.current) {
-        // Small delay to ensure the textarea is rendered
-        setTimeout(() => {
+        // Use requestAnimationFrame for smoother focus
+        requestAnimationFrame(() => {
           const textarea = replyTextareaRef.current;
           if (textarea) {
             textarea.focus();
-            // Set cursor to end of text to prevent backwards typing
+            // Set cursor to end of text only on initial focus
             const length = textarea.value.length;
-            textarea.setSelectionRange(length, length);
+            if (length > 0) {
+              textarea.setSelectionRange(length, length);
+            }
           }
-        }, 0);
+        });
       }
       wasReplyingRef.current = isReplying;
     }, [isReplying]);
@@ -328,27 +341,31 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
               <form
                 onSubmit={(e) => handleSubmitComment(e, comment.id)}
                 className="mt-3 flex gap-2"
-                onClick={(e) => e.stopPropagation()}
               >
                 <textarea
                   ref={replyTextareaRef}
                   value={replyText}
                   onChange={(e) => {
-                    e.stopPropagation();
-                    setReplyText(e.target.value);
+                    // Don't stop propagation - let React handle it naturally
+                    const newValue = e.target.value;
+                    // Only update if within limit
+                    if (newValue.length <= 2000) {
+                      setReplyText(newValue);
+                    }
                   }}
-                  onFocus={(e) => {
-                    e.stopPropagation();
-                    // Set cursor to end when focused to prevent backwards typing
-                    const textarea = e.target as HTMLTextAreaElement;
-                    const length = textarea.value.length;
-                    textarea.setSelectionRange(length, length);
+                  onKeyDown={(e) => {
+                    // Prevent form submission on Enter (only Ctrl/Cmd+Enter submits)
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      handleSubmitComment(e, comment.id);
+                    }
                   }}
-                  onClick={(e) => e.stopPropagation()}
                   placeholder={`Reply to ${comment.username}...`}
                   rows={2}
                   maxLength={2000}
-                  className="flex-1 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-black dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  autoComplete="off"
+                  spellCheck="true"
+                  className="flex-1 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-black dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-colors"
                 />
                 <button
                   type="submit"
@@ -400,11 +417,26 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
             <div className="flex-1">
               <textarea
                 value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  // Only update if within limit
+                  if (newValue.length <= 2000) {
+                    setCommentText(newValue);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Prevent form submission on Enter (only Ctrl/Cmd+Enter submits)
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    handleSubmitComment(e);
+                  }
+                }}
                 placeholder="Add a comment..."
                 rows={3}
                 maxLength={2000}
-                className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-black dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                autoComplete="off"
+                spellCheck="true"
+                className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-black dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-colors"
               />
               <p className="text-xs text-zinc-500 mt-1">
                 {commentText.length}/2000 characters
