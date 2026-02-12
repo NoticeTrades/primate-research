@@ -280,6 +280,7 @@ export default function VideoCard({
 
   const isYouTube = videoType === 'youtube' || (!videoType && videoUrl?.includes('youtube'));
   const isExclusiveVideo = videoType === 'exclusive' || isExclusive;
+
   const showIframe = videoUrl && isYouTube && (isPlaying || hasStarted);
   const showVideo = videoUrl && isExclusiveVideo && (isPlaying || hasStarted); // Keep video visible once started
   const embedUrl = showIframe
