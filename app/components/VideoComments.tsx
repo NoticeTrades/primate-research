@@ -346,7 +346,6 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
                   ref={replyTextareaRef}
                   value={replyText}
                   onChange={(e) => {
-                    // Don't stop propagation - let React handle it naturally
                     const newValue = e.target.value;
                     // Only update if within limit
                     if (newValue.length <= 2000) {
@@ -358,6 +357,27 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                       e.preventDefault();
                       handleSubmitComment(e, comment.id);
+                      return;
+                    }
+                    
+                    // Prevent page scrolling/navigation when typing in textarea
+                    // Stop propagation for keys that would affect the page background
+                    const navigationKeys = ['Space', 'PageUp', 'PageDown'];
+                    if (navigationKeys.includes(e.key) || e.key === ' ') {
+                      e.stopPropagation();
+                    }
+                    
+                    // Prevent page navigation when at text boundaries
+                    const textarea = e.target as HTMLTextAreaElement;
+                    const atStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
+                    const atEnd = textarea.selectionStart === textarea.value.length && textarea.selectionEnd === textarea.value.length;
+                    
+                    if ((e.key === 'ArrowUp' && atStart) || 
+                        (e.key === 'ArrowDown' && atEnd) ||
+                        (e.key === 'Home' && atStart) ||
+                        (e.key === 'End' && atEnd)) {
+                      e.preventDefault();
+                      e.stopPropagation();
                     }
                   }}
                   placeholder={`Reply to ${comment.username}...`}
@@ -429,6 +449,27 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
                   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                     e.preventDefault();
                     handleSubmitComment(e);
+                    return;
+                  }
+                  
+                  // Prevent page scrolling/navigation when typing in textarea
+                  // Stop propagation for keys that would affect the page background
+                  const navigationKeys = ['Space', 'PageUp', 'PageDown'];
+                  if (navigationKeys.includes(e.key) || e.key === ' ') {
+                    e.stopPropagation();
+                  }
+                  
+                  // Prevent page navigation when at text boundaries
+                  const textarea = e.target as HTMLTextAreaElement;
+                  const atStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
+                  const atEnd = textarea.selectionStart === textarea.value.length && textarea.selectionEnd === textarea.value.length;
+                  
+                  if ((e.key === 'ArrowUp' && atStart) || 
+                      (e.key === 'ArrowDown' && atEnd) ||
+                      (e.key === 'Home' && atStart) ||
+                      (e.key === 'End' && atEnd)) {
+                    e.preventDefault();
+                    e.stopPropagation();
                   }
                 }}
                 placeholder="Add a comment..."

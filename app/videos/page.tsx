@@ -592,8 +592,24 @@ function VideosPageContent() {
               setCommentModalOpen(false);
             }
           }}
+          onKeyDown={(e) => {
+            // Prevent keyboard events from affecting background when modal is open
+            // Only allow Escape to close modal
+            if (e.key === 'Escape') {
+              setCommentModalOpen(false);
+              return;
+            }
+            // Stop propagation for all other keys to prevent background interactions
+            e.stopPropagation();
+          }}
         >
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div 
+            className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onKeyDown={(e) => {
+              // Stop all keyboard events from bubbling to background
+              e.stopPropagation();
+            }}
+          >
             <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-black dark:text-white">Comments</h2>
