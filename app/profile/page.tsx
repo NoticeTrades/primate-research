@@ -166,16 +166,25 @@ export default function ProfilePage() {
         console.log('Uploading profile picture, base64 length:', base64String.length);
         
         try {
+          console.log('Sending profile picture upload request...');
           const res = await fetch('/api/user/profile-picture', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ imageUrl: base64String }),
           });
 
-          const responseData = await res.json().catch(() => ({}));
+          console.log('Upload response status:', res.status);
+          
+          const responseData = await res.json().catch(async (e) => {
+            const text = await res.text().catch(() => '');
+            console.error('Failed to parse JSON response:', text);
+            return { error: 'Invalid response from server', raw: text };
+          });
+          
+          console.log('Upload response data:', responseData);
           
           if (res.ok && responseData.success) {
-            console.log('Profile picture uploaded successfully:', responseData.profilePictureUrl);
+            console.log('Profile picture uploaded successfully:', responseData.profilePictureUrl?.substring(0, 50));
             // Update profile state immediately
             setProfile(prev => prev ? { ...prev, profilePictureUrl: responseData.profilePictureUrl } : null);
             // Also reload profile to ensure consistency
@@ -183,11 +192,13 @@ export default function ProfilePage() {
             alert('Profile picture updated!');
           } else {
             console.error('Upload failed:', res.status, responseData);
-            alert(`Failed to upload profile picture: ${responseData.error || 'Unknown error'}`);
+            const errorMsg = responseData.error || responseData.details || 'Unknown error';
+            alert(`Failed to upload profile picture: ${errorMsg}`);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Upload error:', error);
-          alert('Failed to upload profile picture. Please check console for details.');
+          console.error('Error stack:', error.stack);
+          alert(`Failed to upload profile picture: ${error.message || 'Network error'}. Please check console for details.`);
         } finally {
           setUploadingPicture(false);
         }
