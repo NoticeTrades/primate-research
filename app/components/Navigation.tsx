@@ -84,7 +84,7 @@ export default function Navigation() {
           if (newUnreadCount > previousUnreadCount && previousUnreadCount > 0) {
             // Play sound notification if enabled
             if (soundNotificationsEnabled && typeof window !== 'undefined') {
-              const { playNotificationSound } = await import('../../utils/sound');
+              const { playNotificationSound } = await import('../utils/sound');
               playNotificationSound();
             }
             
