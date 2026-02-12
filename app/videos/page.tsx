@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Navigation from '../components/Navigation';
 import CursorGlow from '../components/CursorGlow';
@@ -41,7 +41,7 @@ function parseDate(dateStr: string | undefined): number {
 
 type SourceFilter = 'all' | 'youtube' | 'exclusive';
 
-export default function VideosPage() {
+function VideosPageContent() {
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
