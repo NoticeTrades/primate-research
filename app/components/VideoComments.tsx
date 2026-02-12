@@ -340,17 +340,11 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
                   onFocus={(e) => {
                     e.stopPropagation();
                     // Set cursor to end when focused to prevent backwards typing
-                    const textarea = e.target;
+                    const textarea = e.target as HTMLTextAreaElement;
                     const length = textarea.value.length;
                     textarea.setSelectionRange(length, length);
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => {
-                    // Prevent cursor from jumping to beginning
-                    if (e.key === 'ArrowLeft' && e.target.selectionStart === 0 && e.target.selectionEnd === 0) {
-                      // Allow normal left arrow behavior
-                    }
-                  }}
                   placeholder={`Reply to ${comment.username}...`}
                   rows={2}
                   maxLength={2000}
