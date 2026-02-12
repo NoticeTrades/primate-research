@@ -350,7 +350,7 @@ export default function ProfilePage() {
                 <h1 className="text-3xl font-bold text-black dark:text-white">{profile.username}</h1>
                 {profile.username === 'noticetrades' || profile.userRole === 'owner' ? (
                   <span className="px-3 py-1 text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-full">
-                    Owner / Founder
+                    Founder
                   </span>
                 ) : (
                   <span className="px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-full">

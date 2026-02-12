@@ -175,11 +175,11 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
   };
 
   const getUserBadge = (userRole?: string, username?: string) => {
-    // Owner/Founder badge for noticetrades
+    // Founder badge for noticetrades
     if (username === 'noticetrades' || userRole === 'owner') {
       return (
         <span className="px-2 py-0.5 text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-full">
-          Owner / Founder
+          Founder
         </span>
       );
     }
