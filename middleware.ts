@@ -30,6 +30,28 @@ function isSearchEngineCrawler(userAgent: string | null): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const url = request.nextUrl.clone();
+  const hostname = request.headers.get('host') || '';
+  
+  // Canonical domain: www.primatetrading.com (HTTPS)
+  const canonicalHost = 'www.primatetrading.com';
+  const isProduction = hostname.includes('primatetrading.com');
+  
+  // Force HTTPS and www in production
+  if (isProduction) {
+    const needsRedirect = 
+      request.nextUrl.protocol !== 'https:' || 
+      !hostname.startsWith('www.');
+    
+    if (needsRedirect) {
+      // Build canonical URL
+      url.protocol = 'https:';
+      url.hostname = canonicalHost;
+      // Preserve pathname and search params
+      return NextResponse.redirect(url, 301); // Permanent redirect
+    }
+  }
+
   const sessionToken = request.cookies.get('session_token')?.value;
   const isAuthenticated = !!sessionToken;
   const userAgent = request.headers.get('user-agent');
@@ -55,13 +77,15 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/research/:path*',
-    '/videos/:path*',
-    '/trades/:path*',
-    '/ticker/:path*',
-    '/calendar/:path*',
-    '/notifications/:path*',
-    '/profile/:path*',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (images, etc.)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 

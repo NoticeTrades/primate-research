@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { readFile } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
 
 export const alt = 'Primate Trading - Market Analysis & Trading Research';
@@ -9,10 +9,15 @@ export const size = {
 };
 export const contentType = 'image/png';
 
+// Force cache refresh by using file modification time as version
+export const revalidate = 0; // Disable caching for OG images
+
 export default async function OGImage() {
-  const logoData = await readFile(
-    join(process.cwd(), 'public', 'primate-logo.png')
-  );
+  const logoPath = join(process.cwd(), 'public', 'primate-logo.png');
+  const logoData = await readFile(logoPath);
+  const logoStats = await stat(logoPath);
+  // Use file modification time as version to force cache refresh when logo changes
+  const logoVersion = Math.floor(logoStats.mtimeMs / 1000);
   const logoBase64 = `data:image/png;base64,${logoData.toString('base64')}`;
 
   return new ImageResponse(
