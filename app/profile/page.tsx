@@ -239,7 +239,9 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900">
       <Navigation />
-      <MarketTicker />
+      <div className="fixed top-[72px] left-0 right-0 z-40">
+        <MarketTicker />
+      </div>
       <CursorGlow />
       <CursorHover />
       <DiscordSign />

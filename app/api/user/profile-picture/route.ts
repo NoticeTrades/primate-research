@@ -22,15 +22,22 @@ export async function POST(request: Request) {
 
     const sql = getDb();
 
-    await sql`
+    const result = await sql`
       UPDATE users
       SET profile_picture_url = ${imageUrl}
       WHERE email = ${userEmail}
+      RETURNING profile_picture_url
     `;
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    console.log('Profile picture updated for:', userEmail, 'URL:', result[0].profile_picture_url);
 
     return NextResponse.json({
       success: true,
-      profilePictureUrl: imageUrl,
+      profilePictureUrl: result[0].profile_picture_url || imageUrl,
     });
   } catch (error: any) {
     console.error('Upload profile picture error:', error);
