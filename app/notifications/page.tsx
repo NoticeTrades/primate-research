@@ -416,6 +416,13 @@ export default function NotificationsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         );
+      case 'mention':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01" />
+          </svg>
+        );
       default:
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -436,6 +443,8 @@ export default function NotificationsPage() {
         return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
       case 'comment_reply':
         return 'bg-green-500/15 text-green-400 border-green-500/30';
+      case 'mention':
+        return 'bg-orange-500/15 text-orange-400 border-orange-500/30';
       case 'alert':
         return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30';
       default:
@@ -455,6 +464,8 @@ export default function NotificationsPage() {
           return 'border-purple-500/30';
         case 'comment_reply':
           return 'border-green-500/30';
+        case 'mention':
+          return 'border-orange-500/30';
         case 'alert':
           return 'border-zinc-500/30';
         default:
@@ -471,6 +482,8 @@ export default function NotificationsPage() {
           return 'border-purple-500/50';
         case 'comment_reply':
           return 'border-green-500/50';
+        case 'mention':
+          return 'border-orange-500/50';
         case 'alert':
           return 'border-zinc-500/50';
         default:
@@ -490,6 +503,8 @@ export default function NotificationsPage() {
         return 'shadow-[0_0_15px_rgba(168,85,247,0.15)] bg-purple-500/5';
       case 'comment_reply':
         return 'shadow-[0_0_20px_rgba(34,197,94,0.15)] bg-green-500/5';
+      case 'mention':
+        return 'shadow-[0_0_20px_rgba(249,115,22,0.15)] bg-orange-500/5';
       case 'alert':
         return 'shadow-[0_0_15px_rgba(161,161,170,0.08)]';
       default:

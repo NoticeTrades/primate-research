@@ -276,7 +276,7 @@ export async function POST(
               ${`${username} mentioned you in ${roomName}`},
               ${sanitizedMessage.length > 100 ? sanitizedMessage.substring(0, 100) + '...' : sanitizedMessage},
               ${`/chat?room=${roomIdNum}`},
-              'comment_reply',
+              'mention',
               ${mentionedUser.email}
             )
           `;

@@ -524,10 +524,15 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         ) : (
           messages.map((message) => {
             const isOwnMessage = message.user_email === currentUserEmail;
+            // Check if current user is mentioned in this message
+            const isMentioned = message.message_text && 
+              new RegExp(`@${currentUsername}\\b`, 'i').test(message.message_text);
             return (
               <div
                 key={message.id}
-                className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
+                className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} ${
+                  isMentioned && !isOwnMessage ? 'ring-2 ring-orange-500/50 rounded-lg p-2 -m-2 bg-orange-500/5' : ''
+                }`}
               >
                 {/* Avatar */}
                 <div className="flex-shrink-0">
@@ -553,6 +558,14 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                       {message.username}
                     </span>
                     {getUserBadge(message.user_role, message.username)}
+                    {isMentioned && !isOwnMessage && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Mentioned you
+                      </span>
+                    )}
                     <span className="text-xs text-zinc-500">
                       {formatTime(message.created_at)}
                     </span>
