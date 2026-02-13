@@ -37,11 +37,16 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<ChatFile[]>([]);
   const [isModerator, setIsModerator] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; email: string; profile_picture_url?: string | null }[]>([]);
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const lastMessageIdRef = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
 
   // Scroll to bottom of messages
   const scrollToBottom = useCallback(() => {
@@ -321,58 +326,140 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     }
   };
 
-  // Convert URLs in text to clickable links
+  // Fetch user suggestions for @mentions
+  useEffect(() => {
+    if (!mentionQuery.trim() || mentionStartIndex === -1) {
+      setMentionSuggestions([]);
+      setShowMentionSuggestions(false);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch(`/api/chat/users?q=${encodeURIComponent(mentionQuery)}`);
+        if (response.ok) {
+          const data = await response.json();
+          setMentionSuggestions(data.users || []);
+          setShowMentionSuggestions(data.users && data.users.length > 0);
+        }
+      } catch (error) {
+        console.error('Error fetching mention suggestions:', error);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchSuggestions, 200);
+    return () => clearTimeout(debounceTimer);
+  }, [mentionQuery, mentionStartIndex]);
+
+  // Handle @mention input
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const cursorPosition = e.target.selectionStart || 0;
+    
+    // Find @mention pattern
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+      setMentionStartIndex(cursorPosition - mentionMatch[0].length);
+      setMentionQuery(mentionMatch[1]);
+      setShowMentionSuggestions(true);
+    } else {
+      setShowMentionSuggestions(false);
+      setMentionStartIndex(-1);
+      setMentionQuery('');
+    }
+    
+    setNewMessage(value);
+  };
+
+  // Insert mention into message
+  const insertMention = (username: string) => {
+    if (mentionStartIndex === -1 || !messageInputRef.current) return;
+    
+    const beforeMention = newMessage.substring(0, mentionStartIndex);
+    const afterMention = newMessage.substring(mentionStartIndex + 1 + mentionQuery.length);
+    const newText = `${beforeMention}@${username} ${afterMention}`;
+    
+    setNewMessage(newText);
+    setShowMentionSuggestions(false);
+    setMentionStartIndex(-1);
+    setMentionQuery('');
+    
+    // Focus back on input and set cursor position
+    setTimeout(() => {
+      if (messageInputRef.current) {
+        messageInputRef.current.focus();
+        const newCursorPos = mentionStartIndex + username.length + 2; // +2 for @ and space
+        messageInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
+
+  // Convert URLs in text to clickable links and highlight @mentions
   const linkifyText = (text: string): ReactNode => {
-    // URL regex pattern - matches http, https, www, and common domains
-    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s]*)/g;
-    
     const parts: ReactNode[] = [];
-    let lastIndex = 0;
-    let match;
     let keyCounter = 0;
+    let lastIndex = 0;
     
-    while ((match = urlRegex.exec(text)) !== null) {
-      // Add text before the URL
+    // Combined regex for URLs and @mentions
+    const combinedRegex = /(@\w+)|(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s]*)/g;
+    let match;
+    
+    while ((match = combinedRegex.exec(text)) !== null) {
+      // Add text before the match
       if (match.index > lastIndex) {
         parts.push(text.substring(lastIndex, match.index));
       }
       
-      // Add the URL as a clickable link
-      let url = match[0];
-      let displayUrl = url;
-      
-      // Add protocol if missing
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url;
+      if (match[1]) {
+        // @mention
+        parts.push(
+          <span
+            key={`mention-${keyCounter++}`}
+            className="text-blue-400 font-semibold"
+          >
+            {match[1]}
+          </span>
+        );
+      } else if (match[2]) {
+        // URL
+        let url = match[2];
+        let displayUrl = url;
+        
+        // Add protocol if missing
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url;
+        }
+        
+        // Truncate display URL if too long
+        if (displayUrl.length > 50) {
+          displayUrl = displayUrl.substring(0, 47) + '...';
+        }
+        
+        parts.push(
+          <a
+            key={`link-${keyCounter++}`}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 underline break-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {displayUrl}
+          </a>
+        );
       }
-      
-      // Truncate display URL if too long
-      if (displayUrl.length > 50) {
-        displayUrl = displayUrl.substring(0, 47) + '...';
-      }
-      
-      parts.push(
-        <a
-          key={`link-${keyCounter++}`}
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-400 hover:text-blue-300 underline break-all"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {displayUrl}
-        </a>
-      );
       
       lastIndex = match.index + match[0].length;
     }
     
-    // Add remaining text after last URL
+    // Add remaining text after last match
     if (lastIndex < text.length) {
       parts.push(text.substring(lastIndex));
     }
     
-    // If no URLs found, return original text
+    // If no matches found, return original text
     return parts.length > 0 ? <>{parts}</> : text;
   };
 
@@ -603,22 +690,66 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
             </svg>
           </button>
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onPaste={handlePaste}
-            placeholder="Type a message or paste an image..."
-            maxLength={2000}
-            disabled={isSending}
-            className="flex-1 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(e);
-              }
-            }}
-          />
+          <div className="flex-1 relative">
+            <input
+              ref={messageInputRef}
+              type="text"
+              value={newMessage}
+              onChange={handleMessageChange}
+              onPaste={handlePaste}
+              placeholder="Type a message, @mention someone, or paste an image..."
+              maxLength={2000}
+              disabled={isSending}
+              className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              onKeyDown={(e) => {
+                if (showMentionSuggestions && mentionSuggestions.length > 0) {
+                  // Handle arrow keys for mention selection
+                  if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+                    e.preventDefault();
+                    // For now, just select first suggestion on Enter
+                    if (e.key === 'Enter' && mentionSuggestions[0]) {
+                      insertMention(mentionSuggestions[0].username);
+                    }
+                    return;
+                  }
+                }
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
+            />
+            {/* Mention Suggestions Dropdown */}
+            {showMentionSuggestions && mentionSuggestions.length > 0 && (
+              <div className="absolute bottom-full left-0 mb-2 w-full max-w-md bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden z-50">
+                <div className="max-h-48 overflow-y-auto">
+                  {mentionSuggestions.map((user) => (
+                    <button
+                      key={user.email}
+                      type="button"
+                      onClick={() => insertMention(user.username)}
+                      className="w-full text-left px-4 py-2 hover:bg-zinc-700 transition-colors flex items-center gap-3"
+                    >
+                      {user.profile_picture_url ? (
+                        <img
+                          src={user.profile_picture_url}
+                          alt={user.username}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center">
+                          <span className="text-zinc-300 text-sm font-semibold">
+                            {user.username.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <span className="text-sm text-white font-medium">@{user.username}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <button
             type="submit"
             disabled={(!newMessage.trim() && uploadedFiles.length === 0) || isSending || uploadingFiles.length > 0}

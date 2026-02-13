@@ -242,6 +242,48 @@ export async function POST(
       }
     }
 
+    // Parse @mentions and create notifications
+    if (sanitizedMessage) {
+      const mentionRegex = /@(\w+)/g;
+      const mentionedUsernames = new Set<string>();
+      let match;
+      
+      while ((match = mentionRegex.exec(sanitizedMessage)) !== null) {
+        mentionedUsernames.add(match[1].toLowerCase());
+      }
+
+      // Create notifications for mentioned users
+      if (mentionedUsernames.size > 0) {
+        const mentionedUsers = await sql`
+          SELECT email, username
+          FROM users
+          WHERE LOWER(username) = ANY(${Array.from(mentionedUsernames)})
+            AND verified = true
+            AND email != ${userEmail}
+        `;
+
+        // Get room name for the notification
+        const roomInfo = await sql`
+          SELECT name FROM chat_rooms WHERE id = ${roomIdNum}
+        `;
+        const roomName = roomInfo[0]?.name || 'Chat';
+
+        // Create notification for each mentioned user
+        for (const mentionedUser of mentionedUsers) {
+          await sql`
+            INSERT INTO notifications (title, description, link, type, user_email)
+            VALUES (
+              ${`${username} mentioned you in ${roomName}`},
+              ${sanitizedMessage.length > 100 ? sanitizedMessage.substring(0, 100) + '...' : sanitizedMessage},
+              ${`/chat?room=${roomIdNum}`},
+              'comment_reply',
+              ${mentionedUser.email}
+            )
+          `;
+        }
+      }
+    }
+
     // Get user profile info and files for the response
     const users = await sql`
       SELECT profile_picture_url, user_role

@@ -45,6 +45,11 @@ export default function ChatPage() {
     setCurrentUserEmail(email);
     setCurrentUsername(username || '');
 
+    // Check for room query parameter (from notifications)
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    const roomIdFromUrl = roomParam ? parseInt(roomParam, 10) : null;
+
     // Load chat rooms
     const loadRooms = async () => {
       try {
@@ -52,9 +57,13 @@ export default function ChatPage() {
         if (response.ok) {
           const data = await response.json();
           setRooms(data.rooms || []);
-          // Auto-select first room if available
+          // Auto-select room from URL param, or first room if available
           if (data.rooms && data.rooms.length > 0 && !selectedRoomId) {
-            setSelectedRoomId(data.rooms[0].id);
+            if (roomIdFromUrl && data.rooms.some((r: ChatRoomData) => r.id === roomIdFromUrl)) {
+              setSelectedRoomId(roomIdFromUrl);
+            } else {
+              setSelectedRoomId(data.rooms[0].id);
+            }
           }
         }
       } catch (error) {
