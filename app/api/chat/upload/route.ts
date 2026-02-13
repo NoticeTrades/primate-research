@@ -22,7 +22,7 @@ const getR2Client = () => {
   });
 };
 
-// POST /api/videos/upload-r2-client — generate presigned URL for client-side upload
+// POST /api/chat/upload — generate presigned URL for chat file upload
 export async function POST(request: Request) {
   try {
     // Check authentication
@@ -61,38 +61,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
     }
 
+    // Validate file size (max 50MB for chat files)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (fileSize && fileSize > maxSize) {
+      return NextResponse.json(
+        { error: 'File size exceeds 50MB limit' },
+        { status: 400 }
+      );
+    }
+
     // Generate unique filename
     const timestamp = Date.now();
     const sanitizedName = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const videoFileName = `videos/${timestamp}-${sanitizedName}`;
+    const filePath = `chat/${timestamp}-${sanitizedName}`;
 
     // Generate presigned URL for upload (valid for 1 hour)
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
-      Key: videoFileName,
-      ContentType: contentType || 'video/mp4',
+      Key: filePath,
+      ContentType: contentType || 'application/octet-stream',
     });
 
     const presignedUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
 
     // Get public URL after upload
     const publicUrl = process.env.R2_PUBLIC_URL 
-      ? `${process.env.R2_PUBLIC_URL}/${videoFileName}`
-      : `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev/${process.env.R2_BUCKET_NAME}/${videoFileName}`;
+      ? `${process.env.R2_PUBLIC_URL}/${filePath}`
+      : `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev/${process.env.R2_BUCKET_NAME}/${filePath}`;
 
     return NextResponse.json({
       success: true,
       presignedUrl,
       publicUrl,
-      filename: videoFileName,
+      filePath,
+      filename: sanitizedName,
     });
   } catch (error: any) {
-    console.error('Generate R2 presigned URL error:', error);
+    console.error('Generate chat file upload URL error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to generate upload URL' },
       { status: 500 }
     );
   }
 }
-
 

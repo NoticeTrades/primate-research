@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Routes that require authentication
-const protectedRoutes = ['/research', '/videos', '/trades', '/ticker', '/calendar', '/notifications', '/profile'];
+const protectedRoutes = ['/research', '/videos', '/trades', '/ticker', '/calendar', '/notifications', '/profile', '/chat'];
 
 // Check if the request is from a search engine crawler
 function isSearchEngineCrawler(userAgent: string | null): boolean {

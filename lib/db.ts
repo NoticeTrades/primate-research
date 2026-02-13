@@ -192,5 +192,69 @@ export async function initDb() {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_video_comments_parent ON video_comments(parent_id)
   `;
+
+  // Chat rooms table
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_rooms (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      topic TEXT,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `;
+
+  // Chat messages table
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id SERIAL PRIMARY KEY,
+      room_id INTEGER NOT NULL,
+      user_email TEXT NOT NULL,
+      username TEXT NOT NULL,
+      message_text TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE
+    )
+  `;
+
+  // Chat message files table (for file attachments)
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_message_files (
+      id SERIAL PRIMARY KEY,
+      message_id INTEGER NOT NULL,
+      file_url TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      file_type TEXT NOT NULL,
+      file_size INTEGER,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE
+    )
+  `;
+
+  // Create indexes for chat performance
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_room ON chat_messages(room_id, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_email)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_chat_message_files_message ON chat_message_files(message_id)
+  `;
+
+  // Insert default chat rooms if they don't exist
+  const existingRooms = await sql`SELECT COUNT(*) as count FROM chat_rooms`;
+  if (existingRooms[0]?.count === 0) {
+    await sql`
+      INSERT INTO chat_rooms (name, description, topic) VALUES
+      ('General Trading', 'General trading discussions and market chat', 'general'),
+      ('Equities', 'Stock market discussions and analysis', 'equities'),
+      ('Crypto', 'Cryptocurrency discussions and analysis', 'crypto'),
+      ('Macro', 'Macroeconomic discussions and market outlook', 'macro'),
+      ('Options', 'Options trading strategies and discussions', 'options'),
+      ('Futures', 'Futures trading discussions and analysis', 'futures')
+    `;
+  }
 }
 
