@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 
 interface ChatFile {
   id: number;
@@ -321,6 +321,61 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     }
   };
 
+  // Convert URLs in text to clickable links
+  const linkifyText = (text: string): ReactNode => {
+    // URL regex pattern - matches http, https, www, and common domains
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s]*)/g;
+    
+    const parts: ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    let keyCounter = 0;
+    
+    while ((match = urlRegex.exec(text)) !== null) {
+      // Add text before the URL
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+      
+      // Add the URL as a clickable link
+      let url = match[0];
+      let displayUrl = url;
+      
+      // Add protocol if missing
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      
+      // Truncate display URL if too long
+      if (displayUrl.length > 50) {
+        displayUrl = displayUrl.substring(0, 47) + '...';
+      }
+      
+      parts.push(
+        <a
+          key={`link-${keyCounter++}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 underline break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {displayUrl}
+        </a>
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text after last URL
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+    
+    // If no URLs found, return original text
+    return parts.length > 0 ? <>{parts}</> : text;
+  };
+
   // Format timestamp
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -435,7 +490,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                   >
                     {message.message_text && (
                       <p className="text-sm whitespace-pre-wrap break-words mb-2">
-                        {message.message_text}
+                        {linkifyText(message.message_text)}
                       </p>
                     )}
                     {/* File Attachments */}
