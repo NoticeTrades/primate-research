@@ -717,9 +717,9 @@ export default function Navigation() {
             <div className="flex items-center gap-0.5">
               {/* Chat Button */}
               <button
-                onClick={() => router.push('/chat')}
+                onClick={() => window.open('/chat', '_blank')}
                 className="relative p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
-                title="Chat"
+                title="Chat (opens in new tab)"
                 suppressHydrationWarning
               >
                 <svg className="w-5 h-5 text-zinc-400 hover:text-zinc-100 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -879,7 +879,7 @@ export default function Navigation() {
                         </button>
                         <button
                           onClick={() => {
-                            handleNavClick('/chat');
+                            window.open('/chat', '_blank');
                             setShowToolsDropdown(false);
                           }}
                           className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3"
