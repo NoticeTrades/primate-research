@@ -91,26 +91,33 @@ export default function ChatPage() {
           {/* Room Sidebar */}
           <div className="lg:col-span-1 bg-zinc-900 rounded-lg p-4 overflow-y-auto">
             <h2 className="text-lg font-semibold text-white mb-4">Rooms</h2>
-            <div className="space-y-2">
-              {rooms.map((room) => (
-                <button
-                  key={room.id}
-                  onClick={() => setSelectedRoomId(room.id)}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-                    selectedRoomId === room.id
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                  }`}
-                >
-                  <div className="font-semibold">{room.name}</div>
-                  {room.description && (
-                    <div className="text-sm opacity-75 mt-1">
-                      {room.description}
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
+            {rooms.length === 0 ? (
+              <div className="text-zinc-400 text-sm">
+                <p className="mb-2">No rooms available.</p>
+                <p className="text-xs">Run database setup in /admin to create chat rooms.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {rooms.map((room) => (
+                  <button
+                    key={room.id}
+                    onClick={() => setSelectedRoomId(room.id)}
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                      selectedRoomId === room.id
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    <div className="font-semibold">{room.name}</div>
+                    {room.description && (
+                      <div className="text-sm opacity-75 mt-1">
+                        {room.description}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Chat Area */}

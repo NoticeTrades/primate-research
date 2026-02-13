@@ -243,18 +243,25 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_chat_message_files_message ON chat_message_files(message_id)
   `;
 
-  // Insert default chat rooms if they don't exist
-  const existingRooms = await sql`SELECT COUNT(*) as count FROM chat_rooms`;
-  if (existingRooms[0]?.count === 0) {
-    await sql`
-      INSERT INTO chat_rooms (name, description, topic) VALUES
-      ('General Trading', 'General trading discussions and market chat', 'general'),
-      ('Equities', 'Stock market discussions and analysis', 'equities'),
-      ('Crypto', 'Cryptocurrency discussions and analysis', 'crypto'),
-      ('Macro', 'Macroeconomic discussions and market outlook', 'macro'),
-      ('Options', 'Options trading strategies and discussions', 'options'),
-      ('Futures', 'Futures trading discussions and analysis', 'futures')
+  // Insert default chat rooms (upsert - only insert if they don't exist)
+  const defaultRooms = [
+    { name: 'General', description: 'General trading discussions and market chat', topic: 'general' },
+    { name: 'Crypto', description: 'Cryptocurrency discussions and analysis', topic: 'crypto' },
+    { name: "Nick's Trades", description: "Nick's trading ideas and analysis", topic: 'nicks-trades' },
+    { name: 'Day Trades', description: 'Day trading discussions and live trades', topic: 'day-trades' },
+  ];
+
+  for (const room of defaultRooms) {
+    const existing = await sql`
+      SELECT id FROM chat_rooms WHERE name = ${room.name}
     `;
+    
+    if (existing.length === 0) {
+      await sql`
+        INSERT INTO chat_rooms (name, description, topic)
+        VALUES (${room.name}, ${room.description}, ${room.topic})
+      `;
+    }
   }
 }
 

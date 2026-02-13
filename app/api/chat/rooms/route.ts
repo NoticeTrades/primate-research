@@ -15,12 +15,28 @@ export async function GET() {
     }
 
     const sql = getDb();
-    const rooms = await sql`
+    const allRooms = await sql`
       SELECT id, name, description, topic, is_active, created_at
       FROM chat_rooms
       WHERE is_active = true
-      ORDER BY name ASC
     `;
+
+    // Order rooms: General, Crypto, Nick's Trades, Day Trades first, then others alphabetically
+    const priorityRooms = ['General', 'Crypto', "Nick's Trades", 'Day Trades'];
+    const rooms = allRooms.sort((a, b) => {
+      const aIndex = priorityRooms.indexOf(a.name);
+      const bIndex = priorityRooms.indexOf(b.name);
+      
+      // If both are priority rooms, maintain their order
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+      // Priority rooms come first
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      // Others sorted alphabetically
+      return a.name.localeCompare(b.name);
+    });
 
     return NextResponse.json({ rooms });
   } catch (error: any) {
