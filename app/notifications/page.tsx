@@ -639,6 +639,8 @@ export default function NotificationsPage() {
                       ? 'All Notifications'
                       : typeFilter === 'unread'
                         ? 'Unread Only'
+                        : typeFilter === 'mention'
+                        ? 'Mention'
                         : typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}
                   </span>
                   <svg
