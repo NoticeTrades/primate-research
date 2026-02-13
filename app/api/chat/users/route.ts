@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     // Get users matching the query (for autocomplete)
     let users: Array<{ username: string; email: string; profile_picture_url: string | null; user_role: string | null }> = [];
     if (query.trim()) {
-      users = await sql`
+      const result = await sql`
         SELECT username, email, profile_picture_url, user_role
         FROM users
         WHERE username ILIKE ${`%${query}%`}
@@ -30,6 +30,7 @@ export async function GET(request: Request) {
         ORDER BY username ASC
         LIMIT 10
       `;
+      users = result as Array<{ username: string; email: string; profile_picture_url: string | null; user_role: string | null }>;
     }
 
     return NextResponse.json({ users });
