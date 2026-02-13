@@ -651,7 +651,7 @@ export default function Navigation() {
 
         {/* Auth buttons */}
         {isAuthenticated ? (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-2">
             <div
               className="relative"
               ref={profileDropdownRef}
@@ -665,6 +665,19 @@ export default function Navigation() {
                 }}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors group"
               >
+                <span className={`relative group/badge cursor-default flex items-center verified-badge ${username === 'noticetrades' ? 'founder-badge' : ''}`} title={username === 'noticetrades' ? 'Founder' : 'Premium'}>
+                  <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    {/* Three rotated rounded rectangles form the seal/flower shape */}
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} />
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} transform="rotate(30 12 12)" />
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} transform="rotate(60 12 12)" />
+                    {/* White checkmark */}
+                    <path d="M7.5 12.5l3 3 6-6" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-zinc-800 border border-zinc-700 rounded-md opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                    {username === 'noticetrades' ? 'Founder' : 'Premium'}
+                  </span>
+                </span>
                 <span className="text-sm font-medium text-zinc-300 max-w-[120px] truncate">
                   {username}
                 </span>
@@ -699,49 +712,38 @@ export default function Navigation() {
                 </div>
               )}
             </div>
-            <span className={`relative group/badge cursor-default flex items-center verified-badge ${username === 'noticetrades' ? 'founder-badge' : ''}`} title={username === 'noticetrades' ? 'Founder' : 'Premium'}>
-              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                {/* Three rotated rounded rectangles form the seal/flower shape */}
-                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} />
-                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} transform="rotate(30 12 12)" />
-                <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill={username === 'noticetrades' ? '#FFD700' : '#1DA1F2'} transform="rotate(60 12 12)" />
-                {/* White checkmark */}
-                <path d="M7.5 12.5l3 3 6-6" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
-              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white bg-zinc-800 border border-zinc-700 rounded-md opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50 shadow-lg">
-                {username === 'noticetrades' ? 'Founder' : 'Premium'}
-              </span>
-            </span>
 
-            {/* Chat Button */}
-            <button
-              onClick={() => router.push('/chat')}
-              className="relative p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
-              title="Chat"
-              suppressHydrationWarning
-            >
-              <svg className="w-5 h-5 text-zinc-400 hover:text-zinc-100 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-            </button>
-
-            {/* Notification Bell */}
-            <div className="relative">
+            {/* Chat and Notification Buttons */}
+            <div className="flex items-center gap-0.5">
+              {/* Chat Button */}
               <button
-                onClick={handleBellClick}
+                onClick={() => router.push('/chat')}
                 className="relative p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+                title="Chat"
                 suppressHydrationWarning
               >
                 <svg className="w-5 h-5 text-zinc-400 hover:text-zinc-100 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full animate-pulse">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
               </button>
 
+              {/* Notification Bell */}
+              <div className="relative">
+                <button
+                  onClick={handleBellClick}
+                  className="relative p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+                  suppressHydrationWarning
+                >
+                  <svg className="w-5 h-5 text-zinc-400 hover:text-zinc-100 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full animate-pulse">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             <button
