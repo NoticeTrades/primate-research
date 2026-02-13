@@ -48,23 +48,50 @@ export async function GET(
       );
     }
 
-    // Get messages (last 100 messages, ordered by newest first) with files
-    const messages = await sql`
-      SELECT 
-        cm.id,
-        cm.room_id,
-        cm.user_email,
-        cm.username,
-        cm.message_text,
-        cm.created_at,
-        u.profile_picture_url,
-        u.user_role
-      FROM chat_messages cm
-      LEFT JOIN users u ON u.email = cm.user_email
-      WHERE cm.room_id = ${roomIdNum}
-      ORDER BY cm.created_at DESC
-      LIMIT 100
-    `;
+    // Get pagination params (for scalability - load messages in chunks)
+    const url = new URL(request.url);
+    const beforeId = url.searchParams.get('before_id');
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 200); // Max 200 per request
+
+    // Get messages (paginated for scalability)
+    let messages;
+    if (beforeId) {
+      // Load older messages (pagination)
+      messages = await sql`
+        SELECT 
+          cm.id,
+          cm.room_id,
+          cm.user_email,
+          cm.username,
+          cm.message_text,
+          cm.created_at,
+          u.profile_picture_url,
+          u.user_role
+        FROM chat_messages cm
+        LEFT JOIN users u ON u.email = cm.user_email
+        WHERE cm.room_id = ${roomIdNum} AND cm.id < ${parseInt(beforeId, 10)}
+        ORDER BY cm.created_at DESC
+        LIMIT ${limit}
+      `;
+    } else {
+      // Load most recent messages
+      messages = await sql`
+        SELECT 
+          cm.id,
+          cm.room_id,
+          cm.user_email,
+          cm.username,
+          cm.message_text,
+          cm.created_at,
+          u.profile_picture_url,
+          u.user_role
+        FROM chat_messages cm
+        LEFT JOIN users u ON u.email = cm.user_email
+        WHERE cm.room_id = ${roomIdNum}
+        ORDER BY cm.created_at DESC
+        LIMIT ${limit}
+      `;
+    }
 
     // Get files for all messages
     const messageIds = messages.map((m: any) => m.id);

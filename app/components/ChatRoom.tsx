@@ -135,11 +135,36 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Handle file selection
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  // Handle paste event for images (charts)
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = Array.from(e.clipboardData.items);
+    const imageItems = items.filter((item) => item.type.startsWith('image/'));
 
+    if (imageItems.length === 0) return;
+
+    e.preventDefault(); // Prevent default paste behavior
+
+    const files: File[] = [];
+    for (const item of imageItems) {
+      const file = item.getAsFile();
+      if (file) {
+        // Create a proper File object with a name
+        const timestamp = Date.now();
+        const extension = file.type.split('/')[1] || 'png';
+        const namedFile = new File([file], `pasted-image-${timestamp}.${extension}`, {
+          type: file.type,
+        });
+        files.push(namedFile);
+      }
+    }
+
+    if (files.length > 0) {
+      await uploadFiles(files);
+    }
+  };
+
+  // Upload files helper function
+  const uploadFiles = async (files: File[]) => {
     // Validate file sizes (max 50MB each)
     const maxSize = 50 * 1024 * 1024;
     const oversizedFiles = files.filter((f) => f.size > maxSize);
@@ -205,6 +230,14 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    await uploadFiles(files);
   };
 
   // Handle sending a message
@@ -478,7 +511,8 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            onPaste={handlePaste}
+            placeholder="Type a message or paste an image..."
             maxLength={2000}
             disabled={isSending}
             className="flex-1 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
