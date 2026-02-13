@@ -32,6 +32,7 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
+  const [isModerator, setIsModerator] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -48,7 +49,10 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
         const cookies = document.cookie.split(';');
         const usernameCookie = cookies.find(c => c.trim().startsWith('user_username='));
         if (usernameCookie) {
-          setUsername(usernameCookie.split('=')[1]);
+          const currentUsername = usernameCookie.split('=')[1];
+          setUsername(currentUsername);
+          // Check if user is moderator (noticetrades or owner role)
+          setIsModerator(currentUsername === 'noticetrades');
         }
       }
     } catch (error) {
@@ -305,10 +309,11 @@ export default function VideoComments({ videoId, videoType = 'exclusive', onClos
               <span className={`font-semibold ${textSize} text-black dark:text-white`}>{comment.username}</span>
               {getUserBadge(comment.userRole, comment.username)}
               <span className="text-xs text-zinc-500">{formatDate(comment.createdAt)}</span>
-              {comment.isOwnComment && (
+              {(comment.isOwnComment || isModerator) && (
                 <button
                   onClick={() => handleDeleteComment(comment.id)}
                   className="ml-auto text-xs text-red-600 dark:text-red-400 hover:underline"
+                  title={isModerator && !comment.isOwnComment ? 'Moderator: Delete comment' : 'Delete your comment'}
                 >
                   Delete
                 </button>

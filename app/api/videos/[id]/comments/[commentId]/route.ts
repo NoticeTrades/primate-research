@@ -26,7 +26,18 @@ export async function DELETE(
 
     const sql = getDb();
 
-    // Verify the comment exists and belongs to the user
+    // Get user info to check if they're a moderator
+    const users = await sql`
+      SELECT username, user_role
+      FROM users
+      WHERE email = ${userEmail}
+      LIMIT 1
+    `;
+
+    const currentUser = users[0];
+    const isModerator = currentUser?.username === 'noticetrades' || currentUser?.user_role === 'owner';
+
+    // Verify the comment exists
     const comment = await sql`
       SELECT id, user_email
       FROM video_comments
@@ -38,7 +49,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
     }
 
-    if (comment[0].user_email !== userEmail) {
+    // Check permissions: moderators can delete any comment, users can only delete their own
+    if (!isModerator && comment[0].user_email !== userEmail) {
       return NextResponse.json(
         { error: 'You can only delete your own comments' },
         { status: 403 }
