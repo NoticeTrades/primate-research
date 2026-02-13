@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const sql = getDb();
     
     // Get users matching the query (for autocomplete)
-    let users;
+    let users: Array<{ username: string; email: string; profile_picture_url: string | null; user_role: string | null }> = [];
     if (query.trim()) {
       users = await sql`
         SELECT username, email, profile_picture_url, user_role
@@ -30,9 +30,6 @@ export async function GET(request: Request) {
         ORDER BY username ASC
         LIMIT 10
       `;
-    } else {
-      // Return empty if no query
-      users = [];
     }
 
     return NextResponse.json({ users });
