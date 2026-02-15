@@ -35,54 +35,51 @@ export async function POST(request: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://primate-research.vercel.app';
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'Primate Research <notifications@resend.dev>';
 
-    // Send emails in batches of 10
-    const batchSize = 10;
+    const emailHtml = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #09090b; color: #fafafa; padding: 40px 24px; border-radius: 16px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="font-size: 20px; font-weight: 700; color: #fafafa; margin: 0;">Primate Research</h1>
+        </div>
+
+        <div style="background-color: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+          <p style="color: #3b82f6; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px 0;">New Research Published</p>
+          <h2 style="font-size: 22px; font-weight: 700; color: #fafafa; margin: 0 0 12px 0;">${title}</h2>
+          ${description ? `<p style="font-size: 14px; color: #a1a1aa; line-height: 1.6; margin: 0;">${description}</p>` : ''}
+        </div>
+
+        <div style="text-align: center; margin-bottom: 32px;">
+          <a href="${siteUrl}/research"
+             style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
+            View Report →
+          </a>
+        </div>
+
+        <div style="border-top: 1px solid #27272a; padding-top: 16px; text-align: center;">
+          <p style="font-size: 12px; color: #52525b; margin: 0;">
+            You're receiving this because you signed up at Primate Research.
+          </p>
+        </div>
+      </div>
+    `;
+
+    // Send one at a time with a delay to avoid Resend rate limit (429 Too Many Requests)
+    const delayMs = 1100; // ~1 per second to stay under limit
     let totalSent = 0;
     const errors: string[] = [];
 
-    for (let i = 0; i < users.length; i += batchSize) {
-      const batch = users.slice(i, i + batchSize);
-
-      const emailPromises = batch.map(async (user) => {
-        try {
-          await resend.emails.send({
-            from: fromEmail,
-            to: user.email,
-            subject: `New Research Drop: ${title}`,
-            html: `
-              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #09090b; color: #fafafa; padding: 40px 24px; border-radius: 16px;">
-                <div style="text-align: center; margin-bottom: 32px;">
-                  <h1 style="font-size: 20px; font-weight: 700; color: #fafafa; margin: 0;">Primate Research</h1>
-                </div>
-
-                <div style="background-color: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                  <p style="color: #3b82f6; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px 0;">New Research Published</p>
-                  <h2 style="font-size: 22px; font-weight: 700; color: #fafafa; margin: 0 0 12px 0;">${title}</h2>
-                  ${description ? `<p style="font-size: 14px; color: #a1a1aa; line-height: 1.6; margin: 0;">${description}</p>` : ''}
-                </div>
-
-                <div style="text-align: center; margin-bottom: 32px;">
-                  <a href="${siteUrl}/research"
-                     style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
-                    View Report →
-                  </a>
-                </div>
-
-                <div style="border-top: 1px solid #27272a; padding-top: 16px; text-align: center;">
-                  <p style="font-size: 12px; color: #52525b; margin: 0;">
-                    You're receiving this because you signed up at Primate Research.
-                  </p>
-                </div>
-              </div>
-            `,
-          });
-          totalSent++;
-        } catch (err) {
-          errors.push(`Failed to send to ${user.email}: ${err}`);
-        }
-      });
-
-      await Promise.all(emailPromises);
+    for (const user of users) {
+      try {
+        await resend.emails.send({
+          from: fromEmail,
+          to: user.email,
+          subject: `New Research Drop: ${title}`,
+          html: emailHtml,
+        });
+        totalSent++;
+      } catch (err) {
+        errors.push(`Failed to send to ${user.email}: ${err}`);
+      }
+      await new Promise((r) => setTimeout(r, delayMs));
     }
 
     // If NOTIFY_CC_EMAIL is set, always send a copy to the admin (so you get one even if you're not in the users table)
