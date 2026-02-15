@@ -782,7 +782,7 @@ export default function Navigation() {
             <div className="flex items-center gap-3">
               <a
                 href="/"
-                className="text-base font-semibold text-black dark:text-zinc-50 tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
+                className="text-xl font-extrabold text-black dark:text-zinc-50 tracking-[-0.02em] hover:opacity-90 transition-opacity cursor-pointer italic select-none"
               >
                 Primate Research
               </a>

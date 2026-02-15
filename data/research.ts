@@ -65,6 +65,84 @@ export function getArticleBySlug(slug: string): ResearchArticle | undefined {
 
 export const researchArticles: ResearchArticle[] = [
   // ──────────────────────────────────────────────
+  // Week of 02/16/2026 – 02/20/2026
+  // ──────────────────────────────────────────────
+  {
+    title: 'Weekly Market Outlook (02/16–02/20): Strong Data, Weak Markets — What\'s Going On?',
+    description:
+      'Strong U.S. data but weak markets: DXY weekly failure swing favors lower prices; T-Bonds watching PYH and 2023 high; NQ divergence and non-failure swing; Bitcoin daily swing at 65,081 and H4 target 79,396.8. FOMC minutes, Unemployment, GDP, PMI this week.',
+    content: `Weekly Market Outlook 02/16-02/20. Hope everyone's having a great weekend. This week: FOMC meeting minutes, Unemployment Thursday, GDP and PMI Friday. Monday is no news. DXY weekly failure swing, weaker dollar outlook. T-Bonds weekly, PYH and 2023 high. Nasdaq weekly/daily, non-failure swing, swing low Nov 17, three-month bar low, 50% at 21,904.75. Bitcoin daily/H4, daily swing 65,081, target 79,396.8. Ending thoughts: data vs positioning, cross-market correlations.`,
+    category: 'Weekly Market Outlook',
+    date: 'Feb 16, 2026',
+    dateRange: '02/16/2026 - 02/20/2026',
+    slug: 'weekly-market-outlook-02-16-2026',
+    tags: ['DXY', 'T-Bonds', 'NQ', 'BTC', 'Failure Swing', 'FOMC', 'Macro'],
+
+    intro: `Hope everyone's having a great weekend! I encourage you all to take some time to review this week's market outlook—you can even use it as a guide to form your own.\n\nThis week we do not have many major news events like last week, but we do have FOMC meeting minutes, which is pretty much just a recap with a small few details about last meeting, Unemployment on Thursday and GDP and PMI on Friday.\n\nThis Monday is a no news Monday.`,
+
+    newsEvents: [
+      { day: 'Mon', date: 'Feb 16', time: '—', currency: 'USD', event: 'No major news (Presidents Day)', forecast: '', previous: '' },
+      { day: 'Tue', date: 'Feb 17', time: '—', currency: 'USD', event: 'No major events', forecast: '', previous: '' },
+      { day: 'Wed', date: 'Feb 18', time: '2:00pm', currency: 'USD', event: 'FOMC Meeting Minutes', forecast: '', previous: '' },
+      { day: 'Thu', date: 'Feb 19', time: '8:30am', currency: 'USD', event: 'Unemployment Claims', forecast: '', previous: '' },
+      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'GDP', forecast: '', previous: '' },
+      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Manufacturing PMI', forecast: '', previous: '' },
+      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Services PMI', forecast: '', previous: '' },
+    ],
+
+    sections: [
+      {
+        title: 'DXY',
+        subtitle: 'Weekly → Daily',
+        content: `The DXY continues to show weakness on the higher timeframes, with structure currently favoring lower prices. We have a weekly failure swing where price made a higher high, but the subsequent high failed to break above it and instead broke below a weekly swing low, signaling that sellers have stepped in for now.\n\nWith inflation cooling and rate cuts being forecasted, I continue to expect a weaker dollar over the next few months.\n\nThe main risk to this outlook would be a broader market unwind, which could lead to short-term dollar strength.`,
+        images: [
+          '/charts/weekly-02-16-2026/dxy-weekly.png',
+          '/charts/weekly-02-16-2026/dxy-daily.png',
+        ],
+      },
+      {
+        title: 'T-Bonds (ZB1!)',
+        subtitle: 'Weekly',
+        content: `Treasuries have been anything but exciting, but at the end of the day, that is not what this market is meant to be.\n\nLast week, however, bonds closed with a strong bullish bar as yields fell. Yields initially spiked following the NFP (jobs data) release on Wednesday, but the move was short-lived. The market reversed those gains the following day and pushed even lower after inflation data came in below expectations.\n\nOverall, last week's economic data was solid. The U.S. economy added 130,000 jobs in January, bringing the unemployment rate down to 4.3%. Headline CPI rose just 0.2% month over month and 2.4% year over year, while core inflation eased to 2.5%. This combination supports the soft-landing narrative rather than signaling a renewed boom-bust cycle.\n\nThat mix of "inflation under control, growth still intact, and cuts on the horizon" pulled yields lower across the curve and drove demand into duration, helping bonds rally over the week.\n\nIn the short term, I believe bonds could continue to benefit if this trend persists. If the tech/AI trade cools off, we could also see a rotation of liquidity into bonds.\n\nTwo levels I am watching in the short term are the PYH (previous year high) and the 2023 high.`,
+        images: [
+          '/charts/weekly-02-16-2026/tbonds-weekly.png',
+        ],
+      },
+      {
+        title: 'Nasdaq (NQ)',
+        subtitle: 'Weekly → Daily',
+        content: `The Nasdaq has been a very interesting market in the current environment. Based on the economic data the market has been receiving, you would expect a market like the Nasdaq — which is more volatile and tends to be more sensitive to news — to see upside. However, the Nasdaq actually closed down 1.51% last week and is now down 7% from the all-time highs set in October.\n\nOn the weekly chart, I am continuing to monitor the divergence that tech has been showing relative to the ES and YM. Over the past few weeks, other indices have made new highs, while NQ failed to do so and instead printed a lower high. That said, it has not yet broken any major market structure.\n\nOn the weekly timeframe, I am watching the swing low from the week of November 17, which also aligns with the previous three-month bar low. A move below this level could trigger short setups.\n\nHow far could it move? That's where additional levels come into play, and you'll need to watch for reactions at each one.\n\nFirst, you have the previous three-month bar low. Below that sits the prior local top from the tariff-driven volatility in February–March.\n\nUnder those levels, I am watching the 50% weekly range at 21,904.75, measured from the weekly low of 17,163.25 to the current all-time local high of 26,646.25.\n\nOn the daily chart, we have more structure to be aware of. There is a non-failure swing here where NQ made a higher high (I will attach a reference).\n\nOn this timeframe, I view swing high (E) as a pivotal top in the market. If we are going to see the weekly timeframe start trading lower, this is not a level I would want to see NQ push back up toward.`,
+        images: [
+          '/charts/weekly-02-16-2026/nq-weekly.png',
+          '/charts/weekly-02-16-2026/nq-daily.png',
+        ],
+      },
+      {
+        title: 'Bitcoin (BTC)',
+        subtitle: 'Daily / H4',
+        content: `As I covered in one of my recent Market Musings in the "Vault" here at Primate Trading, I discussed the opportunity for a short-term long entry on Bitcoin.\n\nThe challenge with this trade is that if NQ begins a weekly/daily sell-off, Bitcoin will most likely struggle to see gains — or at least the type of upside movement we would want while holding a long position. That is a risk you need to be aware of.\n\nOn the daily timeframe, the broader structure still favors a bearish trend. However, we now have clearer structure with a defined daily swing low at 65,081.0.\n\nThis level should now act as a key reference point. It is not an area I would want to see Bitcoin trade back toward if the bullish case is to remain intact. If price does begin moving in that direction, it will be important to monitor whether bids step in aggressively at that level.\n\nI have this level marked on the H4 chart, with an interest in higher short-term prices toward 79,396.8.\n\nIf you want a more in-depth view on where I stand on Bitcoin, head over to the Videos section here at Primate Trading and watch the latest Market Musings.`,
+        images: [
+          '/charts/weekly-02-16-2026/btc-h4.png',
+        ],
+      },
+      {
+        title: 'Failure Swing vs Nonfailure Swing',
+        subtitle: 'Technical Reference (NQ daily)',
+        content: `Figure 2.3a — Failure Swing: The failure of the peak at C to overcome A, followed by the violation of the low at B, constitutes a "sell" signal at S. This is the pattern we see on DXY.\n\nFigure 2.3b — Nonfailure Swing: Here C exceeds A before price falls below B. Some Dow theorists would see a sell signal at S1 (the break of B); others would wait for a lower high at E and then a new low below D before turning bearish at S2. On the NQ daily we have a non-failure swing (higher high at C); swing high (E) is the pivotal level to watch.`,
+        images: [
+          '/charts/weekly-02-16-2026/failure-swing.png',
+        ],
+      },
+      {
+        title: 'Ending Thoughts',
+        subtitle: '',
+        content: `Despite strong U.S. data confirming a steady economy, markets appear to be running out of momentum, a reminder that price often leads sentiment, not the other way around. The recent divergence between solid fundamentals and weak asset performance suggests we may be entering a recalibration phase where expectations for rate cuts, valuations, and growth begin to realign.\n\nIn the weeks ahead, watch how bonds and the dollar behave relative to equities. If yields continue to fall while risk assets fail to respond, it could reflect growing caution rather than optimism about policy easing. Meanwhile, the Nasdaq's relative underperformance and Bitcoin's sensitivity to broader risk moves highlight the importance of patience. This may be an environment that rewards selectivity and short term tactical plays over chasing momentum.\n\nOverall, we are entering a stretch where data may matter less than positioning. Keep your focus on key structural levels, monitor cross market correlations, and remember that some of the most important moves happen not when new information hits, but when the market stops reacting to it.`,
+        images: [],
+      },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
   // Week of 01/26/2026 – 01/30/2026  (FOMC WEEK)
   // ──────────────────────────────────────────────
   {
