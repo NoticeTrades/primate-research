@@ -787,13 +787,11 @@ export default function Navigation() {
                   scrollToSection('home');
                 }
               }}
-              className="flex items-center gap-2.5 pl-1 pr-3 py-1.5 -ml-1 rounded-lg border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer select-none group"
+              className="nav-logo-float flex items-center justify-center rounded-xl bg-white dark:bg-zinc-100 p-2.5 shadow-sm border border-zinc-200 dark:border-zinc-300 shrink-0 cursor-pointer select-none"
+              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
             >
-              <span className="flex items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-800 group-hover:bg-zinc-800 dark:group-hover:bg-zinc-700 transition-colors shrink-0 [&>div]:!w-9 [&>div]:!h-9">
+              <span className="[&>div]:!w-10 [&>div]:!h-10">
                 <Logo />
-              </span>
-              <span className="text-lg font-extrabold text-black dark:text-zinc-50 tracking-[-0.03em] italic">
-                Primate Research
               </span>
             </a>
             <div className="hidden md:flex items-center gap-8">

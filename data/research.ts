@@ -24,11 +24,17 @@ export interface NewsEvent {
   previous?: string;
 }
 
+export type SectionTextBlock = { type: 'text'; content: string };
+export type SectionImagesBlock = { type: 'images'; images: string[]; imageClassName?: string };
+export type SectionBlock = SectionTextBlock | SectionImagesBlock;
+
 export interface ReportSection {
   title: string;
   subtitle?: string;
   content: string;
   images?: string[]; // paths to chart images in /public/charts/
+  /** When set, section is rendered as ordered blocks (text + images) instead of content then images. */
+  blocks?: SectionBlock[];
 }
 
 export interface ResearchArticle {
@@ -82,19 +88,19 @@ export const researchArticles: ResearchArticle[] = [
 
     newsEvents: [
       { day: 'Mon', date: 'Feb 16', time: '—', currency: 'USD', event: 'No major news (Presidents Day)', forecast: '', previous: '' },
-      { day: 'Tue', date: 'Feb 17', time: '8:30am', currency: 'USD', event: 'Empire State Manufacturing Index', forecast: '', previous: '7.7' },
-      { day: 'Wed', date: 'Feb 18', time: '8:30am', currency: 'USD', event: 'Core Durable Goods Orders m/m', forecast: '0.4%', previous: '' },
-      { day: 'Wed', date: 'Feb 18', time: '8:30am', currency: 'USD', event: 'Durable Goods Orders m/m', forecast: '', previous: '5.3%' },
+      { day: 'Tue', date: 'Feb 17', time: '8:30am', currency: 'USD', event: 'Empire State Manufacturing Index', forecast: '8.5', previous: '7.7' },
+      { day: 'Wed', date: 'Feb 18', time: '8:30am', currency: 'USD', event: 'Core Durable Goods Orders m/m', forecast: '0.3%', previous: '0.4%' },
+      { day: 'Wed', date: 'Feb 18', time: '8:30am', currency: 'USD', event: 'Durable Goods Orders m/m', forecast: '-1.8%', previous: '5.3%' },
       { day: 'Wed', date: 'Feb 18', time: '2:00pm', currency: 'USD', event: 'FOMC Meeting Minutes', forecast: '', previous: '' },
-      { day: 'Thu', date: 'Feb 19', time: '8:30am', currency: 'USD', event: 'Unemployment Claims', forecast: '', previous: '227K' },
-      { day: 'Thu', date: 'Feb 19', time: '8:30am', currency: 'USD', event: 'Philly Fed Manufacturing Index', forecast: '', previous: '12.6' },
-      { day: 'Thu', date: 'Feb 19', time: '10:00am', currency: 'USD', event: 'Pending Home Sales m/m', forecast: '', previous: '-9.3%' },
-      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Advance GDP q/q', forecast: '4.4%', previous: '' },
-      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Core PCE Price Index m/m', forecast: '', previous: '0.2%' },
-      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Advance GDP Price Index q/q', forecast: '3.8%', previous: '' },
-      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Manufacturing PMI', forecast: '52.4', previous: '' },
-      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Services PMI', forecast: '52.7', previous: '' },
-      { day: 'Fri', date: 'Feb 20', time: '10:00am', currency: 'USD', event: 'New Home Sales', forecast: '', previous: '737K' },
+      { day: 'Thu', date: 'Feb 19', time: '8:30am', currency: 'USD', event: 'Unemployment Claims', forecast: '229K', previous: '227K' },
+      { day: 'Thu', date: 'Feb 19', time: '8:30am', currency: 'USD', event: 'Philly Fed Manufacturing Index', forecast: '7.8', previous: '12.6' },
+      { day: 'Thu', date: 'Feb 19', time: '10:00am', currency: 'USD', event: 'Pending Home Sales m/m', forecast: '2.4%', previous: '-9.3%' },
+      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Advance GDP q/q', forecast: '2.8%', previous: '4.4%' },
+      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Core PCE Price Index m/m', forecast: '0.3%', previous: '0.2%' },
+      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Advance GDP Price Index q/q', forecast: '3.2%', previous: '3.8%' },
+      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Manufacturing PMI', forecast: '52.1', previous: '52.4' },
+      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Services PMI', forecast: '52.8', previous: '52.7' },
+      { day: 'Fri', date: 'Feb 20', time: '10:00am', currency: 'USD', event: 'New Home Sales', forecast: '735K', previous: '' },
     ],
 
     sections: [
@@ -123,6 +129,18 @@ export const researchArticles: ResearchArticle[] = [
           '/charts/weekly-02-16-2026/nq-weekly.png',
           '/charts/weekly-02-16-2026/nq-daily.png',
           '/charts/weekly-02-16-2026/failure-swing.png',
+        ],
+        blocks: [
+          { type: 'text', content: 'The Nasdaq has been a very interesting market in the current environment. Based on the economic data the market has been receiving, you would expect a market like the Nasdaq — which is more volatile and tends to be more sensitive to news — to see upside. However, the Nasdaq actually closed down 1.51% last week and is now down 7% from the all-time highs set in October.' },
+          { type: 'text', content: 'On the weekly chart, I am continuing to monitor the divergence that tech has been showing relative to the ES and YM. Over the past few weeks, other indices have made new highs, while NQ failed to do so and instead printed a lower high. That said, it has not yet broken any major market structure.' },
+          { type: 'images', images: ['/charts/weekly-02-16-2026/nq-weekly.png', '/charts/weekly-02-16-2026/nq-daily.png'] },
+          { type: 'text', content: 'On the weekly timeframe, I am watching the swing low from the week of November 17, which also aligns with the previous three-month bar low. A move below this level could trigger short setups.' },
+          { type: 'text', content: "How far could it move? That's where additional levels come into play, and you'll need to watch for reactions at each one." },
+          { type: 'text', content: 'First, you have the previous three-month bar low. Below that sits the prior local top from the tariff-driven volatility in February–March.' },
+          { type: 'text', content: 'Under those levels, I am watching the 50% weekly range at 21,904.75, measured from the weekly low of 17,163.25 to the current all-time local high of 26,646.25.' },
+          { type: 'text', content: 'On the daily chart, we have more structure to be aware of. There is a non-failure swing here where NQ made a higher high (I will attach a reference).' },
+          { type: 'text', content: "On this timeframe, I view swing high (E) as a pivotal top in the market. If we are going to see the weekly timeframe start trading lower, this is not a level I would want to see NQ push back up toward." },
+          { type: 'images', images: ['/charts/weekly-02-16-2026/failure-swing.png'], imageClassName: 'report-failure-swing-rotated' },
         ],
       },
       {
