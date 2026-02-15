@@ -244,7 +244,7 @@ export default function ChatPopup() {
         aria-hidden
       />
       <div
-        className="fixed z-50 flex flex-col rounded-xl overflow-hidden border border-zinc-700 bg-zinc-900 shadow-2xl"
+        className="fixed z-50 flex flex-col rounded-lg overflow-hidden border border-zinc-700/80 bg-zinc-900/95 shadow-xl backdrop-blur-sm"
         style={{
           width: size.width,
           height: size.height,
@@ -256,16 +256,16 @@ export default function ChatPopup() {
         {/* Draggable header */}
         <div
           onMouseDown={handleHeaderMouseDown}
-          className="flex items-center justify-between px-4 py-2.5 bg-zinc-800 border-b border-zinc-700 cursor-grab active:cursor-grabbing select-none"
+          className="flex items-center justify-between px-3 py-2 bg-zinc-800/90 border-b border-zinc-700/80 cursor-grab active:cursor-grabbing select-none"
         >
-          <span className="text-sm font-semibold text-white">Trading Chat</span>
+          <span className="text-xs font-semibold text-white">Trading Chat</span>
           <button
             type="button"
             onClick={closeChat}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
             aria-label="Close chat"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -274,23 +274,23 @@ export default function ChatPopup() {
         {/* Content */}
         <div className="flex-1 flex min-h-0">
           {!isAuthenticated ? (
-            <div className="flex-1 flex items-center justify-center p-4 text-zinc-400 text-sm">
+            <div className="flex-1 flex items-center justify-center p-3 text-zinc-400 text-xs">
               Log in to use chat
             </div>
           ) : isLoading ? (
-            <div className="flex-1 flex items-center justify-center text-zinc-400 text-sm">
-              Loading...
+            <div className="flex-1 flex items-center justify-center text-zinc-500 text-xs">
+              Loading…
             </div>
           ) : (
             <>
               {/* Sidebar with Channels / DMs tabs */}
-              <div className="w-40 flex-shrink-0 border-r border-zinc-700 overflow-hidden flex flex-col bg-zinc-900/50">
-                <div className="flex border-b border-zinc-700">
+              <div className="w-32 flex-shrink-0 border-r border-zinc-700/80 overflow-hidden flex flex-col bg-zinc-900/30">
+                <div className="flex border-b border-zinc-700/80">
                   <button
                     type="button"
                     onClick={() => setViewMode('channels')}
-                    className={`flex-1 px-2 py-2.5 text-xs font-semibold transition-colors ${
-                      viewMode === 'channels' ? 'bg-zinc-800 text-white border-b-2 border-blue-500' : 'text-zinc-400 hover:text-zinc-200'
+                    className={`flex-1 px-1.5 py-2 text-[11px] font-medium transition-colors ${
+                      viewMode === 'channels' ? 'text-white border-b-2 border-blue-500 bg-zinc-800/80' : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
                     Channels
@@ -298,23 +298,20 @@ export default function ChatPopup() {
                   <button
                     type="button"
                     onClick={() => setViewMode('dms')}
-                    className={`flex-1 px-2 py-2.5 text-xs font-semibold transition-colors ${
-                      viewMode === 'dms' ? 'bg-zinc-800 text-white border-b-2 border-teal-500' : 'text-zinc-400 hover:text-zinc-200'
+                    className={`flex-1 px-1.5 py-2 text-[11px] font-medium transition-colors ${
+                      viewMode === 'dms' ? 'text-white border-b-2 border-teal-500 bg-zinc-800/80' : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
                     DMs
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2">
+                <div className="flex-1 overflow-y-auto p-1.5">
                   {viewMode === 'channels' ? (
                     <>
-                      <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-2">
-                        Public
-                      </div>
                       {rooms.length === 0 ? (
-                        <p className="text-xs text-zinc-500 px-2">No rooms</p>
+                        <p className="text-[11px] text-zinc-500 px-1.5 py-1">No rooms</p>
                       ) : (
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           {rooms.map((room) => {
                             const unreadCount = unreadByRoom[String(room.id)] || 0;
                             return (
@@ -322,13 +319,13 @@ export default function ChatPopup() {
                                 key={room.id}
                                 type="button"
                                 onClick={() => setSelectedRoomId(room.id)}
-                                className={`w-full text-left px-2 py-2 rounded-lg text-sm flex items-center justify-between gap-1 ${
-                                  selectedRoomId === room.id ? 'bg-blue-600 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                                className={`w-full text-left px-1.5 py-1.5 rounded-md text-[12px] flex items-center justify-between gap-1 ${
+                                  selectedRoomId === room.id ? 'bg-blue-600/90 text-white' : 'text-zinc-300 hover:bg-zinc-800/80'
                                 }`}
                               >
                                 <span className="truncate">#{room.name}</span>
                                 {unreadCount > 0 && (
-                                  <span className="flex-shrink-0 min-w-[18px] h-4 flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full animate-pulse">
+                                  <span className="flex-shrink-0 min-w-[16px] h-[14px] flex items-center justify-center px-0.5 text-[9px] font-bold text-white bg-red-500 rounded-full">
                                     {unreadCount > 99 ? '99+' : unreadCount}
                                   </span>
                                 )}
@@ -340,15 +337,12 @@ export default function ChatPopup() {
                     </>
                   ) : (
                     <>
-                      <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-2">
-                        Direct messages
-                      </div>
                       {dmListLoading ? (
-                        <p className="text-xs text-zinc-500 px-2">Loading...</p>
+                        <p className="text-[11px] text-zinc-500 px-1.5 py-1">Loading…</p>
                       ) : dmConversations.length === 0 ? (
-                        <p className="text-xs text-zinc-500 px-2">No DMs yet. Click a username in a channel and choose DM.</p>
+                        <p className="text-[11px] text-zinc-500 px-1.5 py-1 leading-tight">Click a name in a channel → DM</p>
                       ) : (
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           {dmConversations.map((conv) => (
                             <button
                               key={conv.dmId}
@@ -357,8 +351,8 @@ export default function ChatPopup() {
                                 setSelectedDmId(conv.dmId);
                                 setSelectedDmOtherUser(conv.otherUser);
                               }}
-                              className={`w-full text-left px-2 py-2 rounded-lg text-sm truncate ${
-                                selectedDmId === conv.dmId ? 'bg-teal-600/80 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                              className={`w-full text-left px-1.5 py-1.5 rounded-md text-[12px] truncate ${
+                                selectedDmId === conv.dmId ? 'bg-teal-600/80 text-white' : 'text-zinc-300 hover:bg-zinc-800/80'
                               }`}
                             >
                               {conv.otherUser.username}
@@ -371,7 +365,7 @@ export default function ChatPopup() {
                 </div>
               </div>
               {/* Chat area */}
-              <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex-1 min-w-0 flex flex-col min-h-0">
                 {viewMode === 'channels' ? (
                   selectedRoom ? (
                     <ChatRoomComponent
@@ -382,7 +376,7 @@ export default function ChatPopup() {
                       onRequestDM={handleRequestDM}
                     />
                   ) : (
-                    <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">
+                    <div className="flex-1 flex items-center justify-center text-zinc-500 text-xs px-2">
                       Select a channel
                     </div>
                   )
@@ -394,26 +388,21 @@ export default function ChatPopup() {
                     currentUsername={currentUsername}
                   />
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">
-                    Select a DM or click a username in a channel and choose DM
+                  <div className="flex-1 flex items-center justify-center text-zinc-500 text-xs px-2 text-center">
+                    Select a DM or click a name in a channel → DM
                   </div>
                 )}
               </div>
             </>
           )}
         </div>
-        {/* Resize handle - drag from bottom-right corner */}
+        {/* Resize handle */}
         <div
           onMouseDown={handleResizeMouseDown}
-          className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-end justify-end p-1 group"
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end opacity-60 hover:opacity-100 transition-opacity"
           aria-label="Resize chat"
         >
-          <svg
-            className="w-4 h-4 text-zinc-500 group-hover:text-zinc-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>
         </div>

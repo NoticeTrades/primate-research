@@ -130,42 +130,42 @@ export default function DMRoom({ dmId, otherUser, currentUserEmail, currentUsern
   };
 
   return (
-    <div className="flex flex-col h-full bg-zinc-900 rounded-lg overflow-hidden">
-      <div className="bg-zinc-800 border-b border-zinc-700 px-4 py-3">
-        <h2 className="text-lg font-semibold text-white">DM with {otherUser.username}</h2>
-        <p className="text-sm text-zinc-400">{messages.length} messages</p>
+    <div className="flex flex-col h-full bg-transparent overflow-hidden">
+      <div className="flex items-center gap-2 shrink-0 px-3 py-2 border-b border-zinc-700/80">
+        <h2 className="text-sm font-semibold text-white truncate">{otherUser.username}</h2>
+        {messages.length > 0 && (
+          <span className="text-xs text-zinc-500">· {messages.length}</span>
+        )}
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3 min-h-0">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full text-zinc-400">Loading...</div>
+          <div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading...</div>
         ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-center text-zinc-400">
-            <p className="text-lg mb-2">No messages yet</p>
-            <p className="text-sm">Send a message to start the conversation.</p>
+          <div className="flex items-center justify-center h-full text-center text-zinc-500 text-sm">
+            <p>No messages yet.</p>
+            <p className="mt-1 text-xs">Send a message to start.</p>
           </div>
         ) : (
           messages.map((msg) => {
             const isOwn = msg.sender_email === currentUserEmail;
             return (
-              <div key={msg.id} className="flex gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center border border-zinc-600">
-                    <span className="text-zinc-300 text-sm font-semibold">
-                      {msg.username.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
+              <div key={msg.id} className="flex gap-2">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-zinc-700/80 flex items-center justify-center">
+                  <span className="text-zinc-300 text-xs font-medium">
+                    {msg.username.charAt(0).toUpperCase()}
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-blue-400">{msg.username}</span>
-                    <span className="text-xs text-zinc-500">{formatTime(msg.created_at)}</span>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs font-medium text-blue-400">{msg.username}</span>
+                    <span className="text-[10px] text-zinc-500">{formatTime(msg.created_at)}</span>
                   </div>
                   <div
-                    className={`inline-block px-4 py-2 rounded-lg max-w-[85%] ${
-                      isOwn ? 'bg-blue-600/80 text-white' : 'bg-zinc-800 text-zinc-100 border border-zinc-700'
+                    className={`inline-block px-3 py-1.5 rounded-md max-w-[90%] text-sm ${
+                      isOwn ? 'bg-blue-600/80 text-white' : 'bg-zinc-800/90 text-zinc-100 border border-zinc-700/50'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap break-words">{linkifyText(msg.message_text)}</p>
+                    <p className="whitespace-pre-wrap break-words text-[13px]">{linkifyText(msg.message_text)}</p>
                   </div>
                 </div>
               </div>
@@ -174,23 +174,23 @@ export default function DMRoom({ dmId, otherUser, currentUserEmail, currentUsern
         )}
         <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSend} className="border-t border-zinc-700 p-4 bg-zinc-800">
+      <form onSubmit={handleSend} className="shrink-0 border-t border-zinc-700/80 px-3 py-2 bg-zinc-800/50">
         <div className="flex gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder="Message..."
             maxLength={2000}
             disabled={isSending}
-            className="flex-1 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="flex-1 px-3 py-1.5 text-sm bg-zinc-900/80 border border-zinc-700/80 rounded-md text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!newMessage.trim() || isSending}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-md font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isSending ? 'Sending...' : 'Send'}
+            {isSending ? '…' : 'Send'}
           </button>
         </div>
       </form>

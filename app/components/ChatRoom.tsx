@@ -534,22 +534,24 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   };
 
   return (
-    <div className="flex flex-col h-full bg-zinc-900 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-transparent overflow-hidden">
       {/* Room Header */}
-      <div className="bg-zinc-800 border-b border-zinc-700 px-4 py-3">
-        <h2 className="text-lg font-semibold text-white">{roomName}</h2>
-        <p className="text-sm text-zinc-400">{messages.length} messages</p>
+      <div className="shrink-0 bg-zinc-800/90 border-b border-zinc-700/80 px-3 py-2 flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-white truncate">#{roomName}</h2>
+        {messages.length > 0 && (
+          <span className="text-xs text-zinc-500">{messages.length}</span>
+        )}
       </div>
 
       {/* Messages Container */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+        className="flex-1 overflow-y-auto px-3 py-2 space-y-3 min-h-0"
         style={{ scrollBehavior: 'smooth' }}
       >
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-zinc-400">Loading messages...</div>
+            <div className="text-zinc-500 text-sm">Loading…</div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -789,7 +791,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       </div>
 
       {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="border-t border-zinc-700 p-4 bg-zinc-800">
+      <form onSubmit={handleSendMessage} className="shrink-0 border-t border-zinc-700/80 p-3 bg-zinc-800/50">
         {/* Uploaded Files Preview */}
         {uploadedFiles.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">
