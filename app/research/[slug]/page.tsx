@@ -7,6 +7,7 @@ import { getArticleBySlug } from '../../../data/research';
 import Navigation from '../../components/Navigation';
 import MarketTicker from '../../components/MarketTicker';
 import StructuredData from '../../components/StructuredData';
+import ResearchComments from '../../components/ResearchComments';
 
 export default function ReportViewer() {
   const params = useParams();
@@ -134,6 +135,19 @@ export default function ReportViewer() {
           </header>
 
           <div className="border-t border-zinc-800 mb-10" />
+
+          {/* ─── Jump to Comments (top) ─── */}
+          <div className="mb-10">
+            <a
+              href="#report-comments"
+              className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-300 hover:text-blue-400 hover:border-blue-500/40 hover:bg-zinc-800 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Comments
+            </a>
+          </div>
 
           {/* ─── Markets Covered ─── */}
           {hasSections && (
@@ -264,6 +278,12 @@ export default function ReportViewer() {
               ))}
             </div>
           )}
+
+          {/* ─── Comments (scroll target from top button) ─── */}
+          <section id="report-comments" className="scroll-mt-32 border-t border-zinc-800 mt-16 pt-10">
+            <h2 className="text-xl font-bold text-zinc-50 mb-6">Discussion</h2>
+            <ResearchComments articleSlug={slug} />
+          </section>
 
           {/* ─── Footer ─── */}
           <div className="border-t border-zinc-800 mt-16 pt-8">

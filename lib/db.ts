@@ -259,6 +259,23 @@ export async function initDb() {
     )
   `;
 
+  // Research article comments (per report slug)
+  await sql`
+    CREATE TABLE IF NOT EXISTS research_comments (
+      id SERIAL PRIMARY KEY,
+      article_slug TEXT NOT NULL,
+      user_email TEXT NOT NULL,
+      username TEXT NOT NULL,
+      comment_text TEXT NOT NULL,
+      parent_id INTEGER,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      FOREIGN KEY (parent_id) REFERENCES research_comments(id) ON DELETE CASCADE
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_research_comments_slug ON research_comments(article_slug)
+  `;
+
   // Create indexes for chat performance
   await sql`
     CREATE INDEX IF NOT EXISTS idx_chat_messages_room ON chat_messages(room_id, created_at DESC)
