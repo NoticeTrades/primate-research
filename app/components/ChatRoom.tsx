@@ -50,6 +50,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; email: string; profile_picture_url?: string | null }[]>([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -67,18 +68,24 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     setIsModerator(currentUsername === 'noticetrades');
   }, [currentUsername]);
 
-  // Load initial messages
+  // Load messages when room changes — reset state first so we don't show another room's messages
   useEffect(() => {
+    setIsLoading(true);
+    setMessages([]);
+    lastMessageIdRef.current = 0;
+
     const loadMessages = async () => {
       try {
-        const response = await fetch(`/api/chat/rooms/${roomId}/messages`);
+        const response = await fetch(`/api/chat/rooms/${roomId}/messages`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        });
         if (response.ok) {
           const data = await response.json();
-          setMessages(data.messages || []);
-          if (data.messages && data.messages.length > 0) {
-            lastMessageIdRef.current = Math.max(
-              ...data.messages.map((m: ChatMessage) => m.id)
-            );
+          const list = data.messages || [];
+          setMessages(list);
+          if (list.length > 0) {
+            lastMessageIdRef.current = Math.max(...list.map((m: ChatMessage) => m.id));
           }
         }
       } catch (error) {
@@ -677,29 +684,66 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                       </div>
                     )}
                   </div>
-                  {/* Reactions */}
-                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                    {REACTION_EMOJIS.map((emoji) => {
-                      const r = (message.reactions || []).find((x) => x.emoji === emoji);
-                      const count = r?.count ?? 0;
-                      const reacted = r?.reacted ?? false;
-                      return (
+                  {/* Reactions: show existing reaction pills + one "add reaction" button that opens emoji picker */}
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5 relative">
+                    {(message.reactions || [])
+                      .filter((r) => r.count > 0)
+                      .map((r) => (
                         <button
-                          key={emoji}
+                          key={r.emoji}
                           type="button"
-                          onClick={() => handleToggleReaction(message.id, emoji)}
+                          onClick={() => handleToggleReaction(message.id, r.emoji)}
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-sm transition-colors ${
-                            reacted
+                            r.reacted
                               ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
                               : 'bg-zinc-800 text-zinc-400 border border-zinc-600 hover:bg-zinc-700 hover:text-zinc-300'
                           }`}
-                          title={`${emoji} ${count > 0 ? count : 'Add reaction'}`}
+                          title={`${r.emoji} ${r.count}`}
                         >
-                          <span>{emoji}</span>
-                          {count > 0 && <span className="text-xs">{count}</span>}
+                          <span>{r.emoji}</span>
+                          <span className="text-xs">{r.count}</span>
                         </button>
-                      );
-                    })}
+                      ))}
+                    <div className="relative inline-block">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenReactionPickerMessageId((prev) =>
+                            prev === message.id ? null : message.id
+                          )
+                        }
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 border border-transparent hover:border-zinc-600 transition-colors"
+                        title="Add reaction"
+                      >
+                        <span className="opacity-80">😊</span>
+                        <span className="text-xs font-medium">+</span>
+                      </button>
+                      {openReactionPickerMessageId === message.id && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            aria-hidden
+                            onClick={() => setOpenReactionPickerMessageId(null)}
+                          />
+                          <div className="absolute left-0 bottom-full mb-1 flex items-center gap-0.5 p-1.5 bg-zinc-800 border border-zinc-600 rounded-lg shadow-xl z-20">
+                            {REACTION_EMOJIS.map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={() => {
+                                  handleToggleReaction(message.id, emoji);
+                                  setOpenReactionPickerMessageId(null);
+                                }}
+                                className="p-1.5 rounded hover:bg-zinc-700 text-lg leading-none"
+                                title={emoji}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
