@@ -276,6 +276,20 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_research_comments_slug ON research_comments(article_slug)
   `;
 
+  // Research article likes (per report slug)
+  await sql`
+    CREATE TABLE IF NOT EXISTS research_likes (
+      id SERIAL PRIMARY KEY,
+      article_slug TEXT NOT NULL,
+      user_email TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(article_slug, user_email)
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_research_likes_slug ON research_likes(article_slug)
+  `;
+
   // Create indexes for chat performance
   await sql`
     CREATE INDEX IF NOT EXISTS idx_chat_messages_room ON chat_messages(room_id, created_at DESC)

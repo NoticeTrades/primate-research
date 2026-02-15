@@ -13,6 +13,7 @@ interface ResearchCardProps {
   pdfUrl?: string;
   slug?: string;
   tags?: string[];
+  likeCount?: number;
 }
 
 export default function ResearchCard({
@@ -23,6 +24,7 @@ export default function ResearchCard({
   dateRange,
   slug,
   tags,
+  likeCount = 0,
 }: ResearchCardProps) {
   const router = useRouter();
 
@@ -37,11 +39,19 @@ export default function ResearchCard({
         <span className="text-xs font-medium px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
           {category}
         </span>
-        {date && (
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            {date}
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            {likeCount}
           </span>
-        )}
+          {date && (
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {date}
+            </span>
+          )}
+        </div>
       </div>
       <h3 className="text-xl font-semibold text-black dark:text-zinc-50 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-500 transition-colors">
         {title}

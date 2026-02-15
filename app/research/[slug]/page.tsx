@@ -19,20 +19,43 @@ export default function ReportViewer() {
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
   const [copyDone, setCopyDone] = useState(false);
 
+  // Load like count and user liked from API; fallback to localStorage for guest "liked" state
   useEffect(() => {
-    if (typeof window === 'undefined' || !slug) return;
-    try {
-      const raw = localStorage.getItem(LIKED_KEY);
-      const set = raw ? (JSON.parse(raw) as Set<string>) : new Set<string>();
-      setLiked(set.has(slug));
-    } catch {
-      setLiked(false);
-    }
+    if (!slug) return;
+    fetch(`/api/research/${encodeURIComponent(slug)}/like`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: { likeCount?: number; userLiked?: boolean }) => {
+        if (typeof data.likeCount === 'number') setLikeCount(data.likeCount);
+        if (data.userLiked === true) {
+          setLiked(true);
+        } else {
+          try {
+            const raw = typeof window !== 'undefined' ? localStorage.getItem(LIKED_KEY) : null;
+            const arr = raw ? (JSON.parse(raw) as string[]) : [];
+            setLiked(Array.isArray(arr) && arr.includes(slug));
+          } catch {
+            setLiked(false);
+          }
+        }
+      })
+      .catch(() => {});
   }, [slug]);
 
-  const toggleLike = () => {
+  const toggleLike = async () => {
+    const res = await fetch(`/api/research/${encodeURIComponent(slug)}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (typeof data.likeCount === 'number') setLikeCount(data.likeCount);
+      if (typeof data.userLiked === 'boolean') setLiked(data.userLiked);
+      return;
+    }
+    // Not authenticated: fallback to localStorage only (count won't update)
     try {
       const raw = localStorage.getItem(LIKED_KEY);
       const set = new Set<string>(raw ? JSON.parse(raw) : []);
@@ -194,6 +217,9 @@ export default function ReportViewer() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
               {liked ? 'Liked' : 'Like'}
+              {likeCount > 0 && (
+                <span className="text-zinc-500 dark:text-zinc-400 tabular-nums">({likeCount})</span>
+              )}
             </button>
             <button
               type="button"

@@ -160,9 +160,23 @@ export default function AdminPage() {
         });
         const data = await res.json();
         if (res.ok) {
-          setNotifyStatus(`Bell notification created + ${data.sent}/${data.total} emails sent.`);
+          const sent = data.sent ?? 0;
+          const total = data.total ?? 0;
+          setNotifyStatus(
+            total === 0
+              ? 'Bell notification created. No subscribers in database to email.'
+              : sent === 0 && total > 0
+                ? `Bell created, but 0/${total} emails were delivered. Check RESEND_API_KEY and Resend domain (see tip below).`
+                : `Bell notification created + ${sent}/${total} emails sent.`
+          );
+          // Show per-recipient errors so admin knows why some emails failed
+          if (data.errors?.length) {
+            setNotifyStatus((prev) =>
+              [prev, ' Delivery issues: ' + data.errors.slice(0, 3).join('; ')].join('')
+            );
+          }
         } else {
-          setNotifyStatus(`Bell created, but email error: ${data.error}`);
+          setNotifyStatus(`Bell created, but email error: ${data.error || 'Unknown error'}`);
         }
       } else {
         setNotifyStatus('Bell notification created (no emails sent).');
@@ -698,6 +712,12 @@ export default function AdminPage() {
               />
               Also send email to all {totalUsers} subscriber{totalUsers !== 1 ? 's' : ''}
             </label>
+            {sendEmail && (
+              <p className="text-xs text-zinc-500">
+                Requires <code className="bg-zinc-800 px-1 rounded">RESEND_API_KEY</code> in your environment.
+                With the default <code className="bg-zinc-800 px-1 rounded">notifications@resend.dev</code>, Resend only delivers to the email that owns your Resend account. To send to all subscribers, add and verify your own domain in Resend and set <code className="bg-zinc-800 px-1 rounded">RESEND_FROM_EMAIL</code>.
+              </p>
+            )}
             <div className="flex items-center gap-4">
               <button
                 onClick={handleNotify}

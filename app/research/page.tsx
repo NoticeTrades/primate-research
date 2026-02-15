@@ -8,7 +8,7 @@ import CursorHover from '../components/CursorHover';
 import DiscordSign from '../components/DiscordSign';
 import MarketTicker from '../components/MarketTicker';
 import ResearchCard from '../components/ResearchCard';
-import { researchArticles } from '../../data/research';
+import { researchArticles, generateSlug } from '../../data/research';
 import type { ResearchArticle } from '../../data/research';
 
 function matchSearch(article: ResearchArticle, query: string): boolean {
@@ -47,6 +47,15 @@ function ResearchPageContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+
+  // Fetch like counts for all reports
+  useEffect(() => {
+    fetch('/api/research/likes')
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((counts: Record<string, number>) => setLikeCounts(counts))
+      .catch(() => {});
+  }, []);
 
   // Pre-fill search from ?q= query param (e.g. from nav search bar)
   useEffect(() => {
@@ -238,9 +247,16 @@ function ResearchPageContent() {
             <main className="min-w-0 flex-1">
               {filtered.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filtered.map((report, index) => (
-                    <ResearchCard key={index} {...report} />
-                  ))}
+                  {filtered.map((report, index) => {
+                    const articleSlug = report.slug || generateSlug(report.title);
+                    return (
+                      <ResearchCard
+                        key={index}
+                        {...report}
+                        likeCount={likeCounts[articleSlug] ?? 0}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-12 text-center">
