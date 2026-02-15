@@ -125,10 +125,33 @@ export async function GET(
       });
     }
 
-    // Attach files to messages
+    // Get reactions for all messages (count per emoji, and whether current user reacted)
+    let reactionsMap: Record<number, { emoji: string; count: number; reacted: boolean }[]> = {};
+    if (messageIds.length > 0) {
+      const reactions = await sql`
+        SELECT message_id, emoji, user_email
+        FROM chat_message_reactions
+        WHERE message_id = ANY(${messageIds})
+      `;
+      const countByMessageEmoji: Record<string, { count: number; reacted: boolean }> = {};
+      (reactions as { message_id: number; emoji: string; user_email: string }[]).forEach((r) => {
+        const key = `${r.message_id}:${r.emoji}`;
+        if (!countByMessageEmoji[key]) countByMessageEmoji[key] = { count: 0, reacted: false };
+        countByMessageEmoji[key].count += 1;
+        if (r.user_email === userEmail) countByMessageEmoji[key].reacted = true;
+      });
+      messageIds.forEach((mid: number) => {
+        reactionsMap[mid] = Object.entries(countByMessageEmoji)
+          .filter(([k]) => k.startsWith(String(mid) + ':'))
+          .map(([k, v]) => ({ emoji: k.split(':')[1], count: v.count, reacted: v.reacted }));
+      });
+    }
+
+    // Attach files and reactions to messages
     const messagesWithFiles = messages.map((m: any) => ({
       ...m,
       files: filesMap[m.id] || [],
+      reactions: reactionsMap[m.id] || [],
     }));
 
     // Reverse to show oldest first (for display)

@@ -10,6 +10,14 @@ interface ChatFile {
   file_size?: number;
 }
 
+export const REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '👎'] as const;
+
+interface MessageReaction {
+  emoji: string;
+  count: number;
+  reacted: boolean;
+}
+
 interface ChatMessage {
   id: number;
   room_id: number;
@@ -20,6 +28,7 @@ interface ChatMessage {
   profile_picture_url?: string | null;
   user_role?: string;
   files?: ChatFile[];
+  reactions?: MessageReaction[];
 }
 
 interface ChatRoomProps {
@@ -323,6 +332,25 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     } catch (error) {
       console.error('Error deleting message:', error);
       alert('Failed to delete message. Please try again.');
+    }
+  };
+
+  const handleToggleReaction = async (messageId: number, emoji: string) => {
+    try {
+      const res = await fetch(`/api/chat/rooms/${roomId}/messages/${messageId}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, reactions: data.reactions || [] } : m
+        )
+      );
+    } catch (e) {
+      console.error('Error toggling reaction:', e);
     }
   };
 
@@ -648,6 +676,30 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                         ))}
                       </div>
                     )}
+                  </div>
+                  {/* Reactions */}
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                    {REACTION_EMOJIS.map((emoji) => {
+                      const r = (message.reactions || []).find((x) => x.emoji === emoji);
+                      const count = r?.count ?? 0;
+                      const reacted = r?.reacted ?? false;
+                      return (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => handleToggleReaction(message.id, emoji)}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-sm transition-colors ${
+                            reacted
+                              ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
+                              : 'bg-zinc-800 text-zinc-400 border border-zinc-600 hover:bg-zinc-700 hover:text-zinc-300'
+                          }`}
+                          title={`${emoji} ${count > 0 ? count : 'Add reaction'}`}
+                        >
+                          <span>{emoji}</span>
+                          {count > 0 && <span className="text-xs">{count}</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

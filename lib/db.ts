@@ -232,6 +232,22 @@ export async function initDb() {
     )
   `;
 
+  // Chat message reactions (emoji reactions per message)
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_message_reactions (
+      id SERIAL PRIMARY KEY,
+      message_id INTEGER NOT NULL,
+      user_email TEXT NOT NULL,
+      emoji TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(message_id, user_email, emoji),
+      FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_chat_message_reactions_message ON chat_message_reactions(message_id)
+  `;
+
   // Chat room read tracking (for unread mention badges per channel)
   await sql`
     CREATE TABLE IF NOT EXISTS chat_room_read (

@@ -21,16 +21,27 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
-const POPUP_WIDTH = 520;
-const POPUP_HEIGHT = 640;
-const DEFAULT_X = typeof window !== 'undefined' ? window.innerWidth - POPUP_WIDTH - 24 : 100;
+const POPUP_WIDTH = 400;
+const POPUP_HEIGHT = 480;
+const MIN_WIDTH = 320;
+const MIN_HEIGHT = 320;
+const MAX_WIDTH = 900;
+const MAX_HEIGHT = 800;
+
+function getDefaultX() {
+  if (typeof window === 'undefined') return 100;
+  return window.innerWidth - POPUP_WIDTH - 24;
+}
 const DEFAULT_Y = 80;
 
 export default function ChatPopup() {
   const { isChatOpen, closeChat } = useChat();
-  const [position, setPosition] = useState({ x: DEFAULT_X, y: DEFAULT_Y });
+  const [position, setPosition] = useState({ x: getDefaultX(), y: DEFAULT_Y });
+  const [size, setSize] = useState({ width: POPUP_WIDTH, height: POPUP_HEIGHT });
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
+  const resizeStartRef = useRef({ x: 0, y: 0, width: POPUP_WIDTH, height: POPUP_HEIGHT });
 
   const [currentUserEmail, setCurrentUserEmail] = useState('');
   const [currentUsername, setCurrentUsername] = useState('');
@@ -119,6 +130,39 @@ export default function ChatPopup() {
     };
   }, [isDragging]);
 
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: size.width,
+      height: size.height,
+    };
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const dx = e.clientX - resizeStartRef.current.x;
+      const dy = e.clientY - resizeStartRef.current.y;
+      const maxW = typeof window !== 'undefined' ? Math.min(MAX_WIDTH, window.innerWidth - position.x - 20) : MAX_WIDTH;
+      const maxH = typeof window !== 'undefined' ? Math.min(MAX_HEIGHT, window.innerHeight - position.y - 20) : MAX_HEIGHT;
+      setSize({
+        width: Math.max(MIN_WIDTH, Math.min(maxW, resizeStartRef.current.width + dx)),
+        height: Math.max(MIN_HEIGHT, Math.min(maxH, resizeStartRef.current.height + dy)),
+      });
+    };
+    const onUp = () => setIsResizing(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isResizing, position.x, position.y]);
+
   if (!isChatOpen) return null;
 
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
@@ -127,18 +171,17 @@ export default function ChatPopup() {
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/20"
+        className="fixed inset-0 z-40 bg-black/20 pointer-events-none"
         aria-hidden
-        onClick={closeChat}
       />
       <div
         className="fixed z-50 flex flex-col rounded-xl overflow-hidden border border-zinc-700 bg-zinc-900 shadow-2xl"
         style={{
-          width: POPUP_WIDTH,
-          height: POPUP_HEIGHT,
+          width: size.width,
+          height: size.height,
           left: position.x,
           top: position.y,
-          cursor: isDragging ? 'grabbing' : 'default',
+          cursor: isDragging ? 'grabbing' : isResizing ? 'nwse-resize' : 'default',
         }}
       >
         {/* Draggable header */}
@@ -222,6 +265,21 @@ export default function ChatPopup() {
               </div>
             </>
           )}
+        </div>
+        {/* Resize handle - drag from bottom-right corner */}
+        <div
+          onMouseDown={handleResizeMouseDown}
+          className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-end justify-end p-1 group"
+          aria-label="Resize chat"
+        >
+          <svg
+            className="w-4 h-4 text-zinc-500 group-hover:text-zinc-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
         </div>
       </div>
     </>
