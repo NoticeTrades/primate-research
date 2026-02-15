@@ -155,6 +155,7 @@ async function sendWelcomeEmail(email: string, name: string) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Primate Research <notifications@resend.dev>';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://primate-research.vercel.app';
+  const { getEmailLogoHtml } = await import('../../../../lib/email-logo');
 
   try {
     await resend.emails.send({
@@ -163,6 +164,7 @@ async function sendWelcomeEmail(email: string, name: string) {
       subject: 'Welcome to Primate Research',
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #09090b; color: #fafafa; padding: 40px 24px; border-radius: 16px;">
+          ${getEmailLogoHtml(siteUrl)}
           <div style="text-align: center; margin-bottom: 32px;">
             <h1 style="font-size: 24px; font-weight: 700; color: #fafafa; margin: 0;">Welcome to Primate Research</h1>
           </div>

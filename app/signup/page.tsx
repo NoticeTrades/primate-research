@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import CursorGlow from '../components/CursorGlow';
+import DiscordSign from '../components/DiscordSign';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -68,23 +70,29 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/50 to-zinc-950 flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      <CursorGlow />
+      <DiscordSign />
+      <div className="w-full max-w-md relative z-10">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-block">
+          <Link href="/" className="inline-flex flex-col items-center gap-3 group">
+            <span className="inline-flex items-center justify-center rounded-lg bg-white p-1 shadow-md border border-zinc-200 group-hover:shadow-lg transition-shadow">
+              <img src="/primate-logo.png" alt="Primate Research" className="w-10 h-10 object-contain" />
+            </span>
             <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">
               Primate Research
             </h1>
           </Link>
-          <p className="text-zinc-400 mt-2">
+          <p className="text-zinc-400 mt-2 text-sm">
             Create an account to access research, videos, and trade insights.
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-semibold text-zinc-50 mb-6">Sign Up</h2>
+        <div className="bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 shadow-2xl shadow-black/20">
+          <h2 className="text-xl font-semibold text-zinc-50 mb-1">Create an account</h2>
+          <p className="text-zinc-500 text-sm mb-6">Start your research and trading journey</p>
 
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -94,7 +102,7 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-zinc-300 mb-1.5">
+              <label htmlFor="name" className="block text-sm font-medium text-zinc-400 mb-1.5">
                 Full Name
               </label>
               <input
@@ -105,12 +113,12 @@ export default function SignupPage() {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="John Doe"
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-xl text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-zinc-400 mb-1.5">
                 Email
               </label>
               <input
@@ -121,12 +129,12 @@ export default function SignupPage() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-xl text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
               />
             </div>
 
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-zinc-300 mb-1.5">
+              <label htmlFor="username" className="block text-sm font-medium text-zinc-400 mb-1.5">
                 Username
               </label>
               <input
@@ -136,13 +144,13 @@ export default function SignupPage() {
                 required
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="Choose an awesome username"
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                placeholder="Choose a username"
+                className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-xl text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium text-zinc-400 mb-1.5">
                 Password
               </label>
               <input
@@ -153,12 +161,12 @@ export default function SignupPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-xl text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-300 mb-1.5">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-400 mb-1.5">
                 Confirm Password
               </label>
               <input
@@ -169,14 +177,14 @@ export default function SignupPage() {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-xl text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed mt-2"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white font-semibold rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -195,13 +203,13 @@ export default function SignupPage() {
           <p className="text-sm text-zinc-400 text-center mt-6">
             Already have an account?{' '}
             <Link href="/login" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
-              Log in
+              Sign in
             </Link>
           </p>
         </div>
 
         <p className="text-xs text-zinc-500 text-center mt-6">
-          By signing up, you&apos;ll receive email notifications when new research is published.
+          By signing up, you&apos;ll receive email when new research is published.
         </p>
       </div>
     </div>

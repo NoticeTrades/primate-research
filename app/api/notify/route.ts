@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { getDb } from '../../../lib/db';
+import { getEmailLogoHtml } from '../../../lib/email-logo';
 
 export async function POST(request: Request) {
   try {
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
 
     const emailHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #09090b; color: #fafafa; padding: 40px 24px; border-radius: 16px;">
+        ${getEmailLogoHtml(siteUrl)}
         <div style="text-align: center; margin-bottom: 32px;">
           <h1 style="font-size: 20px; font-weight: 700; color: #fafafa; margin: 0;">Primate Research</h1>
         </div>
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
           subject: `New Research Drop: ${title}`,
           html: `
               <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #09090b; color: #fafafa; padding: 40px 24px; border-radius: 16px;">
+                ${getEmailLogoHtml(siteUrl)}
                 <div style="text-align: center; margin-bottom: 32px;">
                   <h1 style="font-size: 20px; font-weight: 700; color: #fafafa; margin: 0;">Primate Research</h1>
                 </div>

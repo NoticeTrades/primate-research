@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import CursorGlow from '../components/CursorGlow';
+import DiscordSign from '../components/DiscordSign';
 
 function VerifyPageContent() {
   const router = useRouter();
@@ -130,8 +132,10 @@ function VerifyPageContent() {
 
   if (!email) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-        <div className="text-center">
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/50 to-zinc-950 flex items-center justify-center px-4 relative overflow-hidden">
+        <CursorGlow />
+        <DiscordSign />
+        <div className="text-center relative z-10">
           <p className="text-zinc-400 mb-4">No email provided. Please sign up first.</p>
           <Link
             href="/signup"
@@ -145,20 +149,25 @@ function VerifyPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/50 to-zinc-950 flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      <CursorGlow />
+      <DiscordSign />
+      <div className="w-full max-w-md relative z-10">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-block">
+          <Link href="/" className="inline-flex flex-col items-center gap-3 group">
+            <span className="inline-flex items-center justify-center rounded-lg bg-white p-1 shadow-md border border-zinc-200 group-hover:shadow-lg transition-shadow">
+              <img src="/primate-logo.png" alt="Primate Research" className="w-10 h-10 object-contain" />
+            </span>
             <h1 className="text-2xl font-bold text-zinc-50 tracking-tight">
               Primate Research
             </h1>
           </Link>
-          <p className="text-zinc-400 mt-2">Verify your email to continue</p>
+          <p className="text-zinc-400 mt-2 text-sm">Verify your email to continue</p>
         </div>
 
         {/* Verification Card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 shadow-2xl shadow-black/20">
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
               <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
