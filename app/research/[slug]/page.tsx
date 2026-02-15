@@ -231,9 +231,18 @@ export default function ReportViewer() {
               </div>
               <div className="w-12 h-0.5 bg-blue-500/50 rounded-full mb-6" />
 
+              {/* Commentary first so reference images can sit under the text that mentions them */}
+              <div className="space-y-4 mb-6">
+                {section.content.split('\n\n').filter(p => p.trim()).map((p, j) => (
+                  <p key={j} className="text-base text-zinc-300 leading-relaxed">
+                    {p}
+                  </p>
+                ))}
+              </div>
+
               {/* Chart images */}
               {section.images && section.images.length > 0 && (
-                <div className={`grid gap-4 mb-6 ${section.images.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                <div className={`grid gap-4 ${section.images.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                   {section.images.map((img, j) => (
                     <div
                       key={j}
@@ -258,15 +267,6 @@ export default function ReportViewer() {
                   ))}
                 </div>
               )}
-
-              {/* Commentary */}
-              <div className="space-y-4">
-                {section.content.split('\n\n').filter(p => p.trim()).map((p, j) => (
-                  <p key={j} className="text-base text-zinc-300 leading-relaxed">
-                    {p}
-                  </p>
-                ))}
-              </div>
             </section>
           ))}
 

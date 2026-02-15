@@ -82,12 +82,19 @@ export const researchArticles: ResearchArticle[] = [
 
     newsEvents: [
       { day: 'Mon', date: 'Feb 16', time: '—', currency: 'USD', event: 'No major news (Presidents Day)', forecast: '', previous: '' },
-      { day: 'Tue', date: 'Feb 17', time: '—', currency: 'USD', event: 'No major events', forecast: '', previous: '' },
+      { day: 'Tue', date: 'Feb 17', time: '8:30am', currency: 'USD', event: 'Empire State Manufacturing Index', forecast: '', previous: '7.7' },
+      { day: 'Wed', date: 'Feb 18', time: '8:30am', currency: 'USD', event: 'Core Durable Goods Orders m/m', forecast: '0.4%', previous: '' },
+      { day: 'Wed', date: 'Feb 18', time: '8:30am', currency: 'USD', event: 'Durable Goods Orders m/m', forecast: '', previous: '5.3%' },
       { day: 'Wed', date: 'Feb 18', time: '2:00pm', currency: 'USD', event: 'FOMC Meeting Minutes', forecast: '', previous: '' },
-      { day: 'Thu', date: 'Feb 19', time: '8:30am', currency: 'USD', event: 'Unemployment Claims', forecast: '', previous: '' },
-      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'GDP', forecast: '', previous: '' },
-      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Manufacturing PMI', forecast: '', previous: '' },
-      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Services PMI', forecast: '', previous: '' },
+      { day: 'Thu', date: 'Feb 19', time: '8:30am', currency: 'USD', event: 'Unemployment Claims', forecast: '', previous: '227K' },
+      { day: 'Thu', date: 'Feb 19', time: '8:30am', currency: 'USD', event: 'Philly Fed Manufacturing Index', forecast: '', previous: '12.6' },
+      { day: 'Thu', date: 'Feb 19', time: '10:00am', currency: 'USD', event: 'Pending Home Sales m/m', forecast: '', previous: '-9.3%' },
+      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Advance GDP q/q', forecast: '4.4%', previous: '' },
+      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Core PCE Price Index m/m', forecast: '', previous: '0.2%' },
+      { day: 'Fri', date: 'Feb 20', time: '8:30am', currency: 'USD', event: 'Advance GDP Price Index q/q', forecast: '3.8%', previous: '' },
+      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Manufacturing PMI', forecast: '52.4', previous: '' },
+      { day: 'Fri', date: 'Feb 20', time: '9:45am', currency: 'USD', event: 'Flash Services PMI', forecast: '52.7', previous: '' },
+      { day: 'Fri', date: 'Feb 20', time: '10:00am', currency: 'USD', event: 'New Home Sales', forecast: '', previous: '737K' },
     ],
 
     sections: [
@@ -115,6 +122,7 @@ export const researchArticles: ResearchArticle[] = [
         images: [
           '/charts/weekly-02-16-2026/nq-weekly.png',
           '/charts/weekly-02-16-2026/nq-daily.png',
+          '/charts/weekly-02-16-2026/failure-swing.png',
         ],
       },
       {
@@ -123,14 +131,6 @@ export const researchArticles: ResearchArticle[] = [
         content: `As I covered in one of my recent Market Musings in the "Vault" here at Primate Trading, I discussed the opportunity for a short-term long entry on Bitcoin.\n\nThe challenge with this trade is that if NQ begins a weekly/daily sell-off, Bitcoin will most likely struggle to see gains — or at least the type of upside movement we would want while holding a long position. That is a risk you need to be aware of.\n\nOn the daily timeframe, the broader structure still favors a bearish trend. However, we now have clearer structure with a defined daily swing low at 65,081.0.\n\nThis level should now act as a key reference point. It is not an area I would want to see Bitcoin trade back toward if the bullish case is to remain intact. If price does begin moving in that direction, it will be important to monitor whether bids step in aggressively at that level.\n\nI have this level marked on the H4 chart, with an interest in higher short-term prices toward 79,396.8.\n\nIf you want a more in-depth view on where I stand on Bitcoin, head over to the Videos section here at Primate Trading and watch the latest Market Musings.`,
         images: [
           '/charts/weekly-02-16-2026/btc-h4.png',
-        ],
-      },
-      {
-        title: 'Failure Swing vs Nonfailure Swing',
-        subtitle: 'Technical Reference (NQ daily)',
-        content: `Figure 2.3a — Failure Swing: The failure of the peak at C to overcome A, followed by the violation of the low at B, constitutes a "sell" signal at S. This is the pattern we see on DXY.\n\nFigure 2.3b — Nonfailure Swing: Here C exceeds A before price falls below B. Some Dow theorists would see a sell signal at S1 (the break of B); others would wait for a lower high at E and then a new low below D before turning bearish at S2. On the NQ daily we have a non-failure swing (higher high at C); swing high (E) is the pivotal level to watch.`,
-        images: [
-          '/charts/weekly-02-16-2026/failure-swing.png',
         ],
       },
       {

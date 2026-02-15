@@ -779,27 +779,23 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto pl-4 pr-6 py-4">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-8">
-            <div className="flex items-center gap-3">
-              <a
-                href="/"
-                className="text-xl font-extrabold text-black dark:text-zinc-50 tracking-[-0.02em] hover:opacity-90 transition-opacity cursor-pointer italic select-none"
-              >
-                Primate Research
-              </a>
-              <button
-                onClick={() => {
-                  if (pathname !== '/') {
-                    router.push('/');
-                  } else {
-                    scrollToSection('home');
-                  }
-                }}
-                className="hover:opacity-80 transition-opacity"
-                suppressHydrationWarning
-              >
+            <a
+              href="/"
+              onClick={(e) => {
+                if (pathname === '/') {
+                  e.preventDefault();
+                  scrollToSection('home');
+                }
+              }}
+              className="flex items-center gap-2.5 pl-1 pr-3 py-1.5 -ml-1 rounded-lg border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer select-none group"
+            >
+              <span className="flex items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-800 group-hover:bg-zinc-800 dark:group-hover:bg-zinc-700 transition-colors shrink-0 [&>div]:!w-9 [&>div]:!h-9">
                 <Logo />
-              </button>
-            </div>
+              </span>
+              <span className="text-lg font-extrabold text-black dark:text-zinc-50 tracking-[-0.03em] italic">
+                Primate Research
+              </span>
+            </a>
             <div className="hidden md:flex items-center gap-8">
               <button
                 onClick={() => scrollToSection('about')}
