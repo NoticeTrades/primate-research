@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useMemo, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useMemo, useState, useEffect, useCallback } from 'react';
+import { useSearchParams, usePathname } from 'next/navigation';
 import Navigation from '../components/Navigation';
 import CursorGlow from '../components/CursorGlow';
 import CursorHover from '../components/CursorHover';
@@ -44,18 +44,31 @@ export default function ResearchPage() {
 
 function ResearchPageContent() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
 
-  // Fetch like counts for all reports
-  useEffect(() => {
-    fetch('/api/research/likes')
+  const fetchLikeCounts = useCallback(() => {
+    fetch('/api/research/likes', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : {}))
       .then((counts: Record<string, number>) => setLikeCounts(counts))
       .catch(() => {});
   }, []);
+
+  // Fetch like counts on mount, when returning to this page, and when tab becomes visible
+  useEffect(() => {
+    fetchLikeCounts();
+  }, [fetchLikeCounts, pathname]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchLikeCounts();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [fetchLikeCounts]);
 
   // Pre-fill search from ?q= query param (e.g. from nav search bar)
   useEffect(() => {

@@ -259,6 +259,37 @@ export async function initDb() {
     )
   `;
 
+  // DM conversations (one row per pair of users)
+  await sql`
+    CREATE TABLE IF NOT EXISTS dm_conversations (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS dm_participants (
+      dm_id INTEGER NOT NULL REFERENCES dm_conversations(id) ON DELETE CASCADE,
+      user_email TEXT NOT NULL,
+      PRIMARY KEY (dm_id, user_email)
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS dm_messages (
+      id SERIAL PRIMARY KEY,
+      dm_id INTEGER NOT NULL REFERENCES dm_conversations(id) ON DELETE CASCADE,
+      sender_email TEXT NOT NULL,
+      username TEXT NOT NULL,
+      message_text TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_dm_messages_dm ON dm_messages(dm_id, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_dm_participants_user ON dm_participants(user_email)
+  `;
+
   // Research article comments (per report slug)
   await sql`
     CREATE TABLE IF NOT EXISTS research_comments (

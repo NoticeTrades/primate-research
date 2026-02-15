@@ -36,9 +36,10 @@ interface ChatRoomProps {
   roomName: string;
   currentUserEmail: string;
   currentUsername: string;
+  onRequestDM?: (userEmail: string, username: string) => void;
 }
 
-export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUsername }: ChatRoomProps) {
+export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUsername, onRequestDM }: ChatRoomProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +52,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<number | null>(null);
+  const [dmPopoverMessageId, setDmPopoverMessageId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -594,9 +596,42 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                 {/* Message Content - always left-aligned */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`text-sm ${usernameColorClass}`}>
-                      {message.username}
-                    </span>
+                    <div className="relative inline-block">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (message.user_email === currentUserEmail) return;
+                          setDmPopoverMessageId((prev) => (prev === message.id ? null : message.id));
+                        }}
+                        className={`text-sm ${usernameColorClass} ${message.user_email !== currentUserEmail ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
+                      >
+                        {message.username}
+                      </button>
+                      {dmPopoverMessageId === message.id && message.user_email !== currentUserEmail && onRequestDM && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            aria-hidden
+                            onClick={() => setDmPopoverMessageId(null)}
+                          />
+                          <div className="absolute left-0 top-full mt-1 py-1 bg-zinc-800 border border-zinc-600 rounded-lg shadow-xl z-20 min-w-[100px]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onRequestDM(message.user_email, message.username);
+                                setDmPopoverMessageId(null);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2"
+                            >
+                              <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                              DM
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                     {getUserBadge(message.user_role, message.username)}
                     {isMentioned && !isOwnMessage && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/30">

@@ -424,6 +424,12 @@ export default function NotificationsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01" />
           </svg>
         );
+      case 'dm':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        );
       default:
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -447,6 +453,8 @@ export default function NotificationsPage() {
       case 'mention':
       case 'chat_mention':
         return 'bg-orange-500/15 text-orange-400 border-orange-500/30';
+      case 'dm':
+        return 'bg-teal-500/15 text-teal-400 border-teal-500/30';
       case 'alert':
         return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30';
       default:
@@ -469,6 +477,8 @@ export default function NotificationsPage() {
         case 'mention':
         case 'chat_mention':
           return 'border-orange-500/30';
+        case 'dm':
+          return 'border-teal-500/30';
         case 'alert':
           return 'border-zinc-500/30';
         default:
@@ -488,6 +498,8 @@ export default function NotificationsPage() {
         case 'mention':
         case 'chat_mention':
           return 'border-orange-500/50';
+        case 'dm':
+          return 'border-teal-500/50';
         case 'alert':
           return 'border-zinc-500/50';
         default:
@@ -510,10 +522,24 @@ export default function NotificationsPage() {
       case 'mention':
       case 'chat_mention':
         return 'shadow-[0_0_20px_rgba(249,115,22,0.15)] bg-orange-500/5';
+      case 'dm':
+        return 'shadow-[0_0_20px_rgba(20,184,166,0.15)] bg-teal-500/5';
       case 'alert':
         return 'shadow-[0_0_15px_rgba(161,161,170,0.08)]';
       default:
         return 'shadow-[0_0_15px_rgba(161,161,170,0.08)]';
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'chat_mention':
+      case 'mention':
+        return 'Mention';
+      case 'dm':
+        return 'DM';
+      default:
+        return type?.charAt(0).toUpperCase() + (type?.slice(1) || '');
     }
   };
 
@@ -646,6 +672,8 @@ export default function NotificationsPage() {
                         ? 'Unread Only'
                         : typeFilter === 'mention' || typeFilter === 'chat_mention'
                         ? 'Mention'
+                        : typeFilter === 'dm'
+                        ? 'DM'
                         : typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}
                   </span>
                   <svg
@@ -767,7 +795,7 @@ export default function NotificationsPage() {
               </svg>
               <p className="text-zinc-400 text-sm font-medium mb-1">No notifications</p>
               <p className="text-zinc-600 text-xs">
-                {typeFilter === 'all' ? "You're all caught up!" : `No ${typeFilter} notifications`}
+                {typeFilter === 'all' ? "You're all caught up!" : `No ${getTypeLabel(typeFilter)} notifications`}
               </p>
             </div>
           ) : (
@@ -798,7 +826,7 @@ export default function NotificationsPage() {
                           <div className="flex items-center gap-3">
                             <span className="text-xs text-zinc-600">{formatDate(notification.created_at)}</span>
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${getTypeColor(notification.type)}`}>
-                              {notification.type}
+                              {getTypeLabel(notification.type)}
                             </span>
                             {!notification.is_read && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">

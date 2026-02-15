@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useChat } from '../contexts/ChatContext';
 
 const ChatRoomComponent = dynamic(() => import('./ChatRoom'), { ssr: false });
+const DMRoomComponent = dynamic(() => import('./DMRoom'), { ssr: false });
 
 interface ChatRoomData {
   id: number;
@@ -13,6 +14,14 @@ interface ChatRoomData {
   topic: string | null;
   is_active: boolean;
   created_at: string;
+}
+
+type ViewMode = 'channels' | 'dms';
+
+interface DMConversation {
+  dmId: number;
+  otherUser: { email: string; username: string };
+  lastMessage: { id: number; sender_email: string; username: string; message_text: string; created_at: string };
 }
 
 function getCookie(name: string): string | null {
@@ -49,6 +58,11 @@ export default function ChatPopup() {
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadByRoom, setUnreadByRoom] = useState<Record<string, number>>({});
+  const [viewMode, setViewMode] = useState<ViewMode>('channels');
+  const [dmConversations, setDmConversations] = useState<DMConversation[]>([]);
+  const [selectedDmId, setSelectedDmId] = useState<number | null>(null);
+  const [selectedDmOtherUser, setSelectedDmOtherUser] = useState<{ email: string; username: string } | null>(null);
+  const [dmListLoading, setDmListLoading] = useState(false);
 
   const fetchUnreadMentions = useCallback(async () => {
     try {
@@ -59,6 +73,20 @@ export default function ChatPopup() {
       }
     } catch (e) {
       console.error('Error fetching chat unread mentions:', e);
+    }
+  }, []);
+
+  const fetchDmConversations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/chat/dms');
+      if (res.ok) {
+        const data = await res.json();
+        setDmConversations(data.conversations || []);
+      }
+    } catch (e) {
+      console.error('Error loading DMs:', e);
+    } finally {
+      setDmListLoading(false);
     }
   }, []);
 
@@ -87,6 +115,14 @@ export default function ChatPopup() {
     };
     loadRooms();
   }, [isChatOpen]);
+
+  useEffect(() => {
+    if (!isChatOpen || !currentUserEmail) return;
+    if (viewMode === 'dms') {
+      setDmListLoading(true);
+      fetchDmConversations();
+    }
+  }, [isChatOpen, viewMode, currentUserEmail, fetchDmConversations]);
 
   useEffect(() => {
     if (!isChatOpen) return;
@@ -168,6 +204,39 @@ export default function ChatPopup() {
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
   const isAuthenticated = !!currentUserEmail;
 
+  const handleRequestDM = useCallback(
+    async (userEmail: string, username: string) => {
+      if (!currentUserEmail) return;
+      setViewMode('dms');
+      setDmListLoading(true);
+      try {
+        const res = await fetch(`/api/chat/dms/with/${encodeURIComponent(userEmail)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSelectedDmId(data.dmId);
+          setSelectedDmOtherUser(data.otherUser || { email: userEmail, username });
+          setDmConversations((prev) => {
+            const existing = prev.find((c) => c.dmId === data.dmId);
+            if (existing) return prev;
+            return [
+              {
+                dmId: data.dmId,
+                otherUser: data.otherUser || { email: userEmail, username },
+                lastMessage: { id: 0, sender_email: '', username: '', message_text: '', created_at: new Date().toISOString() },
+              },
+              ...prev,
+            ];
+          });
+        }
+      } catch (e) {
+        console.error('Error opening DM:', e);
+      } finally {
+        setDmListLoading(false);
+      }
+    },
+    [currentUserEmail]
+  );
+
   return (
     <>
       <div
@@ -214,52 +283,119 @@ export default function ChatPopup() {
             </div>
           ) : (
             <>
-              {/* Room list */}
-              <div className="w-36 flex-shrink-0 border-r border-zinc-700 overflow-y-auto bg-zinc-900/50 p-2">
-                <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-2">
-                  Channels
+              {/* Sidebar with Channels / DMs tabs */}
+              <div className="w-40 flex-shrink-0 border-r border-zinc-700 overflow-hidden flex flex-col bg-zinc-900/50">
+                <div className="flex border-b border-zinc-700">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('channels')}
+                    className={`flex-1 px-2 py-2.5 text-xs font-semibold transition-colors ${
+                      viewMode === 'channels' ? 'bg-zinc-800 text-white border-b-2 border-blue-500' : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    Channels
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('dms')}
+                    className={`flex-1 px-2 py-2.5 text-xs font-semibold transition-colors ${
+                      viewMode === 'dms' ? 'bg-zinc-800 text-white border-b-2 border-teal-500' : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    DMs
+                  </button>
                 </div>
-                {rooms.length === 0 ? (
-                  <p className="text-xs text-zinc-500 px-2">No rooms</p>
-                ) : (
-                  <div className="space-y-1">
-                    {rooms.map((room) => {
-                      const unreadCount = unreadByRoom[String(room.id)] || 0;
-                      return (
-                        <button
-                          key={room.id}
-                          type="button"
-                          onClick={() => setSelectedRoomId(room.id)}
-                          className={`w-full text-left px-2 py-2 rounded-lg text-sm flex items-center justify-between gap-1 ${
-                            selectedRoomId === room.id
-                              ? 'bg-blue-600 text-white'
-                              : 'text-zinc-300 hover:bg-zinc-800'
-                          }`}
-                        >
-                          <span className="truncate">#{room.name}</span>
-                          {unreadCount > 0 && (
-                            <span className="flex-shrink-0 min-w-[18px] h-4 flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full animate-pulse">
-                              {unreadCount > 99 ? '99+' : unreadCount}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="flex-1 overflow-y-auto p-2">
+                  {viewMode === 'channels' ? (
+                    <>
+                      <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-2">
+                        Public
+                      </div>
+                      {rooms.length === 0 ? (
+                        <p className="text-xs text-zinc-500 px-2">No rooms</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {rooms.map((room) => {
+                            const unreadCount = unreadByRoom[String(room.id)] || 0;
+                            return (
+                              <button
+                                key={room.id}
+                                type="button"
+                                onClick={() => setSelectedRoomId(room.id)}
+                                className={`w-full text-left px-2 py-2 rounded-lg text-sm flex items-center justify-between gap-1 ${
+                                  selectedRoomId === room.id ? 'bg-blue-600 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                                }`}
+                              >
+                                <span className="truncate">#{room.name}</span>
+                                {unreadCount > 0 && (
+                                  <span className="flex-shrink-0 min-w-[18px] h-4 flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full animate-pulse">
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-2">
+                        Direct messages
+                      </div>
+                      {dmListLoading ? (
+                        <p className="text-xs text-zinc-500 px-2">Loading...</p>
+                      ) : dmConversations.length === 0 ? (
+                        <p className="text-xs text-zinc-500 px-2">No DMs yet. Click a username in a channel and choose DM.</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {dmConversations.map((conv) => (
+                            <button
+                              key={conv.dmId}
+                              type="button"
+                              onClick={() => {
+                                setSelectedDmId(conv.dmId);
+                                setSelectedDmOtherUser(conv.otherUser);
+                              }}
+                              className={`w-full text-left px-2 py-2 rounded-lg text-sm truncate ${
+                                selectedDmId === conv.dmId ? 'bg-teal-600/80 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                              }`}
+                            >
+                              {conv.otherUser.username}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
               {/* Chat area */}
               <div className="flex-1 min-w-0 flex flex-col">
-                {selectedRoom ? (
-                  <ChatRoomComponent
-                    roomId={selectedRoom.id}
-                    roomName={selectedRoom.name}
+                {viewMode === 'channels' ? (
+                  selectedRoom ? (
+                    <ChatRoomComponent
+                      roomId={selectedRoom.id}
+                      roomName={selectedRoom.name}
+                      currentUserEmail={currentUserEmail}
+                      currentUsername={currentUsername}
+                      onRequestDM={handleRequestDM}
+                    />
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">
+                      Select a channel
+                    </div>
+                  )
+                ) : selectedDmId && selectedDmOtherUser ? (
+                  <DMRoomComponent
+                    dmId={selectedDmId}
+                    otherUser={selectedDmOtherUser}
                     currentUserEmail={currentUserEmail}
                     currentUsername={currentUsername}
                   />
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">
-                    Select a channel
+                    Select a DM or click a username in a channel and choose DM
                   </div>
                 )}
               </div>
