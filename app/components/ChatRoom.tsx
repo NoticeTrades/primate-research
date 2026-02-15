@@ -517,6 +517,16 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const formatTimeFull = (timestamp: string) =>
+    new Date(timestamp).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
   // Get user badge
   const getUserBadge = (userRole?: string, username?: string) => {
     if (username === 'noticetrades' || userRole === 'owner') {
@@ -643,7 +653,10 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                         Mentioned you
                       </span>
                     )}
-                    <span className="text-xs text-zinc-500">
+                    <span
+                      className="text-xs text-zinc-500 cursor-default"
+                      title={formatTimeFull(message.created_at)}
+                    >
                       {formatTime(message.created_at)}
                     </span>
                     {(isOwnMessage || isModerator) && (

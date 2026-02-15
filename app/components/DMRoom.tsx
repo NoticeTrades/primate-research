@@ -9,6 +9,7 @@ interface DMMessage {
   username: string;
   message_text: string;
   created_at: string;
+  profile_picture_url?: string | null;
 }
 
 interface DMRoomProps {
@@ -61,6 +62,17 @@ function formatTime(timestamp: string) {
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatTimeFull(timestamp: string) {
+  return new Date(timestamp).toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 export default function DMRoom({ dmId, otherUser, currentUserEmail, currentUsername }: DMRoomProps) {
@@ -131,11 +143,8 @@ export default function DMRoom({ dmId, otherUser, currentUserEmail, currentUsern
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
-      <div className="flex items-center gap-2 shrink-0 px-3 py-2 border-b border-zinc-700/80">
+      <div className="flex items-center shrink-0 px-3 py-2 border-b border-zinc-700/80">
         <h2 className="text-sm font-semibold text-white truncate">{otherUser.username}</h2>
-        {messages.length > 0 && (
-          <span className="text-xs text-zinc-500">· {messages.length}</span>
-        )}
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3 min-h-0">
         {isLoading ? (
@@ -150,15 +159,24 @@ export default function DMRoom({ dmId, otherUser, currentUserEmail, currentUsern
             const isOwn = msg.sender_email === currentUserEmail;
             return (
               <div key={msg.id} className="flex gap-2">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-zinc-700/80 flex items-center justify-center">
-                  <span className="text-zinc-300 text-xs font-medium">
-                    {msg.username.charAt(0).toUpperCase()}
-                  </span>
+                <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden bg-zinc-700/80 flex items-center justify-center">
+                  {msg.profile_picture_url ? (
+                    <img src={msg.profile_picture_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-zinc-300 text-xs font-medium">
+                      {msg.username.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="text-xs font-medium text-blue-400">{msg.username}</span>
-                    <span className="text-[10px] text-zinc-500">{formatTime(msg.created_at)}</span>
+                    <span
+                      className="text-[10px] text-zinc-500 cursor-default"
+                      title={formatTimeFull(msg.created_at)}
+                    >
+                      {formatTime(msg.created_at)}
+                    </span>
                   </div>
                   <div
                     className={`inline-block px-3 py-1.5 rounded-md max-w-[90%] text-sm ${

@@ -787,8 +787,8 @@ export default function Navigation() {
                   scrollToSection('home');
                 }
               }}
-              className="nav-logo-float flex items-center justify-center rounded-lg bg-white dark:bg-zinc-100 p-1 shadow-sm border border-zinc-200 dark:border-zinc-300 shrink-0 cursor-pointer select-none"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
+              className="nav-logo-float flex items-center justify-center rounded-md bg-white dark:bg-zinc-100 p-0.5 shadow-sm border border-zinc-200 dark:border-zinc-300 shrink-0 cursor-pointer select-none"
+              style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}
             >
               <span className="[&>div]:!w-10 [&>div]:!h-10">
                 <Logo />

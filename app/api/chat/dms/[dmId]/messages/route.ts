@@ -32,14 +32,15 @@ export async function GET(
     }
 
     const messages = await sql`
-      SELECT id, dm_id, sender_email, username, message_text, created_at
-      FROM dm_messages
-      WHERE dm_id = ${id}
-      ORDER BY created_at ASC
+      SELECT m.id, m.dm_id, m.sender_email, m.username, m.message_text, m.created_at, u.profile_picture_url
+      FROM dm_messages m
+      LEFT JOIN users u ON u.email = m.sender_email
+      WHERE m.dm_id = ${id}
+      ORDER BY m.created_at ASC
     `;
 
     return NextResponse.json({
-      messages: messages as { id: number; dm_id: number; sender_email: string; username: string; message_text: string; created_at: string }[],
+      messages: messages as { id: number; dm_id: number; sender_email: string; username: string; message_text: string; created_at: string; profile_picture_url: string | null }[],
     });
   } catch (error) {
     console.error('Get DM messages error:', error);
@@ -91,7 +92,10 @@ export async function POST(
       VALUES (${id}, ${userEmail}, ${username}, ${text})
       RETURNING id, dm_id, sender_email, username, message_text, created_at
     `;
-    const message = insert[0] as { id: number; dm_id: number; sender_email: string; username: string; message_text: string; created_at: string };
+    const row = insert[0] as { id: number; dm_id: number; sender_email: string; username: string; message_text: string; created_at: string };
+    const profileRow = await sql`SELECT profile_picture_url FROM users WHERE email = ${userEmail}`;
+    const profile_picture_url = (profileRow[0] as { profile_picture_url: string | null } | undefined)?.profile_picture_url ?? null;
+    const message = { ...row, profile_picture_url };
 
     await sql`
       INSERT INTO notifications (title, description, link, type, user_email)
