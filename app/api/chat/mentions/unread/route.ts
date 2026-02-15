@@ -14,18 +14,18 @@ export async function GET() {
 
     const sql = getDb();
 
-    // Get all rooms
+    // Get all rooms (Neon returns Record<string, unknown>[])
     const rooms = await sql`
       SELECT id FROM chat_rooms WHERE is_active = true
     `;
-    const roomIds = rooms.map((r: { id: number }) => r.id);
+    const roomIds = (rooms as { id: number }[]).map((r) => r.id);
 
     // Get last_read_at per room for this user
     const readRows = await sql`
       SELECT room_id, last_read_at FROM chat_room_read WHERE user_email = ${userEmail}
     `;
     const lastReadByRoom: Record<number, string> = {};
-    readRows.forEach((row: { room_id: number; last_read_at: string }) => {
+    (readRows as { room_id: number; last_read_at: string }[]).forEach((row) => {
       lastReadByRoom[row.room_id] = row.last_read_at;
     });
 
