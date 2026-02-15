@@ -199,11 +199,6 @@ export default function ChatPopup() {
     };
   }, [isResizing, position.x, position.y]);
 
-  if (!isChatOpen) return null;
-
-  const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
-  const isAuthenticated = !!currentUserEmail;
-
   const handleRequestDM = useCallback(
     async (userEmail: string, username: string) => {
       if (!currentUserEmail) return;
@@ -236,6 +231,11 @@ export default function ChatPopup() {
     },
     [currentUserEmail]
   );
+
+  if (!isChatOpen) return null;
+
+  const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
+  const isAuthenticated = !!currentUserEmail;
 
   return (
     <>
