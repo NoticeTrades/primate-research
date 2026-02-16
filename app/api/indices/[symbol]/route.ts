@@ -102,10 +102,15 @@ export async function GET(
         previousClose = prevClose;
         change = changeVal;
         changePercent = changePct;
-        high = q.regularMarketDayHigh ?? q.dayHigh ?? 0;
-        low = q.regularMarketDayLow ?? q.dayLow ?? 0;
-        open = q.regularMarketOpen ?? q.open ?? 0;
+        high = q.regularMarketDayHigh ?? q.dayHigh ?? q.regularMarketPrice ?? 0;
+        low = q.regularMarketDayLow ?? q.dayLow ?? q.regularMarketPrice ?? 0;
+        open = q.regularMarketOpen ?? q.open ?? q.regularMarketPrice ?? 0;
         volume = q.regularMarketVolume ?? q.volume ?? 0;
+        
+        // Validate HOLC data - ensure we have valid numbers
+        if (high === 0 && price > 0) high = price;
+        if (low === 0 && price > 0) low = price;
+        if (open === 0 && price > 0) open = price;
       }
     }
 
@@ -135,10 +140,15 @@ export async function GET(
             previousClose = prev;
             change = changeVal;
             changePercent = changePct;
-            high = meta?.regularMarketDayHigh ?? meta?.dayHigh ?? 0;
-            low = meta?.regularMarketDayLow ?? meta?.dayLow ?? 0;
-            open = meta?.regularMarketOpen ?? meta?.open ?? 0;
+            high = meta?.regularMarketDayHigh ?? meta?.dayHigh ?? priceFromChart ?? 0;
+            low = meta?.regularMarketDayLow ?? meta?.dayLow ?? priceFromChart ?? 0;
+            open = meta?.regularMarketOpen ?? meta?.open ?? priceFromChart ?? 0;
             volume = meta?.regularMarketVolume ?? meta?.volume ?? 0;
+            
+            // Validate HOLC data - ensure we have valid numbers
+            if (high === 0 && priceFromChart > 0) high = priceFromChart;
+            if (low === 0 && priceFromChart > 0) low = priceFromChart;
+            if (open === 0 && priceFromChart > 0) open = priceFromChart;
           }
         }
       } catch {

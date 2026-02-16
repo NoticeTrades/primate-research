@@ -72,7 +72,13 @@ export default function IndexAnalysisPage() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/indices/${symbol}`);
+        // Add cache-busting timestamp to ensure fresh data
+        const res = await fetch(`/api/indices/${symbol}?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
         if (!res.ok) {
           const err = await res.json();
           setError(err.error || 'Failed to load index data');
@@ -94,8 +100,8 @@ export default function IndexAnalysisPage() {
     };
 
     fetchData();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000);
+    // Refresh every 15 seconds for more real-time updates
+    const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
   }, [symbol]);
 
@@ -315,8 +321,14 @@ export default function IndexAnalysisPage() {
                 <div>
                   <p className="text-xs text-zinc-500 mb-1">Body (O→C)</p>
                   <p className={`text-lg font-semibold ${holc.close >= holc.open ? 'text-green-400' : 'text-red-400'}`}>
-                    {holc.close >= holc.open ? '+' : ''}
-                    {((holc.close - holc.open) / holc.open * 100).toFixed(2)}%
+                    {holc.open > 0 && holc.close > 0 ? (
+                      <>
+                        {holc.close >= holc.open ? '+' : ''}
+                        {((holc.close - holc.open) / holc.open * 100).toFixed(2)}%
+                      </>
+                    ) : (
+                      'N/A'
+                    )}
                   </p>
                 </div>
               </div>
