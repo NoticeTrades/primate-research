@@ -124,14 +124,37 @@ export async function GET(
       WHERE symbol = ${symbol}
     `;
 
-    // Fetch current price and basic stats from Yahoo Finance
-    const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSymbol)}`;
-    const quoteRes = await fetch(quoteUrl, {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-      cache: 'no-store',
-    });
-
+    // Try Twelve Data first (most reliable for futures), then fallback to Yahoo
+    let price = 0;
+    let change = 0;
+    let changePercent = 0;
+    let previousClose = 0;
+    let high = 0;
+    let low = 0;
+    let open = 0;
+    let volume = 0;
     let ytdPercent: number | null = null;
+
+    const twelveData = await fetchTwelveData(symbol);
+    if (twelveData) {
+      price = twelveData.price;
+      change = twelveData.change;
+      changePercent = twelveData.changePercent;
+      previousClose = twelveData.previousClose;
+      high = twelveData.holc.high;
+      low = twelveData.holc.low;
+      open = twelveData.holc.open;
+      volume = twelveData.volume;
+    }
+
+    // Fallback to Yahoo Finance if Twelve Data didn't work
+    if (price === 0) {
+      // Fetch current price and basic stats from Yahoo Finance
+      const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSymbol)}`;
+      const quoteRes = await fetch(quoteUrl, {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+        cache: 'no-store',
+      });
 
     if (quoteRes.ok) {
       const data = await quoteRes.json();
