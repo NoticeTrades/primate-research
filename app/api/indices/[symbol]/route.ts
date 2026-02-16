@@ -61,14 +61,88 @@ export async function GET(
       const data = await quoteRes.json();
       const q = data?.quoteResponse?.result?.[0];
       if (q) {
-        price = q.regularMarketPrice ?? q.price ?? 0;
-        previousClose = q.regularMarketPreviousClose ?? q.previousClose ?? price;
-        change = q.regularMarketChange ?? (price - previousClose);
-        changePercent = q.regularMarketChangePercent ?? ((change / previousClose) * 100);
+        let regularMarketPrice = q.regularMarketPrice ?? q.price ?? 0;
+        let prevClose = q.regularMarketPreviousClose ?? q.previousClose ?? regularMarketPrice;
+        const rawChange = q.regularMarketChange;
+        const rawChangePercent = q.regularMarketChangePercent;
+        let changeVal = typeof rawChange === 'number' && !Number.isNaN(rawChange)
+          ? rawChange
+          : (typeof regularMarketPrice === 'number' && typeof prevClose === 'number' ? regularMarketPrice - prevClose : 0);
+        let changePct = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)
+          ? rawChangePercent
+          : (prevClose && typeof changeVal === 'number' ? (changeVal / prevClose) * 100 : 0);
+        
+        if (changeVal === 0 && typeof regularMarketPrice === 'number') {
+          try {
+            const chart5Url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
+            const chart5Res = await fetch(chart5Url, {
+              headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+              cache: 'no-store',
+            });
+            if (chart5Res.ok) {
+              const chart5 = await chart5Res.json();
+              const closes = chart5?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+              if (Array.isArray(closes) && closes.length >= 2) {
+                const valid = closes.filter((n: number) => n != null && typeof n === 'number');
+                const prevFromChart = valid[valid.length - 2];
+                const lastFromChart = valid[valid.length - 1];
+                if (typeof prevFromChart === 'number' && typeof lastFromChart === 'number') {
+                  prevClose = prevFromChart;
+                  changeVal = regularMarketPrice - prevClose;
+                  changePct = prevClose ? (changeVal / prevClose) * 100 : 0;
+                }
+              }
+            }
+          } catch {
+            // keep 0
+          }
+        }
+        
+        price = regularMarketPrice;
+        previousClose = prevClose;
+        change = changeVal;
+        changePercent = changePct;
         high = q.regularMarketDayHigh ?? q.dayHigh ?? 0;
         low = q.regularMarketDayLow ?? q.dayLow ?? 0;
         open = q.regularMarketOpen ?? q.open ?? 0;
         volume = q.regularMarketVolume ?? q.volume ?? 0;
+      }
+    }
+
+    // Fallback to chart API if quote API didn't work
+    if (price === 0) {
+      try {
+        const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
+        const chartRes = await fetch(chartUrl, {
+          headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+          cache: 'no-store',
+        });
+        if (chartRes.ok) {
+          const chartData = await chartRes.json();
+          const meta = chartData?.chart?.result?.[0]?.meta;
+          const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
+          const closeArr = quote?.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number') : []) : [];
+          const priceFromChart = meta?.regularMarketPrice ?? meta?.previousClose ?? closeArr[closeArr.length - 1];
+          let prevCloseFromChart = meta?.previousClose ?? closeArr[closeArr.length - 2] ?? priceFromChart;
+          if (closeArr.length >= 2 && (prevCloseFromChart == null || prevCloseFromChart === priceFromChart)) {
+            prevCloseFromChart = closeArr[closeArr.length - 2];
+          }
+          if (priceFromChart != null && typeof priceFromChart === 'number') {
+            const prev = typeof prevCloseFromChart === 'number' ? prevCloseFromChart : priceFromChart;
+            const changeVal = priceFromChart - prev;
+            const changePct = prev ? (changeVal / prev) * 100 : 0;
+            price = priceFromChart;
+            previousClose = prev;
+            change = changeVal;
+            changePercent = changePct;
+            high = meta?.regularMarketDayHigh ?? meta?.dayHigh ?? 0;
+            low = meta?.regularMarketDayLow ?? meta?.dayLow ?? 0;
+            open = meta?.regularMarketOpen ?? meta?.open ?? 0;
+            volume = meta?.regularMarketVolume ?? meta?.volume ?? 0;
+          }
+        }
+      } catch {
+        // keep defaults
       }
     }
 
@@ -169,7 +243,14 @@ export async function GET(
     });
   } catch (error) {
     console.error('Index data error:', error);
-    return NextResponse.json({ error: 'Failed to fetch index data' }, { status: 500 });
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return NextResponse.json({ 
+      error: 'Failed to fetch index data',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
 

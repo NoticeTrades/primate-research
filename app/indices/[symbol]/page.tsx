@@ -79,8 +79,14 @@ export default function IndexAnalysisPage() {
           return;
         }
         const indexData = await res.json();
+        console.log('Index data received:', indexData);
+        if (indexData.error) {
+          setError(indexData.error);
+          return;
+        }
         setData(indexData);
       } catch (err) {
+        console.error('Fetch error:', err);
         setError('Failed to fetch index data');
       } finally {
         setLoading(false);
