@@ -131,15 +131,26 @@ export async function GET(request: Request) {
       const meta = chartData?.chart?.result?.[0]?.meta;
       const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
       const closeArr = quote?.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number') : []) : [];
+      const openArr = quote?.open ? (Array.isArray(quote.open) ? quote.open.filter((n: number) => n != null && typeof n === 'number') : []) : [];
       const price = meta?.regularMarketPrice ?? meta?.previousClose ?? closeArr[closeArr.length - 1];
       let previousClose = meta?.previousClose ?? closeArr[closeArr.length - 2] ?? price;
+      const dayOpen = meta?.regularMarketOpen ?? meta?.open ?? openArr[0] ?? 0;
       if (closeArr.length >= 2 && (previousClose == null || previousClose === price)) {
         previousClose = closeArr[closeArr.length - 2];
       }
       if (price != null && typeof price === 'number') {
         const prev = typeof previousClose === 'number' ? previousClose : price;
-        const change = price - prev;
-        const changePercent = prev ? (change / prev) * 100 : 0;
+        // Calculate intraday change from day's open for accuracy
+        let change = 0;
+        let changePercent = 0;
+        if (dayOpen > 0) {
+          change = price - dayOpen;
+          changePercent = (change / dayOpen) * 100;
+        } else {
+          // Fallback to previous close if open not available
+          change = price - prev;
+          changePercent = prev ? (change / prev) * 100 : 0;
+        }
         let ytdPercent: number | null = null;
         try {
           const ytdUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1y`;
