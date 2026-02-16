@@ -678,9 +678,9 @@ export default function Navigation() {
             }}
             onBlur={() => setIsSearchFocused(false)}
             placeholder={searchPlaceholder || 'Search Terminal... (Press ` to open)'}
-            className={`w-48 lg:w-64 px-3 py-1.5 pl-9 bg-white/80 dark:bg-zinc-800/80 border rounded-lg text-sm text-black dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+            className={`w-56 lg:w-80 px-3 py-1.5 pl-9 bg-white/80 dark:bg-zinc-800/80 border rounded-lg text-sm text-black dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
               isSearchFocused
-                ? 'border-blue-500 w-56 lg:w-72'
+                ? 'border-blue-500 w-64 lg:w-96'
                 : 'border-zinc-300 dark:border-zinc-700'
             }`}
             suppressHydrationWarning
@@ -707,7 +707,7 @@ export default function Navigation() {
                 return (
                   <div
                     ref={dropdownRef}
-                    className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                    className="absolute top-full mt-1.5 right-0 w-64 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
                     <div className="px-2 py-1 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
                       <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Commands</span>
@@ -752,7 +752,7 @@ export default function Navigation() {
                 return (
                   <div
                     ref={dropdownRef}
-                    className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                    className="absolute top-full mt-1.5 right-0 w-64 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
                     <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
                       <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">R</span>
@@ -778,7 +778,7 @@ export default function Navigation() {
                 return (
                   <div
                     ref={dropdownRef}
-                    className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                    className="absolute top-full mt-1.5 right-0 w-64 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
                     <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
                       <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">V</span>
@@ -804,7 +804,7 @@ export default function Navigation() {
                 return (
                   <div
                     ref={dropdownRef}
-                    className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                    className="absolute top-full mt-1.5 right-0 w-64 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
                     <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
                       <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">EI</span>
