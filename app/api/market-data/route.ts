@@ -31,14 +31,43 @@ export async function GET(request: Request) {
       if (q) {
         const regularMarketPrice = q.regularMarketPrice ?? q.price ?? 0;
         const previousClose = q.regularMarketPreviousClose ?? q.previousClose ?? regularMarketPrice;
-        const change = q.regularMarketChange ?? (regularMarketPrice - previousClose);
-        const changePercent = q.regularMarketChangePercent ?? (previousClose ? (change / previousClose) * 100 : 0);
+        const rawChange = q.regularMarketChange;
+        const rawChangePercent = q.regularMarketChangePercent;
+        const change = typeof rawChange === 'number' && !Number.isNaN(rawChange)
+          ? rawChange
+          : (typeof regularMarketPrice === 'number' && typeof previousClose === 'number' ? regularMarketPrice - previousClose : 0);
+        const changePercent = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)
+          ? rawChangePercent
+          : (previousClose && typeof change === 'number' ? (change / previousClose) * 100 : 0);
+        let ytdPercent: number | null = null;
+        try {
+          const ytdUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1y`;
+          const ytdRes = await fetch(ytdUrl, {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+            cache: 'no-store',
+          });
+          if (ytdRes.ok) {
+            const ytdData = await ytdRes.json();
+            const closes = ytdData?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+            if (Array.isArray(closes)) {
+              const valid = closes.filter((n: number) => n != null && typeof n === 'number');
+              const first = valid[0];
+              const last = valid[valid.length - 1];
+              if (typeof first === 'number' && typeof last === 'number' && first > 0) {
+                ytdPercent = ((last - first) / first) * 100;
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
         return NextResponse.json({
           symbol: q.symbol === yahooSymbol ? symbol : q.symbol,
           price: regularMarketPrice,
           change,
           changePercent,
           previousClose,
+          ytdPercent: ytdPercent ?? undefined,
         });
       }
     }
@@ -55,14 +84,38 @@ export async function GET(request: Request) {
       const price = meta?.regularMarketPrice ?? meta?.previousClose ?? (quote?.close?.filter((n: number) => n != null).pop());
       const previousClose = meta?.previousClose ?? price;
       if (price != null && typeof price === 'number') {
-        const change = price - previousClose;
-        const changePercent = previousClose ? (change / previousClose) * 100 : 0;
+        const prev = typeof previousClose === 'number' ? previousClose : price;
+        const change = price - prev;
+        const changePercent = prev ? (change / prev) * 100 : 0;
+        let ytdPercent: number | null = null;
+        try {
+          const ytdUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1y`;
+          const ytdRes = await fetch(ytdUrl, {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+            cache: 'no-store',
+          });
+          if (ytdRes.ok) {
+            const ytdData = await ytdRes.json();
+            const closes = ytdData?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+            if (Array.isArray(closes)) {
+              const valid = closes.filter((n: number) => n != null && typeof n === 'number');
+              const first = valid[0];
+              const last = valid[valid.length - 1];
+              if (typeof first === 'number' && typeof last === 'number' && first > 0) {
+                ytdPercent = ((last - first) / first) * 100;
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
         return NextResponse.json({
           symbol,
           price,
           change,
           changePercent,
-          previousClose,
+          previousClose: prev,
+          ytdPercent: ytdPercent ?? undefined,
         });
       }
     }

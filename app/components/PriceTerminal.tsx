@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTicker } from '../contexts/TickerContext';
 
-const TERMINAL_WIDTH = 200;
-const TERMINAL_HEIGHT = 120;
-const MIN_WIDTH = 160;
-const MIN_HEIGHT = 100;
-const MAX_WIDTH = 500;
-const MAX_HEIGHT = 400;
+const TERMINAL_WIDTH = 160;
+const TERMINAL_HEIGHT = 96;
+const MIN_WIDTH = 140;
+const MIN_HEIGHT = 80;
+const MAX_WIDTH = 400;
+const MAX_HEIGHT = 320;
 const POLL_MS = 3000;
 
 function getDefaultPosition(symbol: string, index: number) {
@@ -48,11 +48,15 @@ export default function PriceTerminal({ symbol, index }: { symbol: string; index
           setData(null);
           return;
         }
+        const price = typeof j.price === 'number' && !Number.isNaN(j.price) ? j.price : 0;
+        const prev = typeof j.previousClose === 'number' && !Number.isNaN(j.previousClose) ? j.previousClose : price;
+        const change = typeof j.change === 'number' && !Number.isNaN(j.change) ? j.change : (price - prev);
+        const changePercent = typeof j.changePercent === 'number' && !Number.isNaN(j.changePercent) ? j.changePercent : (prev ? (change / prev) * 100 : 0);
         setData({
           symbol: j.symbol || symbol,
-          price: Number(j.price) ?? 0,
-          change: Number(j.change) ?? 0,
-          changePercent: Number(j.changePercent) ?? 0,
+          price,
+          change,
+          changePercent,
         });
       } else {
         setData(null);
@@ -134,9 +138,9 @@ export default function PriceTerminal({ symbol, index }: { symbol: string; index
           setIsDragging(true);
           dragStart.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y };
         }}
-        className="flex items-center justify-between px-2.5 py-1.5 bg-zinc-800/90 border-b border-zinc-700/80 cursor-grab active:cursor-grabbing select-none"
+        className="flex items-center justify-between px-2 py-1 bg-zinc-800/90 border-b border-zinc-700/80 cursor-grab active:cursor-grabbing select-none"
       >
-        <span className="text-xs font-semibold text-white truncate">{symbol}</span>
+        <span className="text-[11px] font-semibold text-white truncate">{symbol}</span>
         <button
           type="button"
           onClick={() => closeTicker(symbol)}
@@ -148,16 +152,16 @@ export default function PriceTerminal({ symbol, index }: { symbol: string; index
           </svg>
         </button>
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center p-3 min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-center p-2 min-h-0">
         {loading ? (
-          <div className="text-zinc-500 text-xs">Loading…</div>
+          <div className="text-zinc-500 text-[11px]">Loading…</div>
         ) : data ? (
           <>
-            <div className="text-lg font-semibold text-white tabular-nums">
+            <div className="text-sm font-semibold text-white tabular-nums">
               ${typeof data.price === 'number' ? data.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : data.price}
             </div>
-            <div className={`text-xs font-medium tabular-nums mt-0.5 ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-              {isPositive ? '+' : ''}{data.changePercent.toFixed(2)}% {isPositive ? '+' : ''}{data.change.toFixed(2)}
+            <div className={`text-[11px] font-medium tabular-nums mt-0.5 ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+              {isPositive ? '+' : ''}{Number(data.changePercent).toFixed(2)}% {isPositive ? '+' : ''}{Number(data.change).toFixed(2)}
             </div>
           </>
         ) : (

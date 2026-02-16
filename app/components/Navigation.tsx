@@ -539,12 +539,12 @@ export default function Navigation() {
                 return (
                   <div
                     ref={dropdownRef}
-                    className="absolute top-full mt-2 right-0 w-80 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
+                    className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
-                    <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-                      <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Commands</span>
+                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                      <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Commands</span>
                     </div>
-                    <div className="py-1">
+                    <div className="py-0.5">
                       <button
                         type="button"
                         onMouseDown={(e) => {
@@ -552,9 +552,9 @@ export default function Navigation() {
                           setSearchQuery('P ');
                           searchRef.current?.focus();
                         }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                        className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200"
                       >
-                        <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40">P</span>
+                        <span className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">P</span>
                         <span>Live Price</span>
                       </button>
                       <button
@@ -566,9 +566,9 @@ export default function Navigation() {
                           setSearchQuery('');
                           searchRef.current?.blur();
                         }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                        className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200"
                       >
-                        <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40">CHAT</span>
+                        <span className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">CHAT</span>
                         <span>Live Chat</span>
                       </button>
                       <button
@@ -580,10 +580,10 @@ export default function Navigation() {
                           setSearchQuery('');
                           searchRef.current?.blur();
                         }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                        className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200"
                       >
-                        <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40">EI</span>
-                        <span>Equity Index Futures (ES, YM, NQ)</span>
+                        <span className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">EI</span>
+                        <span>US Equity Index Futures (ES, YM, NQ)</span>
                       </button>
                     </div>
                   </div>
@@ -601,11 +601,11 @@ export default function Navigation() {
                 return (
                   <div
                     ref={dropdownRef}
-                    className="absolute top-full mt-2 right-0 w-80 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
+                    className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
-                    <div className="px-3 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-3">
-                      <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40">EI</span>
-                      <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Equity Index Futures</span>
+                    <div className="px-2.5 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
+                      <span className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">EI</span>
+                      <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">US Equity Index Futures</span>
                     </div>
                     <button
                       type="button"
@@ -616,9 +616,9 @@ export default function Navigation() {
                         setIsDropdownOpen(false);
                         searchRef.current?.blur();
                       }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                      className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200"
                     >
-                      <span className="w-8 h-6 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold">ES, YM, NQ</span>
+                      <span className="w-6 h-5 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-bold">ES, YM, NQ</span>
                       Open comparison
                     </button>
                   </div>
