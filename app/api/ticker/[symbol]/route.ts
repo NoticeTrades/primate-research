@@ -27,17 +27,46 @@ export async function GET(
           const q = quoteData?.quoteResponse?.result?.[0];
           if (q) {
             const price = q.regularMarketPrice ?? q.price ?? 0;
-            const dayOpen = q.regularMarketOpen ?? q.open ?? 0;
+            let dayOpen = q.regularMarketOpen ?? q.open ?? 0;
             const high = q.regularMarketDayHigh ?? q.dayHigh ?? price;
             const low = q.regularMarketDayLow ?? q.dayLow ?? price;
             const volume = q.regularMarketVolume ?? q.volume ?? 0;
             
-            // Calculate intraday change from day's open (not 24h)
+            // Try to get day's open from chart API if not available in quote
+            if (dayOpen === 0 && price > 0) {
+              try {
+                const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1m&range=1d`;
+                const chartRes = await fetch(chartUrl, {
+                  headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+                  cache: 'no-store',
+                });
+                if (chartRes.ok) {
+                  const chartData = await chartRes.json();
+                  const meta = chartData?.chart?.result?.[0]?.meta;
+                  const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
+                  if (meta?.regularMarketOpen) {
+                    dayOpen = meta.regularMarketOpen;
+                  } else if (quote?.open && Array.isArray(quote.open)) {
+                    const opens = quote.open.filter((n: number) => n != null && typeof n === 'number' && n > 0);
+                    if (opens.length > 0) {
+                      dayOpen = opens[0]; // First open of the day
+                    }
+                  }
+                }
+              } catch (err) {
+                console.error('Error fetching chart data for day open:', err);
+              }
+            }
+            
+            // Calculate intraday change from day's open (not 24h or previous close)
             let intradayChangePercent = 0;
             if (dayOpen > 0 && price > 0) {
               intradayChangePercent = ((price - dayOpen) / dayOpen) * 100;
-            } else if (q.regularMarketChangePercent) {
-              intradayChangePercent = q.regularMarketChangePercent;
+              console.log(`[Ticker API] ${symbol}: price=${price}, dayOpen=${dayOpen}, intradayChange=${intradayChangePercent.toFixed(2)}%`);
+            } else {
+              console.warn(`[Ticker API] ${symbol}: Could not get day's open (price=${price}, dayOpen=${dayOpen}), cannot calculate intraday change`);
+              // Don't use regularMarketChangePercent as fallback - it's from previous close, not day's open
+              // Return 0 or try to calculate from chart data
             }
 
             // Get additional data from CoinGecko for market cap, supply, etc.
