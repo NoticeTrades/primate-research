@@ -25,7 +25,7 @@ export default function Navigation() {
   const { openTicker } = useTicker();
   const { openEquityIndex } = useEquityIndex();
 
-  const TERMINAL_PLACEHOLDER = 'Search Terminal...';
+  const TERMINAL_PLACEHOLDER = 'Search Terminal... (Press ` to open)';
   const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'BTC'];
 
   useEffect(() => {
@@ -231,6 +231,38 @@ export default function Navigation() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Handle backtick key to open search terminal
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if backtick is pressed
+      if (e.key === '`' || e.key === 'Backquote') {
+        // Don't trigger if user is typing in an input, textarea, or contenteditable
+        const target = e.target as HTMLElement;
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+
+        // Prevent default and focus search
+        e.preventDefault();
+        if (searchRef.current) {
+          searchRef.current.focus();
+          setIsSearchFocused(true);
+          setIsDropdownOpen(true);
+          setSelectedCommandIndex(0);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthenticated]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -645,7 +677,7 @@ export default function Navigation() {
               }
             }}
             onBlur={() => setIsSearchFocused(false)}
-            placeholder={searchPlaceholder || 'Search Terminal...'}
+            placeholder={searchPlaceholder || 'Search Terminal... (Press ` to open)'}
             className={`w-48 lg:w-64 px-3 py-1.5 pl-9 bg-white/80 dark:bg-zinc-800/80 border rounded-lg text-sm text-black dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
               isSearchFocused
                 ? 'border-blue-500 w-56 lg:w-72'
