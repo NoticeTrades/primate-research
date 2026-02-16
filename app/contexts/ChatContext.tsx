@@ -1,28 +1,40 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+
+export type OpenChatOptions = { dmId?: number; roomId?: number };
 
 type ChatContextType = {
   isChatOpen: boolean;
-  openChat: () => void;
+  openChat: (options?: OpenChatOptions) => void;
   closeChat: () => void;
+  consumePendingOpen: () => OpenChatOptions | null;
 };
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const pendingOpenRef = useRef<OpenChatOptions | null>(null);
 
-  const openChat = useCallback(() => {
+  const openChat = useCallback((options?: OpenChatOptions) => {
+    pendingOpenRef.current = options ?? null;
     setIsChatOpen(true);
   }, []);
 
   const closeChat = useCallback(() => {
     setIsChatOpen(false);
+    pendingOpenRef.current = null;
+  }, []);
+
+  const consumePendingOpen = useCallback(() => {
+    const next = pendingOpenRef.current;
+    pendingOpenRef.current = null;
+    return next;
   }, []);
 
   return (
-    <ChatContext.Provider value={{ isChatOpen, openChat, closeChat }}>
+    <ChatContext.Provider value={{ isChatOpen, openChat, closeChat, consumePendingOpen }}>
       {children}
     </ChatContext.Provider>
   );

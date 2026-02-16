@@ -30,22 +30,23 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
-const POPUP_WIDTH = 400;
-const POPUP_HEIGHT = 480;
+const POPUP_WIDTH = 440;
+const POPUP_HEIGHT = 520;
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 320;
 const MAX_WIDTH = 900;
 const MAX_HEIGHT = 800;
 
-function getDefaultX() {
-  if (typeof window === 'undefined') return 100;
-  return window.innerWidth - POPUP_WIDTH - 24;
+function getDefaultPosition() {
+  if (typeof window === 'undefined') return { x: 100, y: 80 };
+  const x = Math.max(24, (window.innerWidth - POPUP_WIDTH) / 2);
+  const y = Math.max(24, Math.min(120, (window.innerHeight - POPUP_HEIGHT) / 2));
+  return { x, y };
 }
-const DEFAULT_Y = 80;
 
 export default function ChatPopup() {
-  const { isChatOpen, closeChat } = useChat();
-  const [position, setPosition] = useState({ x: getDefaultX(), y: DEFAULT_Y });
+  const { isChatOpen, closeChat, consumePendingOpen } = useChat();
+  const [position, setPosition] = useState(getDefaultPosition);
   const [size, setSize] = useState({ width: POPUP_WIDTH, height: POPUP_HEIGHT });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -102,9 +103,36 @@ export default function ChatPopup() {
         const response = await fetch('/api/chat/rooms');
         if (response.ok) {
           const data = await response.json();
-          setRooms(data.rooms || []);
-          if (data.rooms?.length > 0 && selectedRoomId === null) {
-            setSelectedRoomId(data.rooms[0].id);
+          const roomList = data.rooms || [];
+          setRooms(roomList);
+          const pending = consumePendingOpen();
+          if (pending?.dmId) {
+            setViewMode('dms');
+            setSelectedDmId(pending.dmId);
+            setDmListLoading(true);
+            try {
+              const [dmsRes, infoRes] = await Promise.all([
+                fetch('/api/chat/dms'),
+                fetch(`/api/chat/dms/${pending.dmId}`),
+              ]);
+              if (dmsRes.ok) {
+                const dmsData = await dmsRes.json();
+                setDmConversations(dmsData.conversations || []);
+              }
+              if (infoRes.ok) {
+                const info = await infoRes.json();
+                if (info.otherUser) setSelectedDmOtherUser(info.otherUser);
+              }
+            } finally {
+              setDmListLoading(false);
+            }
+          } else {
+            if (pending?.roomId && roomList.some((r: { id: number }) => r.id === pending.roomId)) {
+              setViewMode('channels');
+              setSelectedRoomId(pending.roomId);
+            } else if (roomList.length > 0) {
+              setSelectedRoomId(roomList[0].id);
+            }
           }
         }
       } catch (error) {
@@ -114,7 +142,7 @@ export default function ChatPopup() {
       }
     };
     loadRooms();
-  }, [isChatOpen]);
+  }, [isChatOpen, consumePendingOpen]);
 
   useEffect(() => {
     if (!isChatOpen || !currentUserEmail) return;

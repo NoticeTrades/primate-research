@@ -1,71 +1,45 @@
 import { NextResponse } from 'next/server';
 
+const YAHOO_SYMBOLS: Record<string, string> = {
+  ES: 'ES=F',
+  NQ: 'NQ=F',
+  YM: 'YM=F',
+  BTC: 'BTC-USD',
+};
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const symbol = searchParams.get('symbol');
-
-  if (!symbol) {
-    return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
-  }
+  const symbol = (searchParams.get('symbol') || '').toUpperCase();
+  const yahooSymbol = YAHOO_SYMBOLS[symbol] || symbol;
 
   try {
-    // Map our symbols to Yahoo Finance symbols
-    const symbolMap: Record<string, string> = {
-      'NQ': 'NQ=F',
-      'ES': 'ES=F',
-      'YM': 'YM=F',
-      'RTY': 'RTY=F',
-      'GC': 'GC=F',
-      'SI': 'SI=F',
-      'N225': '%5EN225',
-    };
-
-    const yahooSymbol = symbolMap[symbol] || symbol;
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`;
-
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-      },
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSymbol)}`;
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      next: { revalidate: 10 },
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.statusText}`);
+    if (!res.ok) throw new Error('Yahoo API error');
+    const data = await res.json();
+    const q = data?.quoteResponse?.result?.[0];
+    if (!q) {
+      return NextResponse.json({ error: 'Symbol not found' }, { status: 404 });
     }
-
-    const data = await response.json();
-
-    if (data.chart?.result?.[0]) {
-      const result = data.chart.result[0];
-      const meta = result.meta;
-      
-      // Use regularMarketPrice or chartPreviousClose for current price
-      const regularPrice = meta.regularMarketPrice ?? meta.chartPreviousClose ?? meta.previousClose;
-      const prevClose = meta.previousClose ?? meta.chartPreviousClose ?? regularPrice;
-      
-      // Try to use Yahoo's calculated change percent first, then calculate our own
-      let change = meta.regularMarketChange ?? (regularPrice - prevClose);
-      let changePercent = meta.regularMarketChangePercent ?? ((change / prevClose) * 100);
-      
-      // If changePercent is not available, calculate it
-      if (!changePercent && prevClose && prevClose !== 0) {
-        changePercent = (change / prevClose) * 100;
-      }
-
-      return NextResponse.json({
-        symbol,
-        price: regularPrice,
-        change,
-        changePercent,
-      });
-    }
-
-    return NextResponse.json({ error: 'No data found' }, { status: 404 });
-  } catch (error) {
-    console.error(`Error fetching data for ${symbol}:`, error);
-    return NextResponse.json(
-      { error: 'Failed to fetch market data' },
-      { status: 500 }
-    );
+    const regularMarketPrice = q.regularMarketPrice ?? q.price ?? 0;
+    const previousClose = q.regularMarketPreviousClose ?? q.previousClose ?? regularMarketPrice;
+    const change = q.regularMarketChange ?? (regularMarketPrice - previousClose);
+    const changePercent = q.regularMarketChangePercent ?? (previousClose ? (change / previousClose) * 100 : 0);
+    return NextResponse.json({
+      symbol: q.symbol === yahooSymbol ? symbol : q.symbol,
+      price: regularMarketPrice,
+      change,
+      changePercent,
+      previousClose,
+    });
+  } catch (e) {
+    console.error('Market data error:', e);
+    return NextResponse.json({ error: 'Failed to fetch market data' }, { status: 500 });
   }
 }

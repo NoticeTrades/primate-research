@@ -4,8 +4,10 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { ChatProvider } from "./contexts/ChatContext";
+import { TickerProvider } from "./contexts/TickerContext";
 import FeedbackWidget from "./components/FeedbackWidget";
 import ChatPopup from "./components/ChatPopup";
+import PriceTerminalWrapper from "./components/PriceTerminalWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -87,8 +89,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ChatProvider>
-            {children}
-            <ChatPopup />
+            <TickerProvider>
+              {children}
+              <ChatPopup />
+              <PriceTerminalWrapper />
+            </TickerProvider>
           </ChatProvider>
         </ThemeProvider>
         <FeedbackWidget />

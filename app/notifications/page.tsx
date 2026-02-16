@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useChat } from '../contexts/ChatContext';
 import Navigation from '../components/Navigation';
 import CursorGlow from '../components/CursorGlow';
 import CursorHover from '../components/CursorHover';
@@ -25,8 +26,29 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
+function parseChatLink(link: string): { dmId?: number; roomId?: number } | null {
+  if (!link || !link.startsWith('/chat')) return null;
+  try {
+    const url = new URL(link, 'https://x');
+    const dm = url.searchParams.get('dm');
+    const room = url.searchParams.get('room');
+    if (dm) {
+      const dmId = parseInt(dm, 10);
+      if (!isNaN(dmId)) return { dmId };
+    }
+    if (room) {
+      const roomId = parseInt(room, 10);
+      if (!isNaN(roomId)) return { roomId };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
+  const { openChat } = useChat();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -853,17 +875,36 @@ export default function NotificationsPage() {
                         </button>
                       </div>
 
-                      {/* Link Button */}
+                      {/* Link Button — open chat in-app for DM/mention, else navigate */}
                       {notification.link && (
-                        <a
-                          href={notification.link}
-                          className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-colors"
-                        >
-                          View
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </a>
+                        (() => {
+                          const chatParams = parseChatLink(notification.link);
+                          if (chatParams) {
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => openChat(chatParams)}
+                                className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-colors"
+                              >
+                                View
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            );
+                          }
+                          return (
+                            <a
+                              href={notification.link}
+                              className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-colors"
+                            >
+                              View
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </a>
+                          );
+                        })()
                       )}
                     </div>
                   </div>

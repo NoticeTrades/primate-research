@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Logo from './Logo';
 import { researchArticles, generateSlug } from '../../data/research';
 import { useChat } from '../contexts/ChatContext';
+import { useTicker } from '../contexts/TickerContext';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -18,7 +19,26 @@ export default function Navigation() {
   const { openChat } = useChat();
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchPlaceholder, setSearchPlaceholder] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const { openTicker } = useTicker();
+
+  const TERMINAL_PLACEHOLDER = 'Search Terminal...';
+  const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'BTC'];
+
+  useEffect(() => {
+    let i = 0;
+    setSearchPlaceholder('');
+    const t = setInterval(() => {
+      if (i < TERMINAL_PLACEHOLDER.length) {
+        setSearchPlaceholder(TERMINAL_PLACEHOLDER.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(t);
+      }
+    }, 80);
+    return () => clearInterval(t);
+  }, []);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
@@ -385,11 +405,24 @@ export default function Navigation() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      setIsDropdownOpen(false);
-      router.push(`/research?q=${encodeURIComponent(searchQuery.trim())}`);
+    const q = searchQuery.trim().toUpperCase();
+    if (!q) return;
+    setIsDropdownOpen(false);
+    if (q === 'CHAT') {
+      openChat();
+      setSearchQuery('');
       searchRef.current?.blur();
+      return;
     }
+    if (SEARCH_TERMINAL_TICKERS.includes(q)) {
+      openTicker(q);
+      setSearchQuery('');
+      searchRef.current?.blur();
+      return;
+    }
+    router.push(`/research?q=${encodeURIComponent(searchQuery.trim())}`);
+    setSearchQuery('');
+    searchRef.current?.blur();
   };
 
   const handleBellClick = () => {
@@ -460,7 +493,7 @@ export default function Navigation() {
               }
             }}
             onBlur={() => setIsSearchFocused(false)}
-            placeholder="Search research..."
+            placeholder={searchPlaceholder || 'Search Terminal...'}
             className={`w-48 lg:w-64 px-3 py-1.5 pl-9 bg-white/80 dark:bg-zinc-800/80 border rounded-lg text-sm text-black dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
               isSearchFocused
                 ? 'border-blue-500 w-56 lg:w-72'
