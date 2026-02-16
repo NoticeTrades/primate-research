@@ -119,7 +119,12 @@ export async function GET(request: Request) {
         const rawChange = q.regularMarketChange;
         const rawChangePercent = q.regularMarketChangePercent;
         
-        console.log(`[Market Data API] ${symbol} raw data: price=${regularMarketPrice}, prevClose=${previousClose}, dayOpen=${dayOpen}, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}`);
+        // Check if market is closed (regularMarketState will be 'CLOSED' or 'PRE' or 'POST')
+        const marketState = q.regularMarketState ?? q.marketState ?? '';
+        const isMarketClosed = marketState === 'CLOSED' || marketState === 'PRE' || marketState === 'POST';
+        const marketTime = q.regularMarketTime ?? q.marketTime;
+        
+        console.log(`[Market Data API] ${symbol} raw data: price=${regularMarketPrice}, prevClose=${previousClose}, dayOpen=${dayOpen}, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}, marketState=${marketState}, marketTime=${marketTime}`);
         
         // For futures (ES, NQ, YM, RTY, GC, SI, N225), use Yahoo's regularMarketChangePercent
         // For crypto (BTC/ETH), calculate from day's open for accurate intraday change
@@ -130,24 +135,35 @@ export async function GET(request: Request) {
         let changePercent = 0;
         
         if (isFutures) {
-          // For futures, use Yahoo Finance's built-in change values directly
-          // These are calculated correctly by Yahoo Finance for the current trading session
-          // Check if rawChangePercent exists and is a valid number (even if 0)
-          const hasYahooChange = (typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)) || 
-                                 (typeof rawChange === 'number' && !Number.isNaN(rawChange));
+          // For futures, ALWAYS use Yahoo Finance's built-in change values when available
+          // Yahoo Finance handles market holidays and early closes correctly
+          // Only calculate ourselves if Yahoo's values are completely missing
           
-          if (hasYahooChange) {
-            // Use Yahoo's values - they're the most accurate
-            change = typeof rawChange === 'number' && !Number.isNaN(rawChange) ? rawChange : (regularMarketPrice - previousClose);
-            changePercent = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent) 
-              ? rawChangePercent 
-              : (previousClose > 0 ? ((regularMarketPrice - previousClose) / previousClose) * 100 : 0);
-            console.log(`[Market Data API] ${symbol} (futures): Using Yahoo's change: price=${regularMarketPrice}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}`);
+          // When market is closed, Yahoo's values are still correct (they show change from last trading day)
+          // Check for rawChangePercent first (even if it's 0, that's valid)
+          if (rawChangePercent != null && typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)) {
+            // Yahoo's changePercent is the most reliable, especially on holidays
+            // Even if it's 0, that's a valid value (no change)
+            changePercent = rawChangePercent;
+            // Calculate change from percent if rawChange is not available
+            if (rawChange != null && typeof rawChange === 'number' && !Number.isNaN(rawChange)) {
+              change = rawChange;
+            } else if (previousClose > 0) {
+              change = (changePercent / 100) * previousClose;
+            } else {
+              change = 0;
+            }
+            console.log(`[Market Data API] ${symbol} (futures): Using Yahoo's changePercent: price=${regularMarketPrice}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%, marketState=${marketState}, isClosed=${isMarketClosed}`);
+          } else if (rawChange != null && typeof rawChange === 'number' && !Number.isNaN(rawChange) && previousClose > 0) {
+            // Fallback: if we have rawChange but not changePercent, calculate percent
+            change = rawChange;
+            changePercent = (change / previousClose) * 100;
+            console.log(`[Market Data API] ${symbol} (futures): Calculated percent from rawChange: price=${regularMarketPrice}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%`);
           } else if (regularMarketPrice > 0 && previousClose > 0 && previousClose !== regularMarketPrice) {
-            // Fallback: calculate from previous close if Yahoo's values aren't available
+            // Last resort: calculate from previous close
             change = regularMarketPrice - previousClose;
             changePercent = (change / previousClose) * 100;
-            console.log(`[Market Data API] ${symbol} (futures): Calculated from prevClose (fallback): price=${regularMarketPrice}, prevClose=${previousClose}, change=${changePercent.toFixed(2)}%`);
+            console.log(`[Market Data API] ${symbol} (futures): Calculated from prevClose (last resort): price=${regularMarketPrice}, prevClose=${previousClose}, change=${changePercent.toFixed(2)}%`);
           } else {
             console.warn(`[Market Data API] ${symbol} (futures): Could not get change - price=${regularMarketPrice}, prevClose=${previousClose}, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}`);
             change = 0;
@@ -234,17 +250,22 @@ export async function GET(request: Request) {
         } catch {
           // ignore
         }
-        return NextResponse.json({
-          symbol: q.symbol === yahooSymbol ? symbol : q.symbol,
-          price: regularMarketPrice,
-          change,
-          changePercent,
-          previousClose,
-          ytdPercent: ytdPercent ?? undefined,
-        });
+        // Only return if we successfully got data from quote API
+        // Don't fall through to chart API if we have quote data (even if change is 0)
+        if (regularMarketPrice > 0) {
+          return NextResponse.json({
+            symbol: q.symbol === yahooSymbol ? symbol : q.symbol,
+            price: regularMarketPrice,
+            change,
+            changePercent,
+            previousClose,
+            ytdPercent: ytdPercent ?? undefined,
+          });
+        }
       }
     }
 
+    // Only use chart API as fallback if quote API completely failed
     const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
     const chartRes = await fetch(chartUrl, {
       headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
