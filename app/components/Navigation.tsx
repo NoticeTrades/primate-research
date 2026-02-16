@@ -584,6 +584,16 @@ export default function Navigation() {
               }
             }}
             onKeyDown={(e) => {
+              // Handle ESC to close search
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                setIsDropdownOpen(false);
+                setIsSearchFocused(false);
+                setSearchQuery('');
+                searchRef.current?.blur();
+                return;
+              }
+
               const raw = searchQuery.trim();
               const showCommands = isDropdownOpen && isSearchFocused && !raw;
               const isPrice = raw === 'P' || raw.toUpperCase().startsWith('P ');

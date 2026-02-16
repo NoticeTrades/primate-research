@@ -100,8 +100,8 @@ export default function IndexAnalysisPage() {
     };
 
     fetchData();
-    // Refresh every 15 seconds for more real-time updates
-    const interval = setInterval(fetchData, 15000);
+    // Refresh every 5 seconds for real-time updates
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [symbol]);
 
