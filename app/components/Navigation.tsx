@@ -60,6 +60,8 @@ export default function Navigation() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const toolsDropdownRef = useRef<HTMLDivElement>(null);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
+  const [selectedPriceTickerIndex, setSelectedPriceTickerIndex] = useState(0);
 
   // Check auth state on mount and when pathname changes (login/signup redirect)
   // Note: session_token is httpOnly so JS can't read it — use user_email instead
@@ -426,6 +428,18 @@ export default function Navigation() {
       searchRef.current?.blur();
       return;
     }
+    if (q === 'R') {
+      router.push('/research');
+      setSearchQuery('');
+      searchRef.current?.blur();
+      return;
+    }
+    if (q === 'V') {
+      router.push('/videos');
+      setSearchQuery('');
+      searchRef.current?.blur();
+      return;
+    }
     const parts = raw.split(/\s+/);
     if (parts[0].toUpperCase() === 'P' && parts[1]) {
       const ticker = parts[1].toUpperCase();
@@ -490,11 +504,93 @@ export default function Navigation() {
             ref={searchRef}
             type="text"
             value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={(e) => {
+              handleSearchChange(e.target.value);
+              const raw = e.target.value.trim();
+              if (raw === 'P' || raw.toUpperCase().startsWith('P ')) setSelectedPriceTickerIndex(0);
+            }}
+            onKeyDown={(e) => {
+              const raw = searchQuery.trim();
+              const showCommands = isDropdownOpen && isSearchFocused && !raw;
+              const isPrice = raw === 'P' || raw.toUpperCase().startsWith('P ');
+              const priceTickerPart = isPrice && raw.toUpperCase().startsWith('P ') ? raw.slice(1).trim().toUpperCase() : '';
+              const priceTickers = isPrice
+                ? (priceTickerPart ? SEARCH_TERMINAL_TICKERS.filter((t: string) => t.startsWith(priceTickerPart) || priceTickerPart.startsWith(t)) : SEARCH_TERMINAL_TICKERS)
+                : [];
+              if (showCommands) {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedCommandIndex((i) => (i + 1) % 5);
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedCommandIndex((i) => (i - 1 + 5) % 5);
+                  return;
+                }
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (selectedCommandIndex === 0) {
+                    setSearchQuery('P ');
+                    setSelectedPriceTickerIndex(0);
+                    setTimeout(() => searchRef.current?.focus(), 0);
+                  } else if (selectedCommandIndex === 1) {
+                    openChat();
+                    setIsDropdownOpen(false);
+                    setSearchQuery('');
+                    searchRef.current?.blur();
+                  } else if (selectedCommandIndex === 2) {
+                    openEquityIndex();
+                    setIsDropdownOpen(false);
+                    setSearchQuery('');
+                    searchRef.current?.blur();
+                  } else if (selectedCommandIndex === 3) {
+                    router.push('/research');
+                    setIsDropdownOpen(false);
+                    setSearchQuery('');
+                    searchRef.current?.blur();
+                  } else {
+                    router.push('/videos');
+                    setIsDropdownOpen(false);
+                    setSearchQuery('');
+                    searchRef.current?.blur();
+                  }
+                  return;
+                }
+              }
+              if (isPrice && priceTickers.length > 0) {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedPriceTickerIndex((i) => (i + 1) % priceTickers.length);
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedPriceTickerIndex((i) => (i - 1 + priceTickers.length) % priceTickers.length);
+                  return;
+                }
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const safeIdx = Math.min(selectedPriceTickerIndex, Math.max(0, priceTickers.length - 1));
+                  const ticker = priceTickers[safeIdx];
+                  if (ticker) {
+                    openTicker(ticker);
+                    setSearchQuery('');
+                    setIsDropdownOpen(false);
+                    searchRef.current?.blur();
+                  }
+                  return;
+                }
+              }
+            }}
             onFocus={() => {
               setIsSearchFocused(true);
               setIsDropdownOpen(true);
               const q = searchQuery.trim();
+              if (!q) setSelectedCommandIndex(0);
+              if (q === 'P' || q.toUpperCase().startsWith('P ')) {
+                setSelectedPriceTickerIndex(0);
+              }
               if (q === 'P' || q.toUpperCase().startsWith('P ')) setIsDropdownOpen(true);
               else if (q) {
                 const qLower = q.toLowerCase();
@@ -541,50 +637,31 @@ export default function Navigation() {
                     ref={dropdownRef}
                     className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
-                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-                      <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Commands</span>
+                    <div className="px-2 py-1 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                      <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Commands</span>
                     </div>
                     <div className="py-0.5">
-                      <button
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setSearchQuery('P ');
-                          searchRef.current?.focus();
-                        }}
-                        className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200"
-                      >
-                        <span className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">P</span>
-                        <span>Live Price</span>
-                      </button>
-                      <button
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          openChat();
-                          setIsDropdownOpen(false);
-                          setSearchQuery('');
-                          searchRef.current?.blur();
-                        }}
-                        className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200"
-                      >
-                        <span className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">CHAT</span>
-                        <span>Live Chat</span>
-                      </button>
-                      <button
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          openEquityIndex();
-                          setIsDropdownOpen(false);
-                          setSearchQuery('');
-                          searchRef.current?.blur();
-                        }}
-                        className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200"
-                      >
-                        <span className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">EI</span>
-                        <span>US Equity Index Futures (ES, YM, NQ)</span>
-                      </button>
+                      {[
+                        { cmd: 'P', label: 'Live Price', onSelect: () => { setSearchQuery('P '); setSelectedPriceTickerIndex(0); searchRef.current?.focus(); } },
+                        { cmd: 'CHAT', label: 'Live Chat', onSelect: () => { openChat(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'EI', label: 'US Equity Index Futures (ES, YM, NQ)', onSelect: () => { openEquityIndex(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'R', label: 'Research', onSelect: () => { router.push('/research'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'V', label: 'The Vault / Videos', onSelect: () => { router.push('/videos'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                      ].map((item, idx) => (
+                        <button
+                          key={item.cmd}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setSelectedCommandIndex(idx);
+                            item.onSelect();
+                          }}
+                          className={`w-full text-left px-2 py-1 transition-colors flex items-center gap-2 text-[11px] font-medium text-zinc-800 dark:text-zinc-200 ${idx === selectedCommandIndex ? 'bg-blue-500/15 dark:bg-blue-500/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+                        >
+                          <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">{item.cmd}</span>
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 );
@@ -596,16 +673,70 @@ export default function Navigation() {
                 : SEARCH_TERMINAL_TICKERS;
               const showPriceDropdown = isPriceCommand;
               const showEIDropdown = raw.toUpperCase() === 'EI';
-              const showOther = !showPriceDropdown && !showEIDropdown && (cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
+              const showRDropdown = raw.toUpperCase() === 'R';
+              const showVDropdown = raw.toUpperCase() === 'V';
+              const showOther = !showPriceDropdown && !showEIDropdown && !showRDropdown && !showVDropdown && (cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
+              if (showRDropdown) {
+                return (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                  >
+                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">R</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Research</span>
+                    </div>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        router.push('/research');
+                        setSearchQuery('');
+                        setIsDropdownOpen(false);
+                        searchRef.current?.blur();
+                      }}
+                      className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
+                    >
+                      Go to Research page
+                    </button>
+                  </div>
+                );
+              }
+              if (showVDropdown) {
+                return (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                  >
+                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">V</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">The Vault / Videos</span>
+                    </div>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        router.push('/videos');
+                        setSearchQuery('');
+                        setIsDropdownOpen(false);
+                        searchRef.current?.blur();
+                      }}
+                      className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
+                    >
+                      Go to The Vault (Videos)
+                    </button>
+                  </div>
+                );
+              }
               if (showEIDropdown) {
                 return (
                   <div
                     ref={dropdownRef}
                     className="absolute top-full mt-1.5 right-0 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
-                    <div className="px-2.5 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
-                      <span className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">EI</span>
-                      <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">US Equity Index Futures</span>
+                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">EI</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">US Equity Index Futures</span>
                     </div>
                     <button
                       type="button"
@@ -616,9 +747,9 @@ export default function Navigation() {
                         setIsDropdownOpen(false);
                         searchRef.current?.blur();
                       }}
-                      className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-xs font-medium text-zinc-800 dark:text-zinc-200"
+                      className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
                     >
-                      <span className="w-6 h-5 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-bold">ES, YM, NQ</span>
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">ES, YM, NQ</span>
                       Open comparison
                     </button>
                   </div>
@@ -633,34 +764,35 @@ export default function Navigation() {
               {/* P = Price Quote / Live Price */}
               {showPriceDropdown && (
                 <>
-                  <div className="px-3 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-3">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40 shadow-sm">
-                      P
-                    </span>
-                    <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Live Price</span>
+                  <div className="px-2.5 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">P</span>
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Live Price</span>
                   </div>
                   <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">Type a ticker: NQ, ES, YM, BTC</span>
                   </div>
                   {priceTickers.length > 0 ? (
                     <div className="max-h-40 overflow-y-auto">
-                      {priceTickers.map((ticker) => (
+                      {priceTickers.map((ticker, idx) => {
+                        const effectiveIdx = Math.min(selectedPriceTickerIndex, Math.max(0, priceTickers.length - 1));
+                        return (
                         <button
                           key={ticker}
                           type="button"
                           onMouseDown={(e) => {
                             e.preventDefault();
+                            setSelectedPriceTickerIndex(idx);
                             openTicker(ticker);
                             setSearchQuery('');
                             setIsDropdownOpen(false);
                             searchRef.current?.blur();
                           }}
-                          className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                          className={`w-full text-left px-4 py-2.5 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200 ${idx === effectiveIdx ? 'bg-blue-500/15 dark:bg-blue-500/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
                         >
                           <span className="w-8 h-6 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold">{ticker}</span>
                           Open live price
                         </button>
-                      ))}
+                      );})}
                     </div>
                   ) : (
                     <div className="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">No matching ticker. Try NQ, ES, YM, BTC.</div>
