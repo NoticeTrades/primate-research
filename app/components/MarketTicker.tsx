@@ -206,7 +206,7 @@ export default function MarketTicker() {
         const futuresResponses = await Promise.all(
           futuresSymbols.map((symbol) => 
             fetchWithErrorHandling(`/api/market-data?symbol=${symbol}&t=${timestamp}`, {
-              cache: 'no-store',
+              cache: 'no-store' as RequestCache,
               headers: { 'Cache-Control': 'no-cache' },
             })
           )
