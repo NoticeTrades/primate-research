@@ -22,7 +22,11 @@ export async function GET() {
           cache: 'no-store',
         });
 
-        if (cmcRes.ok) {
+        // Handle rate limiting
+        if (cmcRes.status === 429) {
+          console.warn('[Crypto Data API] CoinMarketCap rate limit (429) - falling back to Yahoo Finance');
+          // Fall through to Yahoo Finance fallback
+        } else if (cmcRes.ok) {
           const cmcData = await cmcRes.json();
           const result: { bitcoin?: { usd: number; usd_24h_change: number }; ethereum?: { usd: number; usd_24h_change: number } } = {};
 

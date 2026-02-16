@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface TickerData {
   symbol: string;
@@ -24,33 +24,43 @@ export default function MarketTicker() {
     { symbol: 'ETH', name: 'Ethereum', price: null, change: null, changePercent: null, isLoading: true },
   ]);
 
-  const fetchMarketData = async () => {
+  // Use ref to track crypto refresh timing (slower to avoid rate limits)
+  const lastCryptoFetchRef = useRef<number>(0);
+  const CRYPTO_REFRESH_INTERVAL = 8000; // 8 seconds for crypto to avoid CoinMarketCap rate limits
+
+  const fetchMarketData = async (forceCrypto = false) => {
     try {
       // Fetch Bitcoin and Ethereum prices via our API route (avoids CORS issues)
-      // Wrap in Promise to catch extension-intercepted errors
-      let cryptoResponse;
-      try {
-        const timestamp = Date.now();
-        cryptoResponse = await new Promise<Response | null>((resolve) => {
-          fetch(`/api/crypto-data?t=${timestamp}`, {
-            method: 'GET',
-            cache: 'no-store',
-            headers: {
-              'Accept': 'application/json',
-              'Cache-Control': 'no-cache',
-            },
-          })
-            .then(resolve)
-            .catch((error: any) => {
-              // Silently ignore browser extension interference
-              // These errors are non-critical
-              resolve(null);
-            });
-        });
-      } catch (fetchError: any) {
-        // Additional catch for any remaining errors
-        cryptoResponse = null;
-      }
+      // Only fetch crypto if enough time has passed or forced (to avoid rate limits)
+      const now = Date.now();
+      const shouldFetchCrypto = forceCrypto || (now - lastCryptoFetchRef.current >= CRYPTO_REFRESH_INTERVAL);
+      
+      if (shouldFetchCrypto) {
+        lastCryptoFetchRef.current = now;
+        // Wrap in Promise to catch extension-intercepted errors
+        let cryptoResponse;
+        try {
+          const timestamp = Date.now();
+          cryptoResponse = await new Promise<Response | null>((resolve) => {
+            fetch(`/api/crypto-data?t=${timestamp}`, {
+              method: 'GET',
+              cache: 'no-store',
+              headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache',
+              },
+            })
+              .then(resolve)
+              .catch((error: any) => {
+                // Silently ignore browser extension interference
+                // These errors are non-critical
+                resolve(null);
+              });
+          });
+        } catch (fetchError: any) {
+          // Additional catch for any remaining errors
+          cryptoResponse = null;
+        }
 
       if (cryptoResponse?.ok) {
         const cryptoData = await cryptoResponse.json();
@@ -98,7 +108,14 @@ export default function MarketTicker() {
           console.warn('[MarketTicker] No ethereum data in response');
         }
       } else {
-        console.error('[MarketTicker] Crypto API response not OK:', cryptoResponse?.status);
+        // Handle rate limiting (429) gracefully
+        if (cryptoResponse?.status === 429) {
+          console.warn('[MarketTicker] CoinMarketCap rate limit hit, will retry later');
+          // Wait longer before next attempt (add 10 more seconds)
+          lastCryptoFetchRef.current = now - CRYPTO_REFRESH_INTERVAL + 10000;
+        } else {
+          console.error('[MarketTicker] Crypto API response not OK:', cryptoResponse?.status);
+        }
         setTickers((prev) =>
           prev.map((ticker) =>
             ticker.symbol === 'BTC' || ticker.symbol === 'ETH'
@@ -107,6 +124,7 @@ export default function MarketTicker() {
           )
         );
       }
+      } // Close the crypto fetch block
 
       // Fetch Gold and Silver futures prices via our API route
       try {
@@ -292,10 +310,10 @@ export default function MarketTicker() {
 
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
-    // Fetch data immediately
-    fetchMarketData();
+    // Fetch data immediately (including crypto)
+    fetchMarketData(true);
 
-    // Update every 2 seconds for real-time feel
+    // Update every 2 seconds for real-time feel (crypto will only update every 8 seconds)
     const interval = setInterval(() => {
       console.log(`[MarketTicker] Refreshing at ${new Date().toLocaleTimeString()}`);
       fetchMarketData();
