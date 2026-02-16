@@ -54,39 +54,51 @@ export default function MarketTicker() {
 
       if (cryptoResponse?.ok) {
         const cryptoData = await cryptoResponse.json();
+        console.log('[MarketTicker] Crypto data received:', cryptoData);
       
         if (cryptoData.bitcoin) {
+          const btcChange = cryptoData.bitcoin.usd_24h_change || 0;
+          const btcPrice = cryptoData.bitcoin.usd || 0;
+          console.log(`[MarketTicker] Setting BTC: price=${btcPrice}, change=${btcChange}%`);
           setTickers((prev) =>
             prev.map((ticker) =>
               ticker.symbol === 'BTC'
                 ? {
                     ...ticker,
-                    price: cryptoData.bitcoin.usd,
-                    change: cryptoData.bitcoin.usd_24h_change, // This is now intraday change from day's open
-                    changePercent: cryptoData.bitcoin.usd_24h_change, // This is now intraday change from day's open
+                    price: btcPrice,
+                    change: btcChange, // This is now intraday change from day's open
+                    changePercent: btcChange, // This is now intraday change from day's open
                     isLoading: false,
                   }
                 : ticker
             )
           );
+        } else {
+          console.warn('[MarketTicker] No bitcoin data in response');
         }
 
         if (cryptoData.ethereum) {
+          const ethChange = cryptoData.ethereum.usd_24h_change || 0;
+          const ethPrice = cryptoData.ethereum.usd || 0;
+          console.log(`[MarketTicker] Setting ETH: price=${ethPrice}, change=${ethChange}%`);
           setTickers((prev) =>
             prev.map((ticker) =>
               ticker.symbol === 'ETH'
                 ? {
                     ...ticker,
-                    price: cryptoData.ethereum.usd,
-                    change: cryptoData.ethereum.usd_24h_change, // This is now intraday change from day's open
-                    changePercent: cryptoData.ethereum.usd_24h_change, // This is now intraday change from day's open
+                    price: ethPrice,
+                    change: ethChange, // This is now intraday change from day's open
+                    changePercent: ethChange, // This is now intraday change from day's open
                     isLoading: false,
                   }
                 : ticker
             )
           );
+        } else {
+          console.warn('[MarketTicker] No ethereum data in response');
         }
       } else {
+        console.error('[MarketTicker] Crypto API response not OK:', cryptoResponse?.status);
         setTickers((prev) =>
           prev.map((ticker) =>
             ticker.symbol === 'BTC' || ticker.symbol === 'ETH'

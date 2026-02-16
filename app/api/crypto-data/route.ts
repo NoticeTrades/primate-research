@@ -66,6 +66,7 @@ export async function GET() {
           usd: price,
           usd_24h_change: changePercent, // Using intraday change, not 24h
         };
+        console.log(`[Crypto Data API] Returning BTC: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
       }
     }
 
@@ -116,6 +117,7 @@ export async function GET() {
           usd: price,
           usd_24h_change: changePercent, // Using intraday change, not 24h
         };
+        console.log(`[Crypto Data API] Returning ETH: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
       }
     }
 
