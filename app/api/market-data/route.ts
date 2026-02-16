@@ -74,7 +74,15 @@ export async function GET(request: Request) {
           console.log(`[Market Data API] ${symbol}: price=${regularMarketPrice}, dayOpen=${actualDayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
         } else {
           // Don't use previous close as fallback - it's not accurate for intraday
-          console.warn(`[Market Data API] ${symbol}: Could not get day's open (price=${regularMarketPrice}, dayOpen=${actualDayOpen}), cannot calculate accurate intraday change`);
+          // For BTC/ETH, we MUST have day's open - return error if we can't get it
+          if (symbol === 'BTC' || symbol === 'ETH') {
+            console.error(`[Market Data API] ${symbol}: CRITICAL - Could not get day's open (price=${regularMarketPrice}, dayOpen=${actualDayOpen}), cannot calculate accurate intraday change`);
+            return NextResponse.json({ 
+              error: `Unable to fetch accurate intraday data for ${symbol}. Day's opening price not available.` 
+            }, { status: 500 });
+          }
+          // For other symbols, set to 0 but log warning
+          console.warn(`[Market Data API] ${symbol}: Could not get day's open (price=${regularMarketPrice}, dayOpen=${actualDayOpen}), setting change to 0`);
           change = 0;
           changePercent = 0;
         }

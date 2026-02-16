@@ -56,19 +56,19 @@ export async function GET() {
         }
         
         // Calculate intraday change from day's open (not 24h change)
-        let changePercent = 0;
+        // Only return data if we have both price and day's open
         if (dayOpen > 0 && price > 0) {
-          changePercent = ((price - dayOpen) / dayOpen) * 100;
+          const changePercent = ((price - dayOpen) / dayOpen) * 100;
           console.log(`[Crypto Data API] BTC: price=${price}, dayOpen=${dayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
+          result.bitcoin = {
+            usd: price,
+            usd_24h_change: changePercent, // Using intraday change, not 24h
+          };
+          console.log(`[Crypto Data API] Returning BTC: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
         } else {
-          console.warn(`[Crypto Data API] BTC: Could not get day's open (price=${price}, dayOpen=${dayOpen})`);
+          console.warn(`[Crypto Data API] BTC: Could not get day's open (price=${price}, dayOpen=${dayOpen}), not returning data`);
+          // Don't set result.bitcoin - let it remain undefined so MarketTicker knows data is unavailable
         }
-        
-        result.bitcoin = {
-          usd: price,
-          usd_24h_change: changePercent, // Using intraday change, not 24h
-        };
-        console.log(`[Crypto Data API] Returning BTC: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
       } else {
         console.warn('[Crypto Data API] BTC quote data missing or invalid');
       }
@@ -111,19 +111,19 @@ export async function GET() {
         }
         
         // Calculate intraday change from day's open (not 24h change)
-        let changePercent = 0;
+        // Only return data if we have both price and day's open
         if (dayOpen > 0 && price > 0) {
-          changePercent = ((price - dayOpen) / dayOpen) * 100;
+          const changePercent = ((price - dayOpen) / dayOpen) * 100;
           console.log(`[Crypto Data API] ETH: price=${price}, dayOpen=${dayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
+          result.ethereum = {
+            usd: price,
+            usd_24h_change: changePercent, // Using intraday change, not 24h
+          };
+          console.log(`[Crypto Data API] Returning ETH: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
         } else {
-          console.warn(`[Crypto Data API] ETH: Could not get day's open (price=${price}, dayOpen=${dayOpen})`);
+          console.warn(`[Crypto Data API] ETH: Could not get day's open (price=${price}, dayOpen=${dayOpen}), not returning data`);
+          // Don't set result.ethereum - let it remain undefined so MarketTicker knows data is unavailable
         }
-        
-        result.ethereum = {
-          usd: price,
-          usd_24h_change: changePercent, // Using intraday change, not 24h
-        };
-        console.log(`[Crypto Data API] Returning ETH: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
       } else {
         console.warn('[Crypto Data API] ETH quote data missing or invalid');
       }
