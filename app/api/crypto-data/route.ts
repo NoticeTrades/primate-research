@@ -56,18 +56,35 @@ export async function GET() {
         }
         
         // Calculate intraday change from day's open (not 24h change)
-        // Only return data if we have both price and day's open
+        let changePercent = 0;
         if (dayOpen > 0 && price > 0) {
-          const changePercent = ((price - dayOpen) / dayOpen) * 100;
+          // Calculate from day's open (most accurate)
+          changePercent = ((price - dayOpen) / dayOpen) * 100;
           console.log(`[Crypto Data API] BTC: price=${price}, dayOpen=${dayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
+        } else if (price > 0) {
+          // Fallback: Use Yahoo's regularMarketChangePercent if available (might be from previous close, but better than nothing)
+          // Or try to calculate from previous close if we have it
+          const prevClose = btc.regularMarketPreviousClose ?? btc.previousClose ?? 0;
+          if (prevClose > 0) {
+            changePercent = ((price - prevClose) / prevClose) * 100;
+            console.warn(`[Crypto Data API] BTC: Using previous close fallback (price=${price}, prevClose=${prevClose}), changePercent=${changePercent.toFixed(2)}%`);
+          } else if (btc.regularMarketChangePercent != null) {
+            changePercent = btc.regularMarketChangePercent;
+            console.warn(`[Crypto Data API] BTC: Using Yahoo's changePercent fallback: ${changePercent.toFixed(2)}%`);
+          } else {
+            console.warn(`[Crypto Data API] BTC: Could not calculate change (price=${price}, dayOpen=${dayOpen})`);
+          }
+        }
+        
+        // Always return data if we have a price (even if change calculation isn't perfect)
+        if (price > 0) {
           result.bitcoin = {
             usd: price,
-            usd_24h_change: changePercent, // Using intraday change, not 24h
+            usd_24h_change: changePercent,
           };
           console.log(`[Crypto Data API] Returning BTC: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
         } else {
-          console.warn(`[Crypto Data API] BTC: Could not get day's open (price=${price}, dayOpen=${dayOpen}), not returning data`);
-          // Don't set result.bitcoin - let it remain undefined so MarketTicker knows data is unavailable
+          console.error(`[Crypto Data API] BTC: No valid price data`);
         }
       } else {
         console.warn('[Crypto Data API] BTC quote data missing or invalid');
@@ -111,18 +128,35 @@ export async function GET() {
         }
         
         // Calculate intraday change from day's open (not 24h change)
-        // Only return data if we have both price and day's open
+        let changePercent = 0;
         if (dayOpen > 0 && price > 0) {
-          const changePercent = ((price - dayOpen) / dayOpen) * 100;
+          // Calculate from day's open (most accurate)
+          changePercent = ((price - dayOpen) / dayOpen) * 100;
           console.log(`[Crypto Data API] ETH: price=${price}, dayOpen=${dayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
+        } else if (price > 0) {
+          // Fallback: Use Yahoo's regularMarketChangePercent if available (might be from previous close, but better than nothing)
+          // Or try to calculate from previous close if we have it
+          const prevClose = eth.regularMarketPreviousClose ?? eth.previousClose ?? 0;
+          if (prevClose > 0) {
+            changePercent = ((price - prevClose) / prevClose) * 100;
+            console.warn(`[Crypto Data API] ETH: Using previous close fallback (price=${price}, prevClose=${prevClose}), changePercent=${changePercent.toFixed(2)}%`);
+          } else if (eth.regularMarketChangePercent != null) {
+            changePercent = eth.regularMarketChangePercent;
+            console.warn(`[Crypto Data API] ETH: Using Yahoo's changePercent fallback: ${changePercent.toFixed(2)}%`);
+          } else {
+            console.warn(`[Crypto Data API] ETH: Could not calculate change (price=${price}, dayOpen=${dayOpen})`);
+          }
+        }
+        
+        // Always return data if we have a price (even if change calculation isn't perfect)
+        if (price > 0) {
           result.ethereum = {
             usd: price,
-            usd_24h_change: changePercent, // Using intraday change, not 24h
+            usd_24h_change: changePercent,
           };
           console.log(`[Crypto Data API] Returning ETH: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
         } else {
-          console.warn(`[Crypto Data API] ETH: Could not get day's open (price=${price}, dayOpen=${dayOpen}), not returning data`);
-          // Don't set result.ethereum - let it remain undefined so MarketTicker knows data is unavailable
+          console.error(`[Crypto Data API] ETH: No valid price data`);
         }
       } else {
         console.warn('[Crypto Data API] ETH quote data missing or invalid');
