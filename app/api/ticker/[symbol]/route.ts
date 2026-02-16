@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-// GET /api/ticker/[symbol] — fetch crypto data from CoinGecko
+// GET /api/ticker/[symbol] — fetch crypto data (Yahoo Finance for BTC/ETH intraday, CoinGecko for others)
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ symbol: string }> }
@@ -11,7 +12,82 @@ export async function GET(
     const { symbol: symbolParam } = await params;
     const symbol = symbolParam.toUpperCase();
 
-    // Common crypto symbol mappings (CoinGecko uses IDs, not symbols)
+    // For BTC and ETH, use Yahoo Finance for accurate intraday change from day's open
+    if (symbol === 'BTC' || symbol === 'ETH') {
+      const yahooSymbol = symbol === 'BTC' ? 'BTC-USD' : 'ETH-USD';
+      try {
+        const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSymbol)}`;
+        const quoteRes = await fetch(quoteUrl, {
+          headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+          cache: 'no-store',
+        });
+
+        if (quoteRes.ok) {
+          const quoteData = await quoteRes.json();
+          const q = quoteData?.quoteResponse?.result?.[0];
+          if (q) {
+            const price = q.regularMarketPrice ?? q.price ?? 0;
+            const dayOpen = q.regularMarketOpen ?? q.open ?? 0;
+            const high = q.regularMarketDayHigh ?? q.dayHigh ?? price;
+            const low = q.regularMarketDayLow ?? q.dayLow ?? price;
+            const volume = q.regularMarketVolume ?? q.volume ?? 0;
+            
+            // Calculate intraday change from day's open (not 24h)
+            let intradayChangePercent = 0;
+            if (dayOpen > 0 && price > 0) {
+              intradayChangePercent = ((price - dayOpen) / dayOpen) * 100;
+            } else if (q.regularMarketChangePercent) {
+              intradayChangePercent = q.regularMarketChangePercent;
+            }
+
+            // Get additional data from CoinGecko for market cap, supply, etc.
+            const coinId = symbol === 'BTC' ? 'bitcoin' : 'ethereum';
+            const cgRes = await fetch(
+              `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=false`,
+              { cache: 'no-store' }
+            );
+            
+            let cgData = null;
+            if (cgRes.ok) {
+              cgData = await cgRes.json();
+            }
+
+            return NextResponse.json({
+              symbol: symbol,
+              name: q.longName || q.shortName || (symbol === 'BTC' ? 'Bitcoin' : 'Ethereum'),
+              description: cgData?.description?.en || '',
+              currentPrice: price,
+              priceChange24h: intradayChangePercent, // Actually intraday change from day's open
+              high24h: high,
+              low24h: low,
+              volume24h: volume,
+              marketCap: cgData?.market_data?.market_cap?.usd || 0,
+              fullyDilutedValuation: cgData?.market_data?.fully_diluted_valuation?.usd || 0,
+              circulatingSupply: cgData?.market_data?.circulating_supply || 0,
+              totalSupply: cgData?.market_data?.total_supply || 0,
+              maxSupply: cgData?.market_data?.max_supply || null,
+              ath: cgData?.market_data?.ath?.usd || 0,
+              athChangePercentage: cgData?.market_data?.ath_change_percentage?.usd || 0,
+              atl: cgData?.market_data?.atl?.usd || 0,
+              atlChangePercentage: cgData?.market_data?.atl_change_percentage?.usd || 0,
+              image: cgData?.image?.large || '',
+              links: {
+                homepage: cgData?.links?.homepage?.[0] || '',
+                blockchain: cgData?.links?.blockchain_site || [],
+              },
+              categories: cgData?.categories || [],
+              updateInterval: 10, // Update every 10 seconds
+              lastUpdated: new Date().toISOString(),
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Yahoo Finance fetch error for', symbol, err);
+        // Fall through to CoinGecko fallback
+      }
+    }
+
+    // For other cryptos or fallback, use CoinGecko
     const symbolToId: Record<string, string> = {
       BTC: 'bitcoin',
       ETH: 'ethereum',
@@ -56,7 +132,7 @@ export async function GET(
         headers: {
           'Accept': 'application/json',
         },
-        next: { revalidate: 30 }, // Cache for 30 seconds to match polling interval
+        cache: 'no-store',
       }
     );
 

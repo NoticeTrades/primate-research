@@ -87,8 +87,9 @@ export default function TickerPage() {
   useEffect(() => {
     fetchData();
     
-    // Set up polling interval
-    const intervalId = setInterval(fetchData, POLLING_INTERVAL);
+    // Set up polling interval - faster for BTC/ETH (10s), slower for others (30s)
+    const pollingInterval = symbol === 'BTC' || symbol === 'ETH' ? 10000 : POLLING_INTERVAL;
+    const intervalId = setInterval(fetchData, pollingInterval);
 
     return () => {
       clearInterval(intervalId);
@@ -223,7 +224,9 @@ export default function TickerPage() {
                     {cryptoData.priceChange24h >= 0 ? '▲' : '▼'}{' '}
                     {Math.abs(cryptoData.priceChange24h).toFixed(2)}%
                   </span>
-                  <span className="text-sm text-zinc-500">24h</span>
+                  <span className="text-sm text-zinc-500">
+                    {symbol === 'BTC' || symbol === 'ETH' ? 'Today' : '24h'}
+                  </span>
                   {lastUpdateTime && (
                     <span className="text-xs text-zinc-500 ml-2" title={`Last updated: ${lastUpdateTime.toLocaleTimeString()}`}>
                       • Updated every {updateIntervalSeconds}s
@@ -555,8 +558,8 @@ export default function TickerPage() {
                       <p className="text-sm font-medium text-zinc-200 mb-1">Current Price Action</p>
                       <p className="text-sm text-zinc-400">
                         {cryptoData.priceChange24h >= 0
-                          ? `${cryptoData.name} is up ${cryptoData.priceChange24h.toFixed(2)}% in the last 24 hours, indicating positive short-term momentum.`
-                          : `${cryptoData.name} is down ${Math.abs(cryptoData.priceChange24h).toFixed(2)}% in the last 24 hours, showing bearish pressure.`}
+                          ? `${cryptoData.name} is up ${cryptoData.priceChange24h.toFixed(2)}% ${symbol === 'BTC' || symbol === 'ETH' ? 'today' : 'in the last 24 hours'}, indicating positive short-term momentum.`
+                          : `${cryptoData.name} is down ${Math.abs(cryptoData.priceChange24h).toFixed(2)}% ${symbol === 'BTC' || symbol === 'ETH' ? 'today' : 'in the last 24 hours'}, showing bearish pressure.`}
                       </p>
                     </div>
                   </div>
