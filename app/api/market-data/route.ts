@@ -132,10 +132,17 @@ export async function GET(request: Request) {
         if (isFutures) {
           // For futures, use Yahoo Finance's built-in change values directly
           // These are calculated correctly by Yahoo Finance for the current trading session
-          if (typeof rawChange === 'number' && !Number.isNaN(rawChange) && typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)) {
-            change = rawChange;
-            changePercent = rawChangePercent;
-            console.log(`[Market Data API] ${symbol} (futures): Using Yahoo's change: price=${regularMarketPrice}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%`);
+          // Check if rawChangePercent exists and is a valid number (even if 0)
+          const hasYahooChange = (typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)) || 
+                                 (typeof rawChange === 'number' && !Number.isNaN(rawChange));
+          
+          if (hasYahooChange) {
+            // Use Yahoo's values - they're the most accurate
+            change = typeof rawChange === 'number' && !Number.isNaN(rawChange) ? rawChange : (regularMarketPrice - previousClose);
+            changePercent = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent) 
+              ? rawChangePercent 
+              : (previousClose > 0 ? ((regularMarketPrice - previousClose) / previousClose) * 100 : 0);
+            console.log(`[Market Data API] ${symbol} (futures): Using Yahoo's change: price=${regularMarketPrice}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}`);
           } else if (regularMarketPrice > 0 && previousClose > 0 && previousClose !== regularMarketPrice) {
             // Fallback: calculate from previous close if Yahoo's values aren't available
             change = regularMarketPrice - previousClose;
@@ -257,16 +264,30 @@ export async function GET(request: Request) {
       }
       if (price != null && typeof price === 'number') {
         const prev = typeof previousClose === 'number' ? previousClose : price;
-        // Calculate intraday change from day's open for accuracy
+        // For futures, calculate from previous close (not day's open)
+        // For crypto, calculate from day's open
+        const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'N225'].includes(symbol);
+        const isCrypto = symbol === 'BTC' || symbol === 'ETH';
+        
         let change = 0;
         let changePercent = 0;
-        if (dayOpen > 0) {
+        
+        if (isFutures) {
+          // For futures, always calculate from previous close
+          if (prev > 0 && prev !== price) {
+            change = price - prev;
+            changePercent = (change / prev) * 100;
+            console.log(`[Market Data API] ${symbol} (futures, chart fallback): price=${price}, prevClose=${prev}, change=${changePercent.toFixed(2)}%`);
+          }
+        } else if (isCrypto && dayOpen > 0) {
+          // For crypto, calculate from day's open
           change = price - dayOpen;
           changePercent = (change / dayOpen) * 100;
-        } else {
-          // Fallback to previous close if open not available
+          console.log(`[Market Data API] ${symbol} (crypto, chart fallback): price=${price}, dayOpen=${dayOpen}, change=${changePercent.toFixed(2)}%`);
+        } else if (prev > 0 && prev !== price) {
+          // For other symbols, calculate from previous close
           change = price - prev;
-          changePercent = prev ? (change / prev) * 100 : 0;
+          changePercent = (change / prev) * 100;
         }
         let ytdPercent: number | null = null;
         try {
