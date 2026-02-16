@@ -110,9 +110,9 @@ export default function IndexAnalysisPage() {
     };
 
     fetchData(true); // Initial load
-    // Refresh every 60 seconds to stay within API limits (800 calls/day)
-    // This allows ~13 calls per hour per user, which is reasonable
-    const interval = setInterval(() => fetchData(false), 60000);
+    // Refresh every 10 seconds for real-time updates
+    // With server-side caching, this won't exceed API limits
+    const interval = setInterval(() => fetchData(false), 10000);
     return () => clearInterval(interval);
   }, [symbol]);
 

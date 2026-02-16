@@ -262,8 +262,8 @@ export default function MarketTicker() {
     // Fetch data immediately
     fetchMarketData();
 
-    // Update every 5 seconds for faster updates
-    const interval = setInterval(fetchMarketData, 5000);
+    // Update every 3 seconds for real-time feel
+    const interval = setInterval(fetchMarketData, 3000);
 
     return () => {
       clearInterval(interval);

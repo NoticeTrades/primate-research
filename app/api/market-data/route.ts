@@ -12,7 +12,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
 };
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 5; // Cache for 5 seconds for faster updates
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -31,14 +31,29 @@ export async function GET(request: Request) {
       if (q) {
         let regularMarketPrice = q.regularMarketPrice ?? q.price ?? 0;
         let previousClose = q.regularMarketPreviousClose ?? q.previousClose ?? regularMarketPrice;
+        const dayOpen = q.regularMarketOpen ?? q.open ?? 0;
         const rawChange = q.regularMarketChange;
         const rawChangePercent = q.regularMarketChangePercent;
-        let change = typeof rawChange === 'number' && !Number.isNaN(rawChange)
-          ? rawChange
-          : (typeof regularMarketPrice === 'number' && typeof previousClose === 'number' ? regularMarketPrice - previousClose : 0);
-        let changePercent = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)
-          ? rawChangePercent
-          : (previousClose && typeof change === 'number' ? (change / previousClose) * 100 : 0);
+        
+        // For intraday change, calculate from day's open for more accurate real-time data
+        let change = 0;
+        let changePercent = 0;
+        
+        if (dayOpen > 0 && regularMarketPrice > 0) {
+          // Calculate change from day's open (intraday change)
+          change = regularMarketPrice - dayOpen;
+          changePercent = (change / dayOpen) * 100;
+        } else if (typeof rawChange === 'number' && !Number.isNaN(rawChange)) {
+          // Fallback to Yahoo's change value if open is not available
+          change = rawChange;
+          changePercent = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)
+            ? rawChangePercent
+            : (previousClose && typeof change === 'number' ? (change / previousClose) * 100 : 0);
+        } else if (typeof regularMarketPrice === 'number' && typeof previousClose === 'number') {
+          // Last resort: calculate from previous close
+          change = regularMarketPrice - previousClose;
+          changePercent = previousClose ? (change / previousClose) * 100 : 0;
+        }
         if (change === 0 && typeof regularMarketPrice === 'number') {
           try {
             const chart5Url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
