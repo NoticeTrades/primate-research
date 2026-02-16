@@ -20,10 +20,11 @@ const INDEX_NAMES: Record<string, string> = {
 
 export async function GET(
   request: Request,
-  { params }: { params: { symbol: string } }
+  { params }: { params: Promise<{ symbol: string }> }
 ) {
   try {
-    const symbol = params.symbol.toUpperCase();
+    const { symbol: symbolParam } = await params;
+    const symbol = symbolParam.toUpperCase();
     
     if (!YAHOO_SYMBOLS[symbol]) {
       return NextResponse.json({ error: 'Invalid index symbol' }, { status: 400 });
