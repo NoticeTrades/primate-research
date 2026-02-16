@@ -49,40 +49,45 @@ export default function MarketTicker() {
         cryptoResponse = null;
       }
 
-      if (!cryptoResponse || !cryptoResponse.ok) {
-        // Silently fail - don't break the UI
-        return;
-      }
-
-      const cryptoData = await cryptoResponse.json();
+      if (cryptoResponse?.ok) {
+        const cryptoData = await cryptoResponse.json();
       
-      if (cryptoData.bitcoin) {
-        setTickers((prev) =>
-          prev.map((ticker) =>
-            ticker.symbol === 'BTC'
-              ? {
-                  ...ticker,
-                  price: cryptoData.bitcoin.usd,
-                  change: cryptoData.bitcoin.usd_24h_change,
-                  changePercent: cryptoData.bitcoin.usd_24h_change,
-                  isLoading: false,
-                }
-              : ticker
-          )
-        );
-      }
+        if (cryptoData.bitcoin) {
+          setTickers((prev) =>
+            prev.map((ticker) =>
+              ticker.symbol === 'BTC'
+                ? {
+                    ...ticker,
+                    price: cryptoData.bitcoin.usd,
+                    change: cryptoData.bitcoin.usd_24h_change,
+                    changePercent: cryptoData.bitcoin.usd_24h_change,
+                    isLoading: false,
+                  }
+                : ticker
+            )
+          );
+        }
 
-      if (cryptoData.ethereum) {
+        if (cryptoData.ethereum) {
+          setTickers((prev) =>
+            prev.map((ticker) =>
+              ticker.symbol === 'ETH'
+                ? {
+                    ...ticker,
+                    price: cryptoData.ethereum.usd,
+                    change: cryptoData.ethereum.usd_24h_change,
+                    changePercent: cryptoData.ethereum.usd_24h_change,
+                    isLoading: false,
+                  }
+                : ticker
+            )
+          );
+        }
+      } else {
         setTickers((prev) =>
           prev.map((ticker) =>
-            ticker.symbol === 'ETH'
-              ? {
-                  ...ticker,
-                  price: cryptoData.ethereum.usd,
-                  change: cryptoData.ethereum.usd_24h_change,
-                  changePercent: cryptoData.ethereum.usd_24h_change,
-                  isLoading: false,
-                }
+            ticker.symbol === 'BTC' || ticker.symbol === 'ETH'
+              ? { ...ticker, isLoading: false }
               : ticker
           )
         );
@@ -95,37 +100,57 @@ export default function MarketTicker() {
           fetch('/api/market-data?symbol=SI').catch(() => null),
         ]);
 
-        if (goldResponse && goldResponse.ok) {
+        if (goldResponse?.ok) {
           const goldData = await goldResponse.json();
+          if (!goldData.error) {
+            setTickers((prev) =>
+              prev.map((ticker) =>
+                ticker.symbol === 'GC'
+                  ? {
+                      ...ticker,
+                      price: goldData.price,
+                      change: goldData.change,
+                      changePercent: goldData.changePercent,
+                      isLoading: false,
+                    }
+                  : ticker
+              )
+            );
+          } else {
+            setTickers((prev) =>
+              prev.map((t) => (t.symbol === 'GC' ? { ...t, isLoading: false } : t))
+            );
+          }
+        } else {
           setTickers((prev) =>
-            prev.map((ticker) =>
-              ticker.symbol === 'GC'
-                ? {
-                    ...ticker,
-                    price: goldData.price,
-                    change: goldData.change,
-                    changePercent: goldData.changePercent,
-                    isLoading: false,
-                  }
-                : ticker
-            )
+            prev.map((t) => (t.symbol === 'GC' ? { ...t, isLoading: false } : t))
           );
         }
 
-        if (silverResponse && silverResponse.ok) {
+        if (silverResponse?.ok) {
           const silverData = await silverResponse.json();
+          if (!silverData.error) {
+            setTickers((prev) =>
+              prev.map((ticker) =>
+                ticker.symbol === 'SI'
+                  ? {
+                      ...ticker,
+                      price: silverData.price,
+                      change: silverData.change,
+                      changePercent: silverData.changePercent,
+                      isLoading: false,
+                    }
+                  : ticker
+              )
+            );
+          } else {
+            setTickers((prev) =>
+              prev.map((t) => (t.symbol === 'SI' ? { ...t, isLoading: false } : t))
+            );
+          }
+        } else {
           setTickers((prev) =>
-            prev.map((ticker) =>
-              ticker.symbol === 'SI'
-                ? {
-                    ...ticker,
-                    price: silverData.price,
-                    change: silverData.change,
-                    changePercent: silverData.changePercent,
-                    isLoading: false,
-                  }
-                : ticker
-            )
+            prev.map((t) => (t.symbol === 'SI' ? { ...t, isLoading: false } : t))
           );
         }
       } catch (error) {
@@ -171,22 +196,20 @@ export default function MarketTicker() {
         );
 
         futuresData.forEach((data, index) => {
-          if (data) {
-            const symbol = futuresSymbols[index];
-            setTickers((prev) =>
-              prev.map((ticker) =>
-                ticker.symbol === symbol
-                  ? {
-                      ...ticker,
-                      price: data.price,
-                      change: data.change,
-                      changePercent: data.changePercent,
-                      isLoading: false,
-                    }
-                  : ticker
-              )
-            );
-          }
+          const symbol = futuresSymbols[index];
+          setTickers((prev) =>
+            prev.map((ticker) =>
+              ticker.symbol === symbol
+                ? {
+                    ...ticker,
+                    price: data?.price ?? null,
+                    change: data?.change ?? null,
+                    changePercent: data?.changePercent ?? null,
+                    isLoading: false,
+                  }
+                : ticker
+            )
+          );
         });
       } catch (error) {
         console.error('Error fetching futures data:', error);
@@ -239,8 +262,8 @@ export default function MarketTicker() {
     // Fetch data immediately
     fetchMarketData();
 
-    // Update every 10 seconds for faster updates
-    const interval = setInterval(fetchMarketData, 10000);
+    // Update every 5 seconds for faster updates
+    const interval = setInterval(fetchMarketData, 5000);
 
     return () => {
       clearInterval(interval);

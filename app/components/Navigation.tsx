@@ -6,6 +6,7 @@ import Logo from './Logo';
 import { researchArticles, generateSlug } from '../../data/research';
 import { useChat } from '../contexts/ChatContext';
 import { useTicker } from '../contexts/TickerContext';
+import { useEquityIndex } from '../contexts/EquityIndexContext';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -22,22 +23,26 @@ export default function Navigation() {
   const [searchPlaceholder, setSearchPlaceholder] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const { openTicker } = useTicker();
+  const { openEquityIndex } = useEquityIndex();
 
   const TERMINAL_PLACEHOLDER = 'Search Terminal...';
   const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'BTC'];
 
   useEffect(() => {
     let i = 0;
-    setSearchPlaceholder('');
-    const t = setInterval(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const run = () => {
+      setSearchPlaceholder(TERMINAL_PLACEHOLDER.slice(0, i));
       if (i < TERMINAL_PLACEHOLDER.length) {
-        setSearchPlaceholder(TERMINAL_PLACEHOLDER.slice(0, i + 1));
         i++;
+        timeoutId = setTimeout(run, 80);
       } else {
-        clearInterval(t);
+        i = 0;
+        timeoutId = setTimeout(run, 2000);
       }
-    }, 80);
-    return () => clearInterval(t);
+    };
+    timeoutId = setTimeout(run, 0);
+    return () => clearTimeout(timeoutId);
   }, []);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -263,7 +268,7 @@ export default function Navigation() {
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    setIsDropdownOpen(value.trim().length > 0);
+    setIsDropdownOpen(value.trim().length > 0 || isSearchFocused);
   };
 
   const handleResultClick = (article: typeof researchArticles[0]) => {
@@ -415,6 +420,12 @@ export default function Navigation() {
       searchRef.current?.blur();
       return;
     }
+    if (q === 'EI') {
+      openEquityIndex();
+      setSearchQuery('');
+      searchRef.current?.blur();
+      return;
+    }
     const parts = raw.split(/\s+/);
     if (parts[0].toUpperCase() === 'P' && parts[1]) {
       const ticker = parts[1].toUpperCase();
@@ -482,19 +493,19 @@ export default function Navigation() {
             onChange={(e) => handleSearchChange(e.target.value)}
             onFocus={() => {
               setIsSearchFocused(true);
-              if (searchQuery.trim()) {
-                // Check for matches inline
-                const q = searchQuery.toLowerCase().trim();
-                const hasCryptoMatch = cryptoAutocompleteOptions.some(c => 
-                  c.name.toLowerCase().includes(q) || c.ticker.toLowerCase().includes(q)
+              setIsDropdownOpen(true);
+              const q = searchQuery.trim();
+              if (q === 'P' || q.toUpperCase().startsWith('P ')) setIsDropdownOpen(true);
+              else if (q) {
+                const qLower = q.toLowerCase();
+                const hasCryptoMatch = cryptoAutocompleteOptions.some(c =>
+                  c.name.toLowerCase().includes(qLower) || c.ticker.toLowerCase().includes(qLower)
                 ) || isCryptoTicker(searchQuery);
                 const hasArticleMatch = researchArticles.some(article => {
                   const searchText = `${article.title} ${article.description} ${article.content || ''}`.toLowerCase();
-                  return searchText.includes(q);
+                  return searchText.includes(qLower);
                 });
-                if (hasCryptoMatch || hasArticleMatch) {
-                  setIsDropdownOpen(true);
-                }
+                if (hasCryptoMatch || hasArticleMatch) setIsDropdownOpen(true);
               }
             }}
             onBlur={() => setIsSearchFocused(false)}
@@ -521,11 +532,144 @@ export default function Navigation() {
           </svg>
 
           {/* Dropdown results */}
-          {isDropdownOpen && searchQuery.trim() && (cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0) && (
+          {isDropdownOpen && (searchQuery.trim() || isSearchFocused) && (
+            (() => {
+              const raw = searchQuery.trim();
+              const showCommandsList = !raw && isSearchFocused;
+              if (showCommandsList) {
+                return (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full mt-2 right-0 w-80 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
+                  >
+                    <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+                      <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Commands</span>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSearchQuery('P ');
+                          searchRef.current?.focus();
+                        }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                      >
+                        <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40">P</span>
+                        <span>Live Price</span>
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          openChat();
+                          setIsDropdownOpen(false);
+                          setSearchQuery('');
+                          searchRef.current?.blur();
+                        }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                      >
+                        <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40">CHAT</span>
+                        <span>Live Chat</span>
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          openEquityIndex();
+                          setIsDropdownOpen(false);
+                          setSearchQuery('');
+                          searchRef.current?.blur();
+                        }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                      >
+                        <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40">EI</span>
+                        <span>Equity Index Futures (ES, YM, NQ)</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+              const isPriceCommand = raw === 'P' || raw.toUpperCase().startsWith('P ');
+              const priceTickerPart = isPriceCommand && raw.toUpperCase().startsWith('P ') ? raw.slice(1).trim().toUpperCase() : '';
+              const priceTickers = priceTickerPart
+                ? SEARCH_TERMINAL_TICKERS.filter(t => t.startsWith(priceTickerPart) || priceTickerPart.startsWith(t))
+                : SEARCH_TERMINAL_TICKERS;
+              const showPriceDropdown = isPriceCommand;
+              const showEIDropdown = raw.toUpperCase() === 'EI';
+              const showOther = !showPriceDropdown && !showEIDropdown && (cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
+              if (showEIDropdown) {
+                return (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full mt-2 right-0 w-80 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
+                  >
+                    <div className="px-3 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-3">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40">EI</span>
+                      <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Equity Index Futures</span>
+                    </div>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        openEquityIndex();
+                        setSearchQuery('');
+                        setIsDropdownOpen(false);
+                        searchRef.current?.blur();
+                      }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                    >
+                      <span className="w-8 h-6 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold">ES, YM, NQ</span>
+                      Open comparison
+                    </button>
+                  </div>
+                );
+              }
+              if (!showPriceDropdown && !showOther) return null;
+              return (
             <div
               ref={dropdownRef}
               className="absolute top-full mt-2 right-0 w-80 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
             >
+              {/* P = Price Quote / Live Price */}
+              {showPriceDropdown && (
+                <>
+                  <div className="px-3 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-3">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50 dark:border-amber-500/40 shadow-sm">
+                      P
+                    </span>
+                    <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Live Price</span>
+                  </div>
+                  <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">Type a ticker: NQ, ES, YM, BTC</span>
+                  </div>
+                  {priceTickers.length > 0 ? (
+                    <div className="max-h-40 overflow-y-auto">
+                      {priceTickers.map((ticker) => (
+                        <button
+                          key={ticker}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            openTicker(ticker);
+                            setSearchQuery('');
+                            setIsDropdownOpen(false);
+                            searchRef.current?.blur();
+                          }}
+                          className="w-full text-left px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                        >
+                          <span className="w-8 h-6 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold">{ticker}</span>
+                          Open live price
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">No matching ticker. Try NQ, ES, YM, BTC.</div>
+                  )}
+                </>
+              )}
+              {showOther && (
+              <>
               {/* Crypto Autocomplete Suggestions */}
               {cryptoAutocomplete.length > 0 && (
                 <>
@@ -685,8 +829,11 @@ export default function Navigation() {
                   </p>
                 </div>
               )}
+            </>
+              )}
             </div>
-          )}
+          );
+        })()}
         </form>}
 
         {/* Auth buttons */}

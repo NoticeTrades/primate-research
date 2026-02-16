@@ -5,9 +5,11 @@ import "./globals.css";
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { ChatProvider } from "./contexts/ChatContext";
 import { TickerProvider } from "./contexts/TickerContext";
+import { EquityIndexProvider } from "./contexts/EquityIndexContext";
 import FeedbackWidget from "./components/FeedbackWidget";
 import ChatPopup from "./components/ChatPopup";
 import PriceTerminalWrapper from "./components/PriceTerminalWrapper";
+import EquityIndexPopup from "./components/EquityIndexPopup";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -90,9 +92,12 @@ export default function RootLayout({
         <ThemeProvider>
           <ChatProvider>
             <TickerProvider>
-              {children}
-              <ChatPopup />
-              <PriceTerminalWrapper />
+              <EquityIndexProvider>
+                {children}
+                <ChatPopup />
+                <PriceTerminalWrapper />
+                <EquityIndexPopup />
+              </EquityIndexProvider>
             </TickerProvider>
           </ChatProvider>
         </ThemeProvider>
