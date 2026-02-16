@@ -114,56 +114,78 @@ export async function GET(request: Request) {
         const rawChange = q.regularMarketChange;
         const rawChangePercent = q.regularMarketChangePercent;
         
-        // For intraday change, calculate from day's open for more accurate real-time data
+        // For futures (ES, NQ, YM, RTY, GC, SI, N225), use Yahoo's regularMarketChangePercent
+        // For crypto (BTC/ETH), calculate from day's open for accurate intraday change
+        const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'N225'].includes(symbol);
+        const isCrypto = symbol === 'BTC' || symbol === 'ETH';
+        
         let change = 0;
         let changePercent = 0;
         
-        // Try to get day's open from chart API if not available in quote
-        let actualDayOpen = dayOpen;
-        if (actualDayOpen === 0 && regularMarketPrice > 0) {
-          try {
-            const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1m&range=1d`;
-            const chartRes = await fetch(chartUrl, {
-              headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-              cache: 'no-store',
-            });
-            if (chartRes.ok) {
-              const chartData = await chartRes.json();
-              const meta = chartData?.chart?.result?.[0]?.meta;
-              const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
-              if (meta?.regularMarketOpen) {
-                actualDayOpen = meta.regularMarketOpen;
-              } else if (quote?.open && Array.isArray(quote.open)) {
-                const opens = quote.open.filter((n: number) => n != null && typeof n === 'number' && n > 0);
-                if (opens.length > 0) {
-                  actualDayOpen = opens[0]; // First open of the day
+        if (isFutures) {
+          // For futures, use Yahoo Finance's built-in change calculation (from previous close)
+          // This is more accurate for futures trading sessions
+          if (typeof rawChange === 'number' && !Number.isNaN(rawChange)) {
+            change = rawChange;
+            changePercent = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)
+              ? rawChangePercent
+              : (previousClose > 0 ? (change / previousClose) * 100 : 0);
+            console.log(`[Market Data API] ${symbol} (futures): Using Yahoo's change: price=${regularMarketPrice}, change=${changePercent.toFixed(2)}%`);
+          } else if (regularMarketPrice > 0 && previousClose > 0 && previousClose !== regularMarketPrice) {
+            // Fallback: calculate from previous close
+            change = regularMarketPrice - previousClose;
+            changePercent = (change / previousClose) * 100;
+            console.log(`[Market Data API] ${symbol} (futures): Calculated from prevClose: price=${regularMarketPrice}, prevClose=${previousClose}, change=${changePercent.toFixed(2)}%`);
+          }
+        } else if (isCrypto) {
+          // For crypto, calculate from day's open for accurate intraday change
+          let actualDayOpen = dayOpen;
+          if (actualDayOpen === 0 && regularMarketPrice > 0) {
+            try {
+              const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1m&range=1d`;
+              const chartRes = await fetch(chartUrl, {
+                headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+                cache: 'no-store',
+              });
+              if (chartRes.ok) {
+                const chartData = await chartRes.json();
+                const meta = chartData?.chart?.result?.[0]?.meta;
+                const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
+                if (meta?.regularMarketOpen) {
+                  actualDayOpen = meta.regularMarketOpen;
+                } else if (quote?.open && Array.isArray(quote.open)) {
+                  const opens = quote.open.filter((n: number) => n != null && typeof n === 'number' && n > 0);
+                  if (opens.length > 0) {
+                    actualDayOpen = opens[0];
+                  }
                 }
               }
+            } catch (err) {
+              console.error(`Error fetching chart data for ${symbol} day open:`, err);
             }
-          } catch (err) {
-            console.error(`Error fetching chart data for ${symbol} day open:`, err);
           }
-        }
-        
-        // Calculate intraday change from day's open (not previous close)
-        if (actualDayOpen > 0 && regularMarketPrice > 0) {
-          // Calculate change from day's open (intraday change)
-          change = regularMarketPrice - actualDayOpen;
-          changePercent = (change / actualDayOpen) * 100;
-          console.log(`[Market Data API] ${symbol}: price=${regularMarketPrice}, dayOpen=${actualDayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
-        } else {
-          // Don't use previous close as fallback - it's not accurate for intraday
-          // For BTC/ETH, we MUST have day's open - return error if we can't get it
-          if (symbol === 'BTC' || symbol === 'ETH') {
+          
+          if (actualDayOpen > 0 && regularMarketPrice > 0) {
+            change = regularMarketPrice - actualDayOpen;
+            changePercent = (change / actualDayOpen) * 100;
+            console.log(`[Market Data API] ${symbol} (crypto): price=${regularMarketPrice}, dayOpen=${actualDayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
+          } else {
             console.error(`[Market Data API] ${symbol}: CRITICAL - Could not get day's open (price=${regularMarketPrice}, dayOpen=${actualDayOpen}), cannot calculate accurate intraday change`);
             return NextResponse.json({ 
               error: `Unable to fetch accurate intraday data for ${symbol}. Day's opening price not available.` 
             }, { status: 500 });
           }
-          // For other symbols, set to 0 but log warning
-          console.warn(`[Market Data API] ${symbol}: Could not get day's open (price=${regularMarketPrice}, dayOpen=${actualDayOpen}), setting change to 0`);
-          change = 0;
-          changePercent = 0;
+        } else {
+          // For other symbols, use Yahoo's change or calculate from previous close
+          if (typeof rawChange === 'number' && !Number.isNaN(rawChange)) {
+            change = rawChange;
+            changePercent = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)
+              ? rawChangePercent
+              : (previousClose > 0 ? (change / previousClose) * 100 : 0);
+          } else if (regularMarketPrice > 0 && previousClose > 0) {
+            change = regularMarketPrice - previousClose;
+            changePercent = (change / previousClose) * 100;
+          }
         }
         let ytdPercent: number | null = null;
         try {
