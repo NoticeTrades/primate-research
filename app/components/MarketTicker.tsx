@@ -62,8 +62,8 @@ export default function MarketTicker() {
                 ? {
                     ...ticker,
                     price: cryptoData.bitcoin.usd,
-                    change: cryptoData.bitcoin.usd_24h_change,
-                    changePercent: cryptoData.bitcoin.usd_24h_change,
+                    change: cryptoData.bitcoin.usd_24h_change, // This is now intraday change from day's open
+                    changePercent: cryptoData.bitcoin.usd_24h_change, // This is now intraday change from day's open
                     isLoading: false,
                   }
                 : ticker
@@ -78,8 +78,8 @@ export default function MarketTicker() {
                 ? {
                     ...ticker,
                     price: cryptoData.ethereum.usd,
-                    change: cryptoData.ethereum.usd_24h_change,
-                    changePercent: cryptoData.ethereum.usd_24h_change,
+                    change: cryptoData.ethereum.usd_24h_change, // This is now intraday change from day's open
+                    changePercent: cryptoData.ethereum.usd_24h_change, // This is now intraday change from day's open
                     isLoading: false,
                   }
                 : ticker
