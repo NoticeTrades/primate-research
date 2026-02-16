@@ -78,10 +78,14 @@ export default function IndexAnalysisPage() {
       setError('');
       try {
         // Add cache-busting timestamp to ensure fresh data
-        const res = await fetch(`/api/indices/${symbol}?t=${Date.now()}`, {
+        const timestamp = Date.now();
+        const res = await fetch(`/api/indices/${symbol}?t=${timestamp}&_=${timestamp}`, {
           cache: 'no-store',
+          next: { revalidate: 0 },
           headers: {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
           },
         });
         if (!res.ok) {
@@ -111,8 +115,10 @@ export default function IndexAnalysisPage() {
 
     fetchData(true); // Initial load
     // Refresh every 10 seconds for real-time updates
-    // With server-side caching, this won't exceed API limits
-    const interval = setInterval(() => fetchData(false), 10000);
+    const interval = setInterval(() => {
+      console.log(`[Index Page] Refreshing data for ${symbol} at ${new Date().toLocaleTimeString()}`);
+      fetchData(false);
+    }, 10000);
     return () => clearInterval(interval);
   }, [symbol]);
 

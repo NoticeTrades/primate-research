@@ -12,7 +12,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
 };
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 5; // Cache for 5 seconds for faster updates
+export const revalidate = 0; // No caching - always fetch fresh data
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

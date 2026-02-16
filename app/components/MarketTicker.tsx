@@ -30,11 +30,14 @@ export default function MarketTicker() {
       // Wrap in Promise to catch extension-intercepted errors
       let cryptoResponse;
       try {
+        const timestamp = Date.now();
         cryptoResponse = await new Promise<Response | null>((resolve) => {
-          fetch('/api/crypto-data', {
+          fetch(`/api/crypto-data?t=${timestamp}`, {
             method: 'GET',
+            cache: 'no-store',
             headers: {
               'Accept': 'application/json',
+              'Cache-Control': 'no-cache',
             },
           })
             .then(resolve)
@@ -95,9 +98,16 @@ export default function MarketTicker() {
 
       // Fetch Gold and Silver futures prices via our API route
       try {
+        const timestamp = Date.now();
         const [goldResponse, silverResponse] = await Promise.all([
-          fetch('/api/market-data?symbol=GC').catch(() => null),
-          fetch('/api/market-data?symbol=SI').catch(() => null),
+          fetch(`/api/market-data?symbol=GC&t=${timestamp}`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' },
+          }).catch(() => null),
+          fetch(`/api/market-data?symbol=SI&t=${timestamp}`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' },
+          }).catch(() => null),
         ]);
 
         if (goldResponse?.ok) {
@@ -171,23 +181,34 @@ export default function MarketTicker() {
       
       // Fetch Nikkei 225 and other futures via our API route
       try {
-        const fetchWithErrorHandling = async (url: string) => {
-          try {
-            return await fetch(url);
-          } catch (error: any) {
-            // Ignore browser extension interference
-            if (error?.message?.includes('Failed to fetch') || 
-                error?.message?.includes('chrome-extension')) {
-              return null;
-            }
-            throw error;
+      const fetchWithErrorHandling = async (url: string, options?: RequestInit) => {
+        try {
+          return await fetch(url, {
+            ...options,
+            cache: 'no-store',
+            headers: {
+              ...options?.headers,
+              'Cache-Control': 'no-cache',
+            },
+          });
+        } catch (error: any) {
+          // Ignore browser extension interference
+          if (error?.message?.includes('Failed to fetch') || 
+              error?.message?.includes('chrome-extension')) {
+            return null;
           }
-        };
+          throw error;
+        }
+      };
 
         const futuresSymbols = ['N225', 'NQ', 'ES', 'YM', 'RTY'];
+        const timestamp = Date.now();
         const futuresResponses = await Promise.all(
           futuresSymbols.map((symbol) => 
-            fetchWithErrorHandling(`/api/market-data?symbol=${symbol}`)
+            fetchWithErrorHandling(`/api/market-data?symbol=${symbol}&t=${timestamp}`, {
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache' },
+            })
           )
         );
 
@@ -263,7 +284,10 @@ export default function MarketTicker() {
     fetchMarketData();
 
     // Update every 3 seconds for real-time feel
-    const interval = setInterval(fetchMarketData, 3000);
+    const interval = setInterval(() => {
+      console.log(`[MarketTicker] Refreshing at ${new Date().toLocaleTimeString()}`);
+      fetchMarketData();
+    }, 3000);
 
     return () => {
       clearInterval(interval);

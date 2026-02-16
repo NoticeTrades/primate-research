@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/db';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 10; // Cache for 10 seconds - balances freshness with API limits
+export const revalidate = 0; // No caching - always fetch fresh data
 
 const YAHOO_SYMBOLS: Record<string, string> = {
   ES: 'ES=F',
