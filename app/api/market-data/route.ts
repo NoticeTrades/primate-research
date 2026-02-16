@@ -130,19 +130,19 @@ export async function GET(request: Request) {
         let changePercent = 0;
         
         if (isFutures) {
-          // For futures, always calculate from previous close (more reliable than Yahoo's built-in)
-          // Yahoo's regularMarketChangePercent can sometimes be incorrect for futures
-          if (regularMarketPrice > 0 && previousClose > 0 && previousClose !== regularMarketPrice) {
-            change = regularMarketPrice - previousClose;
-            changePercent = (change / previousClose) * 100;
-            console.log(`[Market Data API] ${symbol} (futures): Calculated from prevClose: price=${regularMarketPrice}, prevClose=${previousClose}, change=${changePercent.toFixed(2)}%`);
-          } else if (typeof rawChange === 'number' && !Number.isNaN(rawChange) && typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)) {
-            // Fallback: use Yahoo's values if we can't calculate
+          // For futures, use Yahoo Finance's built-in change values directly
+          // These are calculated correctly by Yahoo Finance for the current trading session
+          if (typeof rawChange === 'number' && !Number.isNaN(rawChange) && typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)) {
             change = rawChange;
             changePercent = rawChangePercent;
-            console.log(`[Market Data API] ${symbol} (futures): Using Yahoo's change (fallback): price=${regularMarketPrice}, change=${changePercent.toFixed(2)}%`);
+            console.log(`[Market Data API] ${symbol} (futures): Using Yahoo's change: price=${regularMarketPrice}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%`);
+          } else if (regularMarketPrice > 0 && previousClose > 0 && previousClose !== regularMarketPrice) {
+            // Fallback: calculate from previous close if Yahoo's values aren't available
+            change = regularMarketPrice - previousClose;
+            changePercent = (change / previousClose) * 100;
+            console.log(`[Market Data API] ${symbol} (futures): Calculated from prevClose (fallback): price=${regularMarketPrice}, prevClose=${previousClose}, change=${changePercent.toFixed(2)}%`);
           } else {
-            console.warn(`[Market Data API] ${symbol} (futures): Could not calculate change - price=${regularMarketPrice}, prevClose=${previousClose}`);
+            console.warn(`[Market Data API] ${symbol} (futures): Could not get change - price=${regularMarketPrice}, prevClose=${previousClose}, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}`);
             change = 0;
             changePercent = 0;
           }
