@@ -1070,7 +1070,8 @@ export default function Navigation() {
                           </div>
                         </div>
                       </button>
-                    ))}
+                    );
+                    })}
                   </div>
                   {(isCryptoTicker(searchQuery) || searchResults.length > 0) && (
                     <div className="border-t border-zinc-100 dark:border-zinc-800" />
