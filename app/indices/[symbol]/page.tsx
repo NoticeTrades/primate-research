@@ -64,12 +64,17 @@ export default function IndexAnalysisPage() {
   const [data, setData] = useState<IndexData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (!symbol) return;
     
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchData = async (isInitial = false) => {
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       setError('');
       try {
         // Add cache-busting timestamp to ensure fresh data
@@ -90,19 +95,24 @@ export default function IndexAnalysisPage() {
           setError(indexData.error);
           return;
         }
+        // Smoothly update data without page reload
         setData(indexData);
       } catch (err) {
         console.error('Fetch error:', err);
         setError('Failed to fetch index data');
       } finally {
-        setLoading(false);
+        if (isInitial) {
+          setLoading(false);
+        } else {
+          setIsRefreshing(false);
+        }
       }
     };
 
-    fetchData();
+    fetchData(true); // Initial load
     // Refresh every 60 seconds to stay within API limits (800 calls/day)
     // This allows ~13 calls per hour per user, which is reasonable
-    const interval = setInterval(fetchData, 60000);
+    const interval = setInterval(() => fetchData(false), 60000);
     return () => clearInterval(interval);
   }, [symbol]);
 
@@ -193,10 +203,10 @@ export default function IndexAnalysisPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-2xl font-bold ${data.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <p className={`text-2xl font-bold transition-colors duration-300 ${data.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {data.change >= 0 ? '+' : ''}{data.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
-                  <p className={`text-lg ${data.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <p className={`text-lg transition-colors duration-300 ${data.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {data.changePercent >= 0 ? '+' : ''}{data.changePercent.toFixed(2)}%
                   </p>
                 </div>
@@ -204,7 +214,7 @@ export default function IndexAnalysisPage() {
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
                 <div>
                   <p className="text-xs text-zinc-500 mb-1">Previous Close</p>
-                  <p className="text-lg font-semibold text-zinc-300">
+                  <p className="text-lg font-semibold text-zinc-300 transition-opacity duration-300">
                     {data.previousClose > 0
                       ? data.previousClose.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       : 'N/A'}
@@ -212,7 +222,7 @@ export default function IndexAnalysisPage() {
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500 mb-1">Volume</p>
-                  <p className="text-lg font-semibold text-zinc-300">
+                  <p className="text-lg font-semibold text-zinc-300 transition-opacity duration-300">
                     {data.volume > 0
                       ? data.volume.toLocaleString('en-US')
                       : 'N/A'}
@@ -221,7 +231,7 @@ export default function IndexAnalysisPage() {
                 {data.ytdPercent !== undefined && (
                   <div>
                     <p className="text-xs text-zinc-500 mb-1">YTD Gain</p>
-                    <p className={`text-lg font-semibold ${data.ytdPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className={`text-lg font-semibold transition-colors duration-300 ${data.ytdPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {data.ytdPercent >= 0 ? '+' : ''}{data.ytdPercent.toFixed(2)}%
                     </p>
                   </div>
@@ -274,7 +284,7 @@ export default function IndexAnalysisPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
                 <p className="text-xs text-zinc-500 mb-2">High</p>
-                <p className="text-2xl font-bold text-green-400">
+                <p className="text-2xl font-bold text-green-400 transition-opacity duration-300">
                   {holc.high > 0
                     ? holc.high.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : 'N/A'}
@@ -282,7 +292,7 @@ export default function IndexAnalysisPage() {
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-2">Open</p>
-                <p className="text-2xl font-bold text-zinc-300">
+                <p className="text-2xl font-bold text-zinc-300 transition-opacity duration-300">
                   {holc.open > 0
                     ? holc.open.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : 'N/A'}
@@ -290,7 +300,7 @@ export default function IndexAnalysisPage() {
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-2">Low</p>
-                <p className="text-2xl font-bold text-red-400">
+                <p className="text-2xl font-bold text-red-400 transition-opacity duration-300">
                   {holc.low > 0
                     ? holc.low.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : 'N/A'}
@@ -298,7 +308,7 @@ export default function IndexAnalysisPage() {
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-2">Close</p>
-                <p className="text-2xl font-bold text-zinc-50">
+                <p className="text-2xl font-bold text-zinc-50 transition-opacity duration-300">
                   {holc.close > 0
                     ? holc.close.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : 'N/A'}
@@ -309,19 +319,19 @@ export default function IndexAnalysisPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-zinc-500 mb-1">Daily Range</p>
-                  <p className="text-lg font-semibold text-zinc-300">
+                  <p className="text-lg font-semibold text-zinc-300 transition-opacity duration-300">
                     {holcRange.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500 mb-1">Range %</p>
-                  <p className="text-lg font-semibold text-zinc-300">
+                  <p className="text-lg font-semibold text-zinc-300 transition-opacity duration-300">
                     {holcRangePercent.toFixed(2)}%
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500 mb-1">Body (O→C)</p>
-                  <p className={`text-lg font-semibold ${holc.close >= holc.open ? 'text-green-400' : 'text-red-400'}`}>
+                  <p className={`text-lg font-semibold transition-colors duration-300 ${holc.close >= holc.open ? 'text-green-400' : 'text-red-400'}`}>
                     {holc.open > 0 && holc.close > 0 ? (
                       <>
                         {holc.close >= holc.open ? '+' : ''}
