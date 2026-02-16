@@ -59,6 +59,7 @@ export default function ChatPopup() {
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadByRoom, setUnreadByRoom] = useState<Record<string, number>>({});
+  const [unreadMessagesByRoom, setUnreadMessagesByRoom] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<ViewMode>('channels');
   const [dmConversations, setDmConversations] = useState<DMConversation[]>([]);
   const [selectedDmId, setSelectedDmId] = useState<number | null>(null);
@@ -74,6 +75,18 @@ export default function ChatPopup() {
       }
     } catch (e) {
       console.error('Error fetching chat unread mentions:', e);
+    }
+  }, []);
+
+  const fetchUnreadMessages = useCallback(async () => {
+    try {
+      const res = await fetch('/api/chat/messages/unread');
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadMessagesByRoom(data.byRoom || {});
+      }
+    } catch (e) {
+      console.error('Error fetching chat unread messages:', e);
     }
   }, []);
 
@@ -155,16 +168,23 @@ export default function ChatPopup() {
   useEffect(() => {
     if (!isChatOpen) return;
     fetchUnreadMentions();
-    const interval = setInterval(fetchUnreadMentions, 10000);
+    fetchUnreadMessages();
+    const interval = setInterval(() => {
+      fetchUnreadMentions();
+      fetchUnreadMessages();
+    }, 10000);
     return () => clearInterval(interval);
-  }, [isChatOpen, fetchUnreadMentions]);
+  }, [isChatOpen, fetchUnreadMentions, fetchUnreadMessages]);
 
   useEffect(() => {
     if (!selectedRoomId || !currentUserEmail) return;
     fetch(`/api/chat/rooms/${selectedRoomId}/read`, { method: 'POST' })
-      .then(() => fetchUnreadMentions())
+      .then(() => {
+        fetchUnreadMentions();
+        fetchUnreadMessages();
+      })
       .catch((e) => console.error('Error marking room read:', e));
-  }, [selectedRoomId, currentUserEmail, fetchUnreadMentions]);
+  }, [selectedRoomId, currentUserEmail, fetchUnreadMentions, fetchUnreadMessages]);
 
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -341,20 +361,28 @@ export default function ChatPopup() {
                       ) : (
                         <div className="space-y-0.5">
                           {rooms.map((room) => {
-                            const unreadCount = unreadByRoom[String(room.id)] || 0;
+                            const unreadMentionCount = unreadByRoom[String(room.id)] || 0;
+                            const unreadMessageCount = unreadMessagesByRoom[String(room.id)] || 0;
+                            const hasUnread = unreadMessageCount > 0;
+                            const isSelected = selectedRoomId === room.id;
+                            
                             return (
                               <button
                                 key={room.id}
                                 type="button"
                                 onClick={() => setSelectedRoomId(room.id)}
-                                className={`w-full text-left px-1.5 py-1.5 rounded-md text-[12px] flex items-center justify-between gap-1 ${
-                                  selectedRoomId === room.id ? 'bg-blue-600/90 text-white' : 'text-zinc-300 hover:bg-zinc-800/80'
+                                className={`w-full text-left px-1.5 py-1.5 rounded-md text-[12px] flex items-center justify-between gap-1 transition-colors ${
+                                  isSelected
+                                    ? 'bg-blue-600/90 text-white'
+                                    : hasUnread
+                                    ? 'text-white font-semibold bg-zinc-800/90 hover:bg-zinc-700/90'
+                                    : 'text-zinc-500 hover:bg-zinc-800/60'
                                 }`}
                               >
                                 <span className="truncate">#{room.name}</span>
-                                {unreadCount > 0 && (
+                                {unreadMentionCount > 0 && (
                                   <span className="flex-shrink-0 min-w-[16px] h-[14px] flex items-center justify-center px-0.5 text-[9px] font-bold text-white bg-red-500 rounded-full">
-                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                    {unreadMentionCount > 99 ? '99+' : unreadMentionCount}
                                   </span>
                                 )}
                               </button>
