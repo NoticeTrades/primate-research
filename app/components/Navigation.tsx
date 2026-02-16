@@ -62,6 +62,7 @@ export default function Navigation() {
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [selectedPriceTickerIndex, setSelectedPriceTickerIndex] = useState(0);
+  const [selectedSearchResultIndex, setSelectedSearchResultIndex] = useState(0);
 
   // Check auth state on mount and when pathname changes (login/signup redirect)
   // Note: session_token is httpOnly so JS can't read it — use user_email instead
@@ -576,7 +577,11 @@ export default function Navigation() {
             onChange={(e) => {
               handleSearchChange(e.target.value);
               const raw = e.target.value.trim();
-              if (raw === 'P' || raw.toUpperCase().startsWith('P ')) setSelectedPriceTickerIndex(0);
+              if (raw === 'P' || raw.toUpperCase().startsWith('P ')) {
+                setSelectedPriceTickerIndex(0);
+              } else {
+                setSelectedSearchResultIndex(0); // Reset selection when query changes
+              }
             }}
             onKeyDown={(e) => {
               const raw = searchQuery.trim();
@@ -649,6 +654,56 @@ export default function Navigation() {
                     searchRef.current?.blur();
                   }
                   return;
+                }
+              }
+              
+              // Handle arrow keys for search results (indices, crypto, articles)
+              if (!showCommands && !isPrice && totalSearchItems > 0) {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedSearchResultIndex((i) => (i + 1) % totalSearchItems);
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedSearchResultIndex((i) => (i - 1 + totalSearchItems) % totalSearchItems);
+                  return;
+                }
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  let currentIndex = 0;
+                  
+                  // Check if selected item is in index autocomplete
+                  if (selectedSearchResultIndex < totalIndexItems) {
+                    if (selectedSearchResultIndex < indexAutocomplete.length) {
+                      handleIndexClick(indexAutocomplete[selectedSearchResultIndex].ticker);
+                    } else if (hasIndexMatch) {
+                      handleIndexClick(searchQuery.trim().toUpperCase());
+                    }
+                    return;
+                  }
+                  currentIndex += totalIndexItems;
+                  
+                  // Check if selected item is in crypto autocomplete
+                  if (selectedSearchResultIndex < currentIndex + totalCryptoItems) {
+                    const cryptoIdx = selectedSearchResultIndex - currentIndex;
+                    if (cryptoIdx < cryptoAutocomplete.length) {
+                      handleTickerClick(cryptoAutocomplete[cryptoIdx].ticker);
+                    } else if (hasCryptoMatch) {
+                      handleTickerClick(searchQuery.trim());
+                    }
+                    return;
+                  }
+                  currentIndex += totalCryptoItems;
+                  
+                  // Check if selected item is in article results
+                  if (selectedSearchResultIndex < currentIndex + totalArticleItems) {
+                    const articleIdx = selectedSearchResultIndex - currentIndex;
+                    if (articleIdx < searchResults.length) {
+                      handleResultClick(searchResults[articleIdx]);
+                    }
+                    return;
+                  }
                 }
               }
             }}
@@ -882,15 +937,22 @@ export default function Navigation() {
                     </span>
                   </div>
                   <div className="max-h-48 overflow-y-auto">
-                    {indexAutocomplete.map((index, idx) => (
+                    {indexAutocomplete.map((index, idx) => {
+                      const isSelected = selectedSearchResultIndex === idx;
+                      return (
                       <button
                         key={idx}
                         type="button"
                         onMouseDown={(e) => {
                           e.preventDefault();
+                          setSelectedSearchResultIndex(idx);
                           handleIndexClick(index.ticker);
                         }}
-                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0"
+                        className={`w-full text-left px-4 py-3 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 ${
+                          isSelected 
+                            ? 'bg-blue-500/15 dark:bg-blue-500/20' 
+                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <svg
@@ -926,9 +988,14 @@ export default function Navigation() {
                     type="button"
                     onMouseDown={(e) => {
                       e.preventDefault();
+                      setSelectedSearchResultIndex(indexAutocomplete.length);
                       handleIndexClick(searchQuery.trim().toUpperCase());
                     }}
-                    className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800"
+                    className={`w-full text-left px-4 py-3 transition-colors border-b border-zinc-100 dark:border-zinc-800 ${
+                      selectedSearchResultIndex === indexAutocomplete.length
+                        ? 'bg-blue-500/15 dark:bg-blue-500/20'
+                        : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <svg
@@ -949,6 +1016,8 @@ export default function Navigation() {
                       </div>
                     </div>
                   </button>
+                    );
+                  })()}
                   {(cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0) && (
                     <div className="border-t border-zinc-100 dark:border-zinc-800" />
                   )}
@@ -964,15 +1033,24 @@ export default function Navigation() {
                     </span>
                   </div>
                   <div className="max-h-48 overflow-y-auto">
-                    {cryptoAutocomplete.map((crypto, index) => (
+                    {cryptoAutocomplete.map((crypto, index) => {
+                      const totalIndexItems = indexAutocomplete.length + (isIndexTicker(searchQuery) && !indexAutocomplete.some(i => i.ticker === searchQuery.trim().toUpperCase()) ? 1 : 0);
+                      const cryptoIdx = totalIndexItems + index;
+                      const isSelected = selectedSearchResultIndex === cryptoIdx;
+                      return (
                       <button
                         key={index}
                         type="button"
                         onMouseDown={(e) => {
                           e.preventDefault();
+                          setSelectedSearchResultIndex(cryptoIdx);
                           handleTickerClick(crypto.ticker);
                         }}
-                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0"
+                        className={`w-full text-left px-4 py-3 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 ${
+                          isSelected
+                            ? 'bg-blue-500/15 dark:bg-blue-500/20'
+                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <svg
@@ -1004,13 +1082,23 @@ export default function Navigation() {
               {/* Crypto ticker option */}
               {isCryptoTicker(searchQuery) && !cryptoAutocomplete.some(c => c.ticker === getCryptoSymbol(searchQuery)) && (
                 <>
+                  {(() => {
+                    const totalIndexItems = indexAutocomplete.length + (isIndexTicker(searchQuery) && !indexAutocomplete.some(i => i.ticker === searchQuery.trim().toUpperCase()) ? 1 : 0);
+                    const cryptoIdx = totalIndexItems + cryptoAutocomplete.length;
+                    const isSelected = selectedSearchResultIndex === cryptoIdx;
+                    return (
                   <button
                     type="button"
                     onMouseDown={(e) => {
                       e.preventDefault();
+                      setSelectedSearchResultIndex(cryptoIdx);
                       handleTickerClick(searchQuery.trim());
                     }}
-                    className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800"
+                    className={`w-full text-left px-4 py-3 transition-colors border-b border-zinc-100 dark:border-zinc-800 ${
+                      isSelected
+                        ? 'bg-blue-500/15 dark:bg-blue-500/20'
+                        : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <svg
