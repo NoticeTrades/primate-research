@@ -658,6 +658,14 @@ export default function Navigation() {
               }
               
               // Handle arrow keys for search results (indices, crypto, articles)
+              // Calculate total search results for arrow navigation
+              const hasIndexMatch = isIndexTicker(searchQuery) && !indexAutocomplete.some(i => i.ticker === searchQuery.trim().toUpperCase());
+              const totalIndexItems = indexAutocomplete.length + (hasIndexMatch ? 1 : 0);
+              const hasCryptoMatch = isCryptoTicker(searchQuery) && !cryptoAutocomplete.some(c => c.ticker === getCryptoSymbol(searchQuery));
+              const totalCryptoItems = cryptoAutocomplete.length + (hasCryptoMatch ? 1 : 0);
+              const totalArticleItems = searchResults.length;
+              const totalSearchItems = totalIndexItems + totalCryptoItems + totalArticleItems;
+              
               if (!showCommands && !isPrice && totalSearchItems > 0) {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
