@@ -9,7 +9,7 @@ const MIN_WIDTH = 140;
 const MIN_HEIGHT = 80;
 const MAX_WIDTH = 400;
 const MAX_HEIGHT = 320;
-const POLL_MS = 3000;
+const POLL_MS = 2000; // Update every 2 seconds for faster real-time updates
 
 function getDefaultPosition(symbol: string, index: number) {
   if (typeof window === 'undefined') return { x: 100 + index * 30, y: 100 + index * 30 };

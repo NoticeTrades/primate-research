@@ -295,11 +295,11 @@ export default function MarketTicker() {
     // Fetch data immediately
     fetchMarketData();
 
-    // Update every 3 seconds for real-time feel
+    // Update every 2 seconds for real-time feel
     const interval = setInterval(() => {
       console.log(`[MarketTicker] Refreshing at ${new Date().toLocaleTimeString()}`);
       fetchMarketData();
-    }, 3000);
+    }, 2000);
 
     return () => {
       clearInterval(interval);
