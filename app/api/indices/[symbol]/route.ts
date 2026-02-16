@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/db';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 0; // Always fetch fresh data
 
 const YAHOO_SYMBOLS: Record<string, string> = {
   ES: 'ES=F',
