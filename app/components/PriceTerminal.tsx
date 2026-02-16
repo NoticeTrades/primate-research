@@ -41,7 +41,12 @@ export default function PriceTerminal({ symbol, index }: { symbol: string; index
 
   const fetchPrice = async () => {
     try {
-      const res = await fetch(`/api/market-data?symbol=${encodeURIComponent(symbol)}`);
+      // Add cache-busting timestamp to ensure fresh data
+      const timestamp = Date.now();
+      const res = await fetch(`/api/market-data?symbol=${encodeURIComponent(symbol)}&t=${timestamp}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
       if (res.ok) {
         const j = await res.json();
         if (j.error) {
@@ -49,9 +54,9 @@ export default function PriceTerminal({ symbol, index }: { symbol: string; index
           return;
         }
         const price = typeof j.price === 'number' && !Number.isNaN(j.price) ? j.price : 0;
-        const prev = typeof j.previousClose === 'number' && !Number.isNaN(j.previousClose) ? j.previousClose : price;
-        const change = typeof j.change === 'number' && !Number.isNaN(j.change) ? j.change : (price - prev);
-        const changePercent = typeof j.changePercent === 'number' && !Number.isNaN(j.changePercent) ? j.changePercent : (prev ? (change / prev) * 100 : 0);
+        // Use the change and changePercent directly from API (already calculated from day's open for BTC/ETH)
+        const change = typeof j.change === 'number' && !Number.isNaN(j.change) ? j.change : 0;
+        const changePercent = typeof j.changePercent === 'number' && !Number.isNaN(j.changePercent) ? j.changePercent : 0;
         setData({
           symbol: j.symbol || symbol,
           price,

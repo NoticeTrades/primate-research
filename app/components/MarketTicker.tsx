@@ -335,6 +335,11 @@ export default function MarketTicker() {
           <div className="w-16 h-4 bg-zinc-800 rounded animate-pulse"></div>
           <div className="w-12 h-4 bg-zinc-800 rounded animate-pulse"></div>
         </div>
+      ) : ticker.price === null ? (
+        <div className="flex items-center gap-2">
+          <div className="w-16 h-4 bg-zinc-800/50 rounded"></div>
+          <div className="w-12 h-4 bg-zinc-800/50 rounded"></div>
+        </div>
       ) : (
         <div className="flex flex-col items-end">
           <span className="text-sm font-bold text-white">
