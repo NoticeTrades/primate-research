@@ -1139,15 +1139,26 @@ export default function Navigation() {
                     </div>
                   )}
                   <div className="max-h-80 overflow-y-auto">
-                    {searchResults.map((article, index) => (
+                    {searchResults.map((article, index) => {
+                      const totalIndexItems = indexAutocomplete.length + (isIndexTicker(searchQuery) && !indexAutocomplete.some(i => i.ticker === searchQuery.trim().toUpperCase()) ? 1 : 0);
+                      const hasCryptoMatch = isCryptoTicker(searchQuery) && !cryptoAutocomplete.some(c => c.ticker === getCryptoSymbol(searchQuery));
+                      const totalCryptoItems = cryptoAutocomplete.length + (hasCryptoMatch ? 1 : 0);
+                      const articleIdx = totalIndexItems + totalCryptoItems + index;
+                      const isSelected = selectedSearchResultIndex === articleIdx;
+                      return (
                       <button
                         key={index}
                         type="button"
                         onMouseDown={(e) => {
                           e.preventDefault();
+                          setSelectedSearchResultIndex(articleIdx);
                           handleResultClick(article);
                         }}
-                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0"
+                        className={`w-full text-left px-4 py-3 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 ${
+                          isSelected
+                            ? 'bg-blue-500/15 dark:bg-blue-500/20'
+                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                        }`}
                       >
                         <div className="flex items-start gap-3">
                           <svg
@@ -1179,7 +1190,8 @@ export default function Navigation() {
                           </div>
                         </div>
                       </button>
-                    ))}
+                    );
+                    })}
                   </div>
                   <button
                     type="button"
