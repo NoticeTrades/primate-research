@@ -405,22 +405,27 @@ export default function Navigation() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = searchQuery.trim().toUpperCase();
-    if (!q) return;
+    const raw = searchQuery.trim();
+    if (!raw) return;
     setIsDropdownOpen(false);
+    const q = raw.toUpperCase();
     if (q === 'CHAT') {
       openChat();
       setSearchQuery('');
       searchRef.current?.blur();
       return;
     }
-    if (SEARCH_TERMINAL_TICKERS.includes(q)) {
-      openTicker(q);
-      setSearchQuery('');
-      searchRef.current?.blur();
-      return;
+    const parts = raw.split(/\s+/);
+    if (parts[0].toUpperCase() === 'P' && parts[1]) {
+      const ticker = parts[1].toUpperCase();
+      if (SEARCH_TERMINAL_TICKERS.includes(ticker)) {
+        openTicker(ticker);
+        setSearchQuery('');
+        searchRef.current?.blur();
+        return;
+      }
     }
-    router.push(`/research?q=${encodeURIComponent(searchQuery.trim())}`);
+    router.push(`/research?q=${encodeURIComponent(raw)}`);
     setSearchQuery('');
     searchRef.current?.blur();
   };
@@ -752,7 +757,7 @@ export default function Navigation() {
             <div className="flex items-center gap-0.5">
               {/* Chat Button - opens popup */}
               <button
-                onClick={openChat}
+                onClick={() => openChat()}
                 className="relative p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
                 title="Chat (popup)"
                 suppressHydrationWarning
