@@ -11,12 +11,96 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   RTY: 'RTY=F',
 };
 
+const ALPHA_VANTAGE_SYMBOLS: Record<string, string> = {
+  ES: 'ES',
+  NQ: 'NQ',
+  YM: 'YM',
+  RTY: 'RTY',
+};
+
 const INDEX_NAMES: Record<string, string> = {
   ES: 'E-mini S&P 500',
   NQ: 'E-mini NASDAQ-100',
   YM: 'E-mini Dow Jones',
   RTY: 'E-mini Russell 2000',
 };
+
+// Fetch data from Alpha Vantage (more reliable for futures)
+async function fetchAlphaVantageData(symbol: string) {
+  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const avSymbol = ALPHA_VANTAGE_SYMBOLS[symbol];
+    // Alpha Vantage uses different endpoints, try intraday first
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${avSymbol}&interval=1min&apikey=${apiKey}&datatype=json`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    // Alpha Vantage format is different, would need parsing
+    // For now, let's use a simpler approach with a different provider
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Fetch data from Twelve Data (excellent for real-time futures)
+async function fetchTwelveData(symbol: string) {
+  const apiKey = process.env.TWELVE_DATA_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    // Twelve Data uses CME symbols
+    const twelveSymbols: Record<string, string> = {
+      ES: 'ES',
+      NQ: 'NQ',
+      YM: 'YM',
+      RTY: 'RTY',
+    };
+    
+    const twelveSymbol = twelveSymbols[symbol];
+    const url = `https://api.twelvedata.com/price?symbol=${twelveSymbol}&apikey=${apiKey}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    if (data.status === 'ok' && data.price) {
+      // Get more detailed data
+      const quoteUrl = `https://api.twelvedata.com/quote?symbol=${twelveSymbol}&apikey=${apiKey}`;
+      const quoteRes = await fetch(quoteUrl, { cache: 'no-store' });
+      if (quoteRes.ok) {
+        const quote = await quoteRes.json();
+        if (quote.status === 'ok') {
+          const price = parseFloat(data.price);
+          const open = parseFloat(quote.open || '0');
+          const high = parseFloat(quote.high || '0');
+          const low = parseFloat(quote.low || '0');
+          const prevClose = parseFloat(quote.previous_close || '0');
+          const volume = parseFloat(quote.volume || '0');
+          
+          const change = price - prevClose;
+          const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+          const intradayChange = open > 0 ? price - open : 0;
+          const intradayChangePercent = open > 0 ? (intradayChange / open) * 100 : 0;
+          
+          return {
+            price,
+            change: intradayChange,
+            changePercent: intradayChangePercent,
+            previousClose: prevClose,
+            holc: { high, open, low, close: price },
+            volume,
+          };
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(
   request: Request,
@@ -47,15 +131,7 @@ export async function GET(
       cache: 'no-store',
     });
 
-    let price = 0;
-    let change = 0;
-    let changePercent = 0;
-    let previousClose = 0;
     let ytdPercent: number | null = null;
-    let high = 0;
-    let low = 0;
-    let open = 0;
-    let volume = 0;
 
     if (quoteRes.ok) {
       const data = await quoteRes.json();
@@ -131,6 +207,7 @@ export async function GET(
         if (low === 0 && price > 0) low = price;
         if (open === 0 && price > 0) open = price;
       }
+    }
     }
 
     // Fallback to chart API if quote API didn't work
