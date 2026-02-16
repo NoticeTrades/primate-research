@@ -532,8 +532,7 @@ export default function Navigation() {
           </svg>
 
           {/* Dropdown results */}
-          {isDropdownOpen && (searchQuery.trim() || isSearchFocused) && (
-            (() => {
+          {isDropdownOpen && (searchQuery.trim() || isSearchFocused) ? (() => {
               const raw = searchQuery.trim();
               const showCommandsList = !raw && isSearchFocused;
               if (showCommandsList) {
@@ -833,7 +832,7 @@ export default function Navigation() {
               )}
             </div>
           );
-        })()}
+        })() : null}
         </form>}
 
         {/* Auth buttons */}
