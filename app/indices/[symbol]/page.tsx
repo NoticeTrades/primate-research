@@ -180,7 +180,9 @@ export default function IndexAnalysisPage() {
                 <div>
                   <p className="text-sm text-zinc-500 mb-1">Current Price</p>
                   <p className="text-4xl font-bold text-zinc-50">
-                    {data.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {data.price > 0 
+                      ? data.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : 'N/A'}
                   </p>
                 </div>
                 <div className="text-right">
@@ -196,13 +198,17 @@ export default function IndexAnalysisPage() {
                 <div>
                   <p className="text-xs text-zinc-500 mb-1">Previous Close</p>
                   <p className="text-lg font-semibold text-zinc-300">
-                    {data.previousClose.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {data.previousClose > 0
+                      ? data.previousClose.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : 'N/A'}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500 mb-1">Volume</p>
                   <p className="text-lg font-semibold text-zinc-300">
-                    {data.volume.toLocaleString('en-US')}
+                    {data.volume > 0
+                      ? data.volume.toLocaleString('en-US')
+                      : 'N/A'}
                   </p>
                 </div>
                 {data.ytdPercent !== undefined && (
@@ -262,25 +268,33 @@ export default function IndexAnalysisPage() {
               <div>
                 <p className="text-xs text-zinc-500 mb-2">High</p>
                 <p className="text-2xl font-bold text-green-400">
-                  {holc.high.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {holc.high > 0
+                    ? holc.high.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : 'N/A'}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-2">Open</p>
                 <p className="text-2xl font-bold text-zinc-300">
-                  {holc.open.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {holc.open > 0
+                    ? holc.open.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : 'N/A'}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-2">Low</p>
                 <p className="text-2xl font-bold text-red-400">
-                  {holc.low.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {holc.low > 0
+                    ? holc.low.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : 'N/A'}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-zinc-500 mb-2">Close</p>
                 <p className="text-2xl font-bold text-zinc-50">
-                  {holc.close.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {holc.close > 0
+                    ? holc.close.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : 'N/A'}
                 </p>
               </div>
             </div>
