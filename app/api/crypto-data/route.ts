@@ -19,6 +19,8 @@ export async function GET() {
 
     const result: { bitcoin?: { usd: number; usd_24h_change: number }; ethereum?: { usd: number; usd_24h_change: number } } = {};
 
+    console.log('[Crypto Data API] Starting fetch for BTC and ETH');
+
     // Process Bitcoin
     if (btcRes.ok) {
       const btcData = await btcRes.json();
@@ -67,7 +69,11 @@ export async function GET() {
           usd_24h_change: changePercent, // Using intraday change, not 24h
         };
         console.log(`[Crypto Data API] Returning BTC: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
+      } else {
+        console.warn('[Crypto Data API] BTC quote data missing or invalid');
       }
+    } else {
+      console.error(`[Crypto Data API] BTC API response not OK: ${btcRes.status}`);
     }
 
     // Process Ethereum
@@ -118,8 +124,14 @@ export async function GET() {
           usd_24h_change: changePercent, // Using intraday change, not 24h
         };
         console.log(`[Crypto Data API] Returning ETH: price=${price}, changePercent=${changePercent.toFixed(2)}%`);
+      } else {
+        console.warn('[Crypto Data API] ETH quote data missing or invalid');
       }
+    } else {
+      console.error(`[Crypto Data API] ETH API response not OK: ${ethRes.status}`);
     }
+    
+    console.log('[Crypto Data API] Final result:', JSON.stringify(result));
 
     return NextResponse.json(result);
   } catch (error) {

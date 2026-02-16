@@ -57,6 +57,7 @@ export default function PriceTerminal({ symbol, index }: { symbol: string; index
         // Use the change and changePercent directly from API (already calculated from day's open for BTC/ETH)
         const change = typeof j.change === 'number' && !Number.isNaN(j.change) ? j.change : 0;
         const changePercent = typeof j.changePercent === 'number' && !Number.isNaN(j.changePercent) ? j.changePercent : 0;
+        console.log(`[PriceTerminal] ${symbol}: price=${price}, change=${change}, changePercent=${changePercent}%`);
         setData({
           symbol: j.symbol || symbol,
           price,
