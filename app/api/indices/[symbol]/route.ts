@@ -49,55 +49,95 @@ async function fetchAlphaVantageData(symbol: string) {
 // Fetch data from Twelve Data (excellent for real-time futures)
 async function fetchTwelveData(symbol: string) {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.log(`[Twelve Data] No API key configured for ${symbol}`);
+    return null;
+  }
 
   try {
-    // Twelve Data uses CME symbols
-    const twelveSymbols: Record<string, string> = {
-      ES: 'ES',
-      NQ: 'NQ',
-      YM: 'YM',
-      RTY: 'RTY',
+    // Twelve Data CME futures symbols - try multiple formats
+    const twelveSymbols: Record<string, string[]> = {
+      ES: ['ES1!', 'ES=F', 'ES'],
+      NQ: ['NQ1!', 'NQ=F', 'NQ'],
+      YM: ['YM1!', 'YM=F', 'YM'],
+      RTY: ['RTY1!', 'RTY=F', 'RTY'],
     };
     
-    const twelveSymbol = twelveSymbols[symbol];
-    const url = `https://api.twelvedata.com/price?symbol=${twelveSymbol}&apikey=${apiKey}`;
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return null;
+    const symbolVariants = twelveSymbols[symbol] || [symbol];
+    console.log(`[Twelve Data] Attempting to fetch ${symbol} with variants:`, symbolVariants);
     
-    const data = await res.json();
-    if (data.status === 'ok' && data.price) {
-      // Get more detailed data
-      const quoteUrl = `https://api.twelvedata.com/quote?symbol=${twelveSymbol}&apikey=${apiKey}`;
-      const quoteRes = await fetch(quoteUrl, { cache: 'no-store' });
-      if (quoteRes.ok) {
-        const quote = await quoteRes.json();
-        if (quote.status === 'ok') {
-          const price = parseFloat(data.price);
-          const open = parseFloat(quote.open || '0');
-          const high = parseFloat(quote.high || '0');
-          const low = parseFloat(quote.low || '0');
-          const prevClose = parseFloat(quote.previous_close || '0');
-          const volume = parseFloat(quote.volume || '0');
-          
-          const change = price - prevClose;
-          const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
-          const intradayChange = open > 0 ? price - open : 0;
-          const intradayChangePercent = open > 0 ? (intradayChange / open) * 100 : 0;
-          
-          return {
-            price,
-            change: intradayChange,
-            changePercent: intradayChangePercent,
-            previousClose: prevClose,
-            holc: { high, open, low, close: price },
-            volume,
-          };
+    // Try each symbol variant until one works
+    for (const twelveSymbol of symbolVariants) {
+      try {
+        const url = `https://api.twelvedata.com/price?symbol=${twelveSymbol}&apikey=${apiKey}`;
+        console.log(`[Twelve Data] Fetching price for ${twelveSymbol}...`);
+        const res = await fetch(url, { cache: 'no-store' });
+        
+        if (!res.ok) {
+          console.log(`[Twelve Data] Price API returned ${res.status} for ${twelveSymbol}`);
+          continue;
         }
+        
+        const data = await res.json();
+        console.log(`[Twelve Data] Price response for ${twelveSymbol}:`, JSON.stringify(data).substring(0, 200));
+        
+        // Check for errors in response
+        if (data.code || data.status === 'error') {
+          console.log(`[Twelve Data] Error in price response for ${twelveSymbol}:`, data.message || data.code);
+          continue;
+        }
+        
+        if (data.status === 'ok' && data.price) {
+          // Get more detailed data
+          const quoteUrl = `https://api.twelvedata.com/quote?symbol=${twelveSymbol}&apikey=${apiKey}`;
+          console.log(`[Twelve Data] Fetching quote for ${twelveSymbol}...`);
+          const quoteRes = await fetch(quoteUrl, { cache: 'no-store' });
+          
+          if (quoteRes.ok) {
+            const quote = await quoteRes.json();
+            console.log(`[Twelve Data] Quote response for ${twelveSymbol}:`, JSON.stringify(quote).substring(0, 200));
+            
+            if (quote.code || quote.status === 'error') {
+              console.log(`[Twelve Data] Error in quote response for ${twelveSymbol}:`, quote.message || quote.code);
+              continue;
+            }
+            
+            if (quote.status === 'ok') {
+              const price = parseFloat(data.price);
+              const open = parseFloat(quote.open || '0');
+              const high = parseFloat(quote.high || '0');
+              const low = parseFloat(quote.low || '0');
+              const prevClose = parseFloat(quote.previous_close || '0');
+              const volume = parseFloat(quote.volume || '0');
+              
+              const change = price - prevClose;
+              const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+              const intradayChange = open > 0 ? price - open : 0;
+              const intradayChangePercent = open > 0 ? (intradayChange / open) * 100 : 0;
+              
+              console.log(`[Twelve Data] Successfully fetched data for ${symbol} (${twelveSymbol}): price=${price}, change=${intradayChangePercent.toFixed(2)}%`);
+              
+              return {
+                price,
+                change: intradayChange,
+                changePercent: intradayChangePercent,
+                previousClose: prevClose,
+                holc: { high, open, low, close: price },
+                volume,
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`[Twelve Data] Error fetching ${twelveSymbol}:`, err);
+        continue;
       }
     }
+    
+    console.log(`[Twelve Data] All symbol variants failed for ${symbol}`);
     return null;
-  } catch {
+  } catch (err) {
+    console.error(`[Twelve Data] Fatal error for ${symbol}:`, err);
     return null;
   }
 }
@@ -137,6 +177,7 @@ export async function GET(
 
     const twelveData = await fetchTwelveData(symbol);
     if (twelveData) {
+      console.log(`[Index API] Using Twelve Data for ${symbol}`);
       price = twelveData.price;
       change = twelveData.change;
       changePercent = twelveData.changePercent;
@@ -145,6 +186,8 @@ export async function GET(
       low = twelveData.holc.low;
       open = twelveData.holc.open;
       volume = twelveData.volume;
+    } else {
+      console.log(`[Index API] Twelve Data failed for ${symbol}, falling back to Yahoo Finance`);
     }
 
     // Fallback to Yahoo Finance if Twelve Data didn't work
