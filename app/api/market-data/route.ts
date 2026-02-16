@@ -20,6 +20,85 @@ export async function GET(request: Request) {
   const yahooSymbol = YAHOO_SYMBOLS[symbol] || symbol;
 
   try {
+    // Use CoinMarketCap for BTC/ETH if API key is available
+    if ((symbol === 'BTC' || symbol === 'ETH') && process.env.COINMARKETCAP_API_KEY) {
+      try {
+        const apiKey = process.env.COINMARKETCAP_API_KEY;
+        const cmcUrl = `https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?symbol=${symbol}&convert=USD`;
+        const cmcRes = await fetch(cmcUrl, {
+          headers: {
+            'X-CMC_PRO_API_KEY': apiKey,
+            'Accept': 'application/json',
+          },
+          cache: 'no-store',
+        });
+
+        if (cmcRes.ok) {
+          const cmcData = await cmcRes.json();
+          const coinData = cmcData.data?.[symbol]?.[0];
+          
+          if (coinData) {
+            const price = coinData.quote?.USD?.price || 0;
+            
+            // Get day's open from Yahoo Finance for accurate intraday change calculation
+            let dayOpen = 0;
+            try {
+              const yahooChartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}-USD?interval=1m&range=1d`;
+              const yahooChartRes = await fetch(yahooChartUrl, {
+                headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+                cache: 'no-store',
+              });
+              if (yahooChartRes.ok) {
+                const chartData = await yahooChartRes.json();
+                const meta = chartData?.chart?.result?.[0]?.meta;
+                const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
+                if (meta?.regularMarketOpen) {
+                  dayOpen = meta.regularMarketOpen;
+                } else if (quote?.open && Array.isArray(quote.open)) {
+                  const opens = quote.open.filter((n: number) => n != null && typeof n === 'number' && n > 0);
+                  if (opens.length > 0) {
+                    dayOpen = opens[0];
+                  }
+                }
+              }
+            } catch (err) {
+              console.error(`[Market Data API] Error fetching ${symbol} day open from Yahoo:`, err);
+            }
+            
+            // Calculate intraday change from day's open if available
+            let change = 0;
+            let changePercent = 0;
+            if (dayOpen > 0 && price > 0) {
+              change = price - dayOpen;
+              changePercent = (change / dayOpen) * 100;
+              console.log(`[Market Data API] CoinMarketCap ${symbol}: price=${price}, dayOpen=${dayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
+            } else if (price > 0) {
+              // Fallback to CoinMarketCap's 24h change if day's open not available
+              changePercent = coinData.quote?.USD?.percent_change_24h || 0;
+              change = (changePercent / 100) * price;
+              console.warn(`[Market Data API] CoinMarketCap ${symbol}: Using 24h change fallback: ${changePercent.toFixed(2)}%`);
+            }
+            
+            if (price > 0) {
+              return NextResponse.json({
+                symbol,
+                price,
+                change,
+                changePercent,
+                previousClose: coinData.quote?.USD?.price || price, // CoinMarketCap doesn't provide previous close directly
+                ytdPercent: undefined, // CoinMarketCap doesn't provide YTD easily
+              });
+            }
+          }
+        } else {
+          console.error(`[Market Data API] CoinMarketCap API error for ${symbol}: ${cmcRes.status}`);
+        }
+      } catch (cmcError) {
+        console.error(`[Market Data API] CoinMarketCap API error for ${symbol}:`, cmcError);
+      }
+      // Fall through to Yahoo Finance if CoinMarketCap fails
+    }
+
     const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSymbol)}`;
     const quoteRes = await fetch(quoteUrl, {
       headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
