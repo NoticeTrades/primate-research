@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '../components/Navigation';
 import CursorGlow from '../components/CursorGlow';
@@ -8,258 +8,146 @@ import CursorHover from '../components/CursorHover';
 import DiscordSign from '../components/DiscordSign';
 import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from 'recharts';
+
+const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 12.5, MNQ: 2, MES: 0.5 };
 
 interface Trade {
-  id: string;
-  symbol: 'NQ' | 'ES'; // NQ or ES micro contracts
-  type: 'long' | 'short';
-  entryDate: string;
-  entryPrice: number; // Price in points
-  exitDate?: string;
-  exitPrice?: number; // Price in points
-  contracts: number; // Number of micro contracts
+  id: number;
+  symbol: string;
+  side: string;
+  quantity: number;
+  entryPrice: number;
+  exitQuantity: number;
+  exitPrice: number | null;
+  chartUrl: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
   status: 'open' | 'closed';
-  notes?: string;
-  callType?: 'discord' | 'public'; // Where the call was posted
 }
 
-interface PerformanceData {
-  date: string;
-  portfolio: number;
-  sp500: number;
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
 }
 
 export default function TradesPage() {
   const router = useRouter();
   const [trades, setTrades] = useState<Trade[]>([]);
-  const [sp500Data, setSp500Data] = useState<PerformanceData[]>([]);
-  const [showPortfolio, setShowPortfolio] = useState(true);
-  const [showES, setShowES] = useState(true);
+  const [prices, setPrices] = useState<Record<string, number>>({ NQ: 0, ES: 0 });
+  const [loading, setLoading] = useState(true);
+  const [tradeNotifEnabled, setTradeNotifEnabled] = useState(true);
+  const [tradeNotifEmail, setTradeNotifEmail] = useState(false);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsMessage, setPrefsMessage] = useState('');
 
-  // Load trades from localStorage
-  useEffect(() => {
-    const savedTrades = localStorage.getItem('primate-trades');
-    if (savedTrades) {
-      setTrades(JSON.parse(savedTrades));
+  const fetchTrades = useCallback(async () => {
+    try {
+      const res = await fetch('/api/trades', { cache: 'no-store' });
+      const data = await res.json();
+      if (res.ok && data.trades) setTrades(data.trades);
+    } catch {
+      // ignore
     }
   }, []);
 
-  // Fetch S&P 500 YTD historical data (live, updates every 3 hours)
   useEffect(() => {
-    const fetchSP500Data = async () => {
-      try {
-        const response = await fetch('/api/sp500-historical', {
-          cache: 'no-store', // Always fetch fresh data
-        });
-        if (!response.ok) {
-          console.error('Failed to fetch S&P 500 historical data');
-          return;
-        }
-        
-        const result = await response.json();
-        if (result.data && result.data.length > 0) {
-          // Convert S&P 500 data to PerformanceData format
-          // Store actual return percentages (not 100 + return)
-          const performanceData: PerformanceData[] = result.data.map((item: { date: string; return: number }) => ({
-            date: item.date,
-            portfolio: 0, // Portfolio starts at 0% (will be calculated from trades)
-            sp500: item.return, // S&P 500 YTD return as percentage (e.g., 1.08 for +1.08%)
-          }));
-          
-          setSp500Data(performanceData);
-        }
-      } catch (error) {
-        console.error('Error fetching S&P 500 historical data:', error);
-      }
-    };
+    fetchTrades().finally(() => setLoading(false));
+    const t = setInterval(fetchTrades, 20000);
+    return () => clearInterval(t);
+  }, [fetchTrades]);
 
-    // Fetch immediately
-    fetchSP500Data();
-    
-    // Auto-update every 3 hours (10800000 ms)
-    const interval = setInterval(fetchSP500Data, 10800000);
+  useEffect(() => {
+    const fetchPrices = async () => {
+      const symbols = ['NQ', 'ES'];
+      const next: Record<string, number> = {};
+      for (const sym of symbols) {
+        try {
+          const res = await fetch(`/api/indices/${sym}`, { cache: 'no-store' });
+          const data = await res.json();
+          if (res.ok && typeof data.price === 'number') next[sym] = data.price;
+        } catch {
+          // keep previous
+        }
+      }
+      setPrices((prev) => ({ ...prev, ...next }));
+    };
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 15000);
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate portfolio performance (YTD, starting at 0%)
-  const calculatePortfolioPerformance = () => {
-    // If no trades, portfolio stays at 0%
-    if (trades.length === 0) {
-      return sp500Data.map(d => ({ ...d, portfolio: 0 }));
-    }
+  useEffect(() => {
+    const email = getCookie('user_email');
+    if (!email) return;
+    fetch('/api/notifications/preferences')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.tradeNotificationsEnabled !== undefined) setTradeNotifEnabled(data.tradeNotificationsEnabled);
+        if (data.tradeNotificationsEmail !== undefined) setTradeNotifEmail(data.tradeNotificationsEmail);
+      })
+      .catch(() => {});
+  }, []);
 
-    // Get point values for contracts
-    const getPointValue = (symbol: string) => {
-      return symbol === 'NQ' ? 2 : 0.5; // NQ micro = $2/point, ES micro = $0.50/point
-    };
-
-    // Calculate initial portfolio value (for percentage calculation)
-    // We'll use a base value to calculate returns
-    const baseValue = 10000; // $10,000 starting capital for calculation purposes
-    
-    // Sort trades by date
-    const sortedTrades = [...trades].sort((a, b) => 
-      new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
-    );
-
-    return sp500Data.map((day) => {
-      const dayDate = new Date(day.date);
-      let portfolioValue = baseValue; // Start with base value
-      
-      // Calculate P&L from all trades up to this day
-      sortedTrades.forEach(trade => {
-        const tradeEntryDate = new Date(trade.entryDate);
-        const tradeExitDate = trade.exitDate ? new Date(trade.exitDate) : null;
-        
-        // Only count trades that have been entered by this day
-        if (tradeEntryDate <= dayDate) {
-          // If trade is closed and exit date is before or on this day, use exit price
-          // If trade is still open or exit is after this day, we'd need current price
-          // For now, if open, we'll use entry price (0 P&L until closed)
-          if (trade.status === 'closed' && tradeExitDate && tradeExitDate <= dayDate && trade.exitPrice) {
-            const pointValue = getPointValue(trade.symbol);
-            const points = trade.type === 'long'
-              ? trade.exitPrice - trade.entryPrice
-              : trade.entryPrice - trade.exitPrice;
-            const pnl = points * pointValue * trade.contracts;
-            portfolioValue += pnl;
-          }
-          // For open trades, we'd need current market price - for now, don't count until closed
-        }
+  const saveTradePrefs = async (inApp: boolean, email: boolean) => {
+    setPrefsSaving(true);
+    setPrefsMessage('');
+    try {
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tradeNotificationsEnabled: inApp, tradeNotificationsEmail: email }),
       });
-      
-      // Calculate YTD return percentage (starting from 0%)
-      const ytdReturn = ((portfolioValue - baseValue) / baseValue) * 100;
-      
-      return {
-        ...day,
-        portfolio: ytdReturn, // Portfolio YTD return starting from 0%
-      };
-    });
+      const data = await res.json();
+      if (res.ok) {
+        setTradeNotifEnabled(inApp);
+        setTradeNotifEmail(email);
+        setPrefsMessage('Saved');
+        setTimeout(() => setPrefsMessage(''), 2000);
+      } else {
+        setPrefsMessage(data.error || 'Failed to save');
+      }
+    } catch {
+      setPrefsMessage('Failed to save');
+    } finally {
+      setPrefsSaving(false);
+    }
   };
 
-  const performanceData = calculatePortfolioPerformance();
-
-  // Calculate statistics
-  const calculateStats = () => {
-    const closedTrades = trades.filter(t => t.status === 'closed' && t.exitPrice);
-    const openTrades = trades.filter(t => t.status === 'open');
-    
-    // Calculate P&L for futures contracts
-    // NQ micro: $2 per point, ES micro: $0.50 per point
-    const getPointValue = (symbol: string) => {
-      return symbol === 'NQ' ? 2 : 0.5; // NQ micro = $2/point, ES micro = $0.50/point
-    };
-
-    const totalPnL = closedTrades.reduce((sum, trade) => {
-      const pointValue = getPointValue(trade.symbol);
-      const points = trade.type === 'long'
-        ? trade.exitPrice! - trade.entryPrice
-        : trade.entryPrice - trade.exitPrice!;
-      const pnl = points * pointValue * trade.contracts;
-      return sum + pnl;
-    }, 0);
-
-    const winRate = closedTrades.length > 0
-      ? (closedTrades.filter(t => {
-          const pointValue = getPointValue(t.symbol);
-          const points = t.type === 'long'
-            ? t.exitPrice! - t.entryPrice
-            : t.entryPrice - t.exitPrice!;
-          const pnl = points * pointValue * t.contracts;
-          return pnl > 0;
-        }).length / closedTrades.length) * 100
-      : 0;
-
-    const avgWin = closedTrades.filter(t => {
-      const pointValue = getPointValue(t.symbol);
-      const points = t.type === 'long'
-        ? t.exitPrice! - t.entryPrice
-        : t.entryPrice - t.exitPrice!;
-      const pnl = points * pointValue * t.contracts;
-      return pnl > 0;
-    }).reduce((sum, t) => {
-      const pointValue = getPointValue(t.symbol);
-      const points = t.type === 'long'
-        ? t.exitPrice! - t.entryPrice
-        : t.entryPrice - t.exitPrice!;
-      const pnl = points * pointValue * t.contracts;
-      return sum + pnl;
-    }, 0) / Math.max(closedTrades.filter(t => {
-      const pointValue = getPointValue(t.symbol);
-      const points = t.type === 'long'
-        ? t.exitPrice! - t.entryPrice
-        : t.entryPrice - t.exitPrice!;
-      const pnl = points * pointValue * t.contracts;
-      return pnl > 0;
-    }).length, 1);
-
-    const avgLoss = closedTrades.filter(t => {
-      const pointValue = getPointValue(t.symbol);
-      const points = t.type === 'long'
-        ? t.exitPrice! - t.entryPrice
-        : t.entryPrice - t.exitPrice!;
-      const pnl = points * pointValue * t.contracts;
-      return pnl < 0;
-    }).reduce((sum, t) => {
-      const pointValue = getPointValue(t.symbol);
-      const points = t.type === 'long'
-        ? t.exitPrice! - t.entryPrice
-        : t.entryPrice - t.exitPrice!;
-      const pnl = points * pointValue * t.contracts;
-      return sum + pnl;
-    }, 0) / Math.max(closedTrades.filter(t => {
-      const pointValue = getPointValue(t.symbol);
-      const points = t.type === 'long'
-        ? t.exitPrice! - t.entryPrice
-        : t.entryPrice - t.exitPrice!;
-      const pnl = points * pointValue * t.contracts;
-      return pnl < 0;
-    }).length, 1);
-
-    const currentPortfolioValue = performanceData[performanceData.length - 1]?.portfolio || 100;
-    const sp500Current = performanceData[performanceData.length - 1]?.sp500 || 100;
-    const vsSp500 = currentPortfolioValue - sp500Current;
-
-    return {
-      totalTrades: trades.length,
-      closedTrades: closedTrades.length,
-      openTrades: openTrades.length,
-      totalPnL,
-      winRate,
-      avgWin,
-      avgLoss,
-      portfolioReturn: currentPortfolioValue - 100,
-      sp500Return: sp500Current - 100,
-      vsSp500,
-    };
+  const getPriceForSymbol = (symbol: string): number => {
+    if (symbol === 'MNQ' || symbol === 'NQ') return prices.NQ || 0;
+    if (symbol === 'MES' || symbol === 'ES') return prices.ES || 0;
+    return 0;
   };
 
-  const stats = calculateStats();
+  const getPointValue = (symbol: string) => POINT_VALUE[symbol] ?? 2;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(value);
-  };
+  const openTrades = trades.filter((t) => t.status === 'open');
+  const closedTrades = trades.filter((t) => t.status === 'closed');
 
-  const formatPercent = (value: number) => {
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-  };
+  let totalUnrealizedPnL = 0;
+  let totalRealizedPnL = 0;
+  for (const t of trades) {
+    const pv = getPointValue(t.symbol);
+    const openQty = t.quantity - (t.exitQuantity ?? 0);
+    if (openQty > 0) {
+      const current = getPriceForSymbol(t.symbol);
+      if (current > 0) {
+        const points = t.side === 'long' ? current - t.entryPrice : t.entryPrice - current;
+        totalUnrealizedPnL += points * pv * openQty;
+      }
+    }
+    if ((t.exitQuantity ?? 0) > 0 && t.exitPrice != null) {
+      const points = t.side === 'long' ? t.exitPrice - t.entryPrice : t.entryPrice - t.exitPrice;
+      totalRealizedPnL += points * pv * (t.exitQuantity ?? 0);
+    }
+  }
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value);
+
+  const isAuthed = typeof document !== 'undefined' && !!getCookie('user_email');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/50 to-zinc-950 relative">
@@ -273,274 +161,183 @@ export default function TradesPage() {
       </div>
 
       <div className="pt-40 pb-24 px-6 relative z-10">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-zinc-50 mb-4">
-              Nick's Live Positions
-            </h1>
-            <p className="text-lg text-zinc-700 dark:text-zinc-300">
-              Real-time tracking of NQ and ES micro futures positions. Updated as trades are entered and calls are posted in Discord.
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-3">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 mb-2">Live Trades</h1>
+            <p className="text-zinc-400">
+              Real-time positions and P&L. Data updates every 15–20s while you’re on the page.
             </p>
           </div>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 relative z-10">
-            <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Total Return</div>
-              <div className={`text-2xl font-bold ${stats.portfolioReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatPercent(stats.portfolioReturn)}
-              </div>
-              <div className="text-xs text-zinc-500 mt-1">vs S&P 500: {formatPercent(stats.vsSp500)}</div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Win Rate</div>
-              <div className="text-2xl font-bold text-blue-600">{stats.winRate.toFixed(1)}%</div>
-              <div className="text-xs text-zinc-500 mt-1">{stats.closedTrades} closed trades</div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Total P&L</div>
-              <div className={`text-2xl font-bold ${stats.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(stats.totalPnL)}
-              </div>
-              <div className="text-xs text-zinc-500 mt-1">{stats.totalTrades} total trades</div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800">
-              <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Open Positions</div>
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{stats.openTrades}</div>
-              <div className="text-xs text-zinc-500 mt-1">{stats.closedTrades} closed</div>
-            </div>
-          </div>
-
-          {/* Performance Chart */}
-          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 mb-12 relative z-10">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-black dark:text-zinc-50">
-                Portfolio Performance vs S&P 500 (YTD)
-              </h2>
-              {/* Toggle Controls */}
-              <div className="flex items-center gap-4">
+          {isAuthed && (
+            <div className="mb-8 p-4 rounded-xl bg-zinc-900/80 border border-zinc-800">
+              <p className="text-sm font-medium text-zinc-300 mb-3">New trade notifications</p>
+              <div className="flex flex-wrap items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={showPortfolio}
-                    onChange={(e) => setShowPortfolio(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-zinc-300 rounded focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
-                    suppressHydrationWarning
+                    checked={tradeNotifEnabled}
+                    onChange={(e) => saveTradePrefs(e.target.checked, tradeNotifEmail)}
+                    disabled={prefsSaving}
+                    className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-600"
                   />
-                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                    Portfolio
-                  </span>
+                  <span className="text-sm text-zinc-300">Notify me in the dashboard (bell)</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={showES}
-                    onChange={(e) => setShowES(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-zinc-300 rounded focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
-                    suppressHydrationWarning
+                    checked={tradeNotifEmail}
+                    onChange={(e) => saveTradePrefs(tradeNotifEnabled, e.target.checked)}
+                    disabled={prefsSaving}
+                    className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-600"
                   />
-                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-zinc-500"></span>
-                    S&P 500 YTD
-                  </span>
+                  <span className="text-sm text-zinc-300">Email me when a new trade is added</span>
                 </label>
+                {prefsMessage && <span className="text-xs text-zinc-500">{prefsMessage}</span>}
               </div>
             </div>
-            <div className="w-full" style={{ height: '400px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={performanceData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-zinc-700" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#6b7280"
-                    className="dark:stroke-zinc-400"
-                    tick={{ fill: '#6b7280' }}
-                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  />
-                  <YAxis 
-                    stroke="#6b7280"
-                    className="dark:stroke-zinc-400"
-                    tick={{ fill: '#6b7280' }}
-                    label={{ value: 'Return %', angle: -90, position: 'insideLeft', fill: '#6b7280' }}
-                    domain={['auto', 'auto']}
-                    tickFormatter={(value) => {
-                      // Format as percentage return (value is already the return percentage)
-                      return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
-                    }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f3f4f6' }}
-                    labelStyle={{ color: '#f3f4f6' }}
-                    labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                    formatter={(value: any) => {
-                      if (value === undefined) return '';
-                      // Both values are already return percentages
-                      return formatPercent(value);
-                    }}
-                  />
-                  {showPortfolio && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="portfolio" 
-                      stroke="#3b82f6" 
-                      strokeWidth={2}
-                      name="Portfolio"
-                      dot={false}
-                    />
-                  )}
-                  {showES && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="sp500" 
-                      stroke="#6b7280" 
-                      strokeWidth={2}
-                      name="S&P 500 YTD"
-                      dot={false}
-                    />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          )}
 
-          {/* Discord CTA Section */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 rounded-lg p-8 mb-12 relative z-10 text-center">
-            <h2 className="text-3xl font-bold text-white mb-3">Want Access to Faster Calls?</h2>
-            <p className="text-blue-100 dark:text-blue-200 mb-6 text-lg">
-              Join the Discord community for real-time trade alerts, faster entry signals, and exclusive market analysis.
-            </p>
+          {(totalUnrealizedPnL !== 0 || totalRealizedPnL !== 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              {totalUnrealizedPnL !== 0 && (
+                <div className="rounded-xl bg-zinc-900/80 border border-zinc-800 p-5">
+                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Unrealized P&L</p>
+                  <p className={`text-2xl font-bold ${totalUnrealizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatCurrency(totalUnrealizedPnL)}
+                  </p>
+                </div>
+              )}
+              {totalRealizedPnL !== 0 && (
+                <div className="rounded-xl bg-zinc-900/80 border border-zinc-800 p-5">
+                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Realized P&L (closed)</p>
+                  <p className={`text-2xl font-bold ${totalRealizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatCurrency(totalRealizedPnL)}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="py-16 text-center text-zinc-500">Loading trades…</div>
+          ) : trades.length === 0 ? (
+            <div className="rounded-xl bg-zinc-900/80 border border-zinc-800 p-12 text-center">
+              <p className="text-zinc-400 mb-2">No live trades yet</p>
+              <p className="text-sm text-zinc-500">Positions will appear here when they’re added.</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {openTrades.length > 0 && (
+                <section>
+                  <h2 className="text-lg font-semibold text-zinc-200 mb-4">Open positions</h2>
+                  <div className="space-y-4">
+                    {openTrades.map((t) => {
+                      const current = getPriceForSymbol(t.symbol);
+                      const openQty = t.quantity - (t.exitQuantity ?? 0);
+                      const pv = getPointValue(t.symbol);
+                      const points = current > 0 ? (t.side === 'long' ? current - t.entryPrice : t.entryPrice - current) : null;
+                      const unrealizedPnL = points != null ? points * pv * openQty : null;
+                      return (
+                        <div
+                          key={t.id}
+                          className="rounded-xl bg-zinc-900/80 border border-zinc-800 overflow-hidden"
+                        >
+                          <div className="p-5">
+                            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                              <div className="flex items-center gap-3">
+                                <span className="px-3 py-1 rounded-lg font-mono font-bold text-sm bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                                  {t.symbol} {t.side}
+                                </span>
+                                <span className="text-zinc-300">
+                                  {openQty} contract{openQty !== 1 ? 's' : ''} @ {t.entryPrice.toFixed(2)} avg
+                                </span>
+                              </div>
+                              {current > 0 && (
+                                <div className="text-right">
+                                  <p className="text-xs text-zinc-500">Mark</p>
+                                  <p className="text-lg font-semibold text-zinc-100">{current.toFixed(2)}</p>
+                                </div>
+                              )}
+                            </div>
+                            {unrealizedPnL != null && (
+                              <p className={`text-xl font-bold ${unrealizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {formatCurrency(unrealizedPnL)} unrealized
+                              </p>
+                            )}
+                            {t.notes && (
+                              <p className="mt-3 text-sm text-zinc-400 border-t border-zinc-800 pt-3">{t.notes}</p>
+                            )}
+                          </div>
+                          {t.chartUrl && (
+                            <div className="border-t border-zinc-800 p-3 bg-zinc-950/50">
+                              <p className="text-xs text-zinc-500 mb-2">Chart / setup</p>
+                              <a href={t.chartUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-600 transition-colors">
+                                <img src={t.chartUrl} alt="Trade chart" className="w-full h-48 object-cover object-center" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {closedTrades.length > 0 && (
+                <section>
+                  <h2 className="text-lg font-semibold text-zinc-200 mb-4">Closed</h2>
+                  <div className="space-y-4">
+                    {closedTrades.map((t) => {
+                      const pv = getPointValue(t.symbol);
+                      const exitQty = t.exitQuantity ?? 0;
+                      const points = t.exitPrice != null ? (t.side === 'long' ? t.exitPrice - t.entryPrice : t.entryPrice - t.exitPrice) : 0;
+                      const realizedPnL = points * pv * exitQty;
+                      return (
+                        <div
+                          key={t.id}
+                          className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <span className="px-3 py-1 rounded-lg font-mono text-sm bg-zinc-700/50 text-zinc-400">
+                                {t.symbol} {t.side}
+                              </span>
+                              <span className="text-zinc-400 text-sm">
+                                {t.quantity} @ {t.entryPrice.toFixed(2)} → exit {exitQty} @ {t.exitPrice?.toFixed(2) ?? '—'}
+                              </span>
+                            </div>
+                            <p className={`font-bold ${realizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {formatCurrency(realizedPnL)}
+                            </p>
+                          </div>
+                          {t.notes && <p className="mt-2 text-sm text-zinc-500">{t.notes}</p>}
+                          {t.chartUrl && (
+                            <a href={t.chartUrl} target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-xs text-blue-400 hover:underline">View chart</a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+
+          <div className="mt-12 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-700/20 border border-blue-500/20 p-6 text-center">
+            <h2 className="text-xl font-bold text-zinc-50 mb-2">Faster calls in Discord</h2>
+            <p className="text-zinc-400 mb-4">Get real-time trade alerts and discussion in the community.</p>
             <a
               href="https://discord.com/invite/QGnUGdAt"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-8 py-4 bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 font-bold text-lg rounded-lg hover:bg-blue-50 dark:hover:bg-zinc-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
             >
-              Join Discord for Free
+              Join Discord
             </a>
-          </div>
-
-          {/* Trade History - Read Only Portfolio Display */}
-          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 mb-12 relative z-10">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-black dark:text-zinc-50 mb-2">Live Positions & Trade History</h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Complete record of NQ and ES micro futures positions. Updated in real-time as trades are entered and calls are posted.
-              </p>
-            </div>
-
-            {/* Trades Table - Read Only */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b-2 border-zinc-300 dark:border-zinc-700">
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Symbol</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Type</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Entry (Points)</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Exit (Points)</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Contracts</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Points</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">P&L ($)</th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trades.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center">
-                        <div className="text-zinc-500 dark:text-zinc-400">
-                          <p className="text-lg mb-2">No trades recorded yet</p>
-                          <p className="text-sm">Portfolio performance will be displayed here as trades are updated.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    trades.map((trade) => {
-                      // Calculate point value: NQ micro = $2/point, ES micro = $0.50/point
-                      const pointValue = trade.symbol === 'NQ' ? 2 : 0.5;
-                      
-                      // Calculate points gained/lost
-                      const points = trade.status === 'closed' && trade.exitPrice
-                        ? trade.type === 'long'
-                          ? trade.exitPrice - trade.entryPrice
-                          : trade.entryPrice - trade.exitPrice
-                        : null;
-                      
-                      // Calculate P&L in dollars
-                      const pnl = points !== null
-                        ? points * pointValue * trade.contracts
-                        : null;
-
-                      return (
-                        <tr key={trade.id} className="border-b border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                          <td className="py-4 px-4">
-                            <span className="text-black dark:text-zinc-50 font-semibold text-base">{trade.symbol}</span>
-                            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                              {trade.symbol === 'NQ' ? 'Micro' : 'Micro'} Futures
-                            </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
-                              trade.type === 'long' 
-                                ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
-                                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
-                            }`}>
-                              {trade.type.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="text-black dark:text-zinc-50 font-medium">{trade.entryPrice.toFixed(2)}</div>
-                            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{new Date(trade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                          </td>
-                          <td className="py-4 px-4">
-                            {trade.exitPrice ? (
-                              <>
-                                <div className="text-black dark:text-zinc-50 font-medium">{trade.exitPrice.toFixed(2)}</div>
-                                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{trade.exitDate ? new Date(trade.exitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</div>
-                              </>
-                            ) : (
-                              <span className="text-zinc-400 dark:text-zinc-500">-</span>
-                            )}
-                          </td>
-                          <td className="py-4 px-4 text-black dark:text-zinc-50 font-medium">{trade.contracts}</td>
-                          <td className="py-4 px-4">
-                            {points !== null ? (
-                              <span className={`font-semibold ${points >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                {points >= 0 ? '+' : ''}{points.toFixed(2)} pts
-                              </span>
-                            ) : (
-                              <span className="text-zinc-400 dark:text-zinc-500">-</span>
-                            )}
-                          </td>
-                          <td className="py-4 px-4">
-                            {pnl !== null ? (
-                              <span className={`font-semibold text-base ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                {formatCurrency(pnl)}
-                              </span>
-                            ) : (
-                              <span className="text-zinc-400 dark:text-zinc-500">-</span>
-                            )}
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
-                              trade.status === 'open'
-                                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400'
-                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                            }`}>
-                              {trade.status.toUpperCase()}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
       </div>

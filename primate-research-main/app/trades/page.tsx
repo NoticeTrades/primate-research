@@ -170,9 +170,12 @@ export default function TradesPage() {
       <div className="pt-40 pb-24 px-6 relative z-10">
         <div className="max-w-4xl mx-auto">
           <div className="mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-3">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live
+            </div>
             <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 mb-2">Live Trades</h1>
             <p className="text-zinc-400">
-              Real-time positions and P&L. Data updates automatically while you’re on the page.
+              Real-time positions and P&L. Data updates every 15–20s while you’re on the page.
             </p>
           </div>
 
