@@ -73,7 +73,13 @@ export async function initDb() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS user_role TEXT DEFAULT 'premium'
   `;
-  
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS trade_notifications_enabled BOOLEAN DEFAULT TRUE
+  `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS trade_notifications_email BOOLEAN DEFAULT FALSE
+  `;
+
   // Set noticetrades as owner/founder
   await sql`
     UPDATE users 
