@@ -9,7 +9,8 @@ import DiscordSign from '../components/DiscordSign';
 import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
 
-const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 12.5, MNQ: 2, MES: 0.5 };
+// CME point values ($ per point per contract): Mini NQ $20, Micro MNQ $2, Mini ES $12.50, Micro MES $5
+const POINT_VALUE: Record<string, number> = { NQ: 20, MNQ: 2, ES: 12.5, MES: 5 };
 
 interface Trade {
   id: number;
@@ -97,7 +98,10 @@ export default function TradesPage() {
       const res = await fetch('/api/notifications/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tradeNotificationsEnabled: inApp, tradeNotificationsEmail: email }),
+        body: JSON.stringify({
+          tradeNotificationsEnabled: Boolean(inApp),
+          tradeNotificationsEmail: Boolean(email),
+        }),
       });
       const data = await res.json();
       if (res.ok) {

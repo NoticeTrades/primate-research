@@ -9,7 +9,8 @@ import DiscordSign from '../components/DiscordSign';
 import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
 
-const POINT_VALUE: Record<string, number> = { NQ: 20, ES: 12.5, MNQ: 2, MES: 0.5 };
+// CME $ per point per contract: NQ $20, MNQ $2, ES $12.50, MES $5
+const POINT_VALUE: Record<string, number> = { NQ: 20, MNQ: 2, ES: 12.5, MES: 5 };
 
 interface Trade {
   id: number;

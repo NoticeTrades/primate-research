@@ -78,6 +78,30 @@ export default function AdminPage() {
   const [editMonthly, setEditMonthly] = useState('');
   const [indexUpdateStatus, setIndexUpdateStatus] = useState('');
 
+  // Live trades state
+  const [liveTrades, setLiveTrades] = useState<{ id: number; symbol: string; side: string; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null; status: string }[]>([]);
+  const [liveTradesLoading, setLiveTradesLoading] = useState(false);
+  const [liveTradesLoaded, setLiveTradesLoaded] = useState(false);
+  const [tradeSymbol, setTradeSymbol] = useState('MNQ');
+  const [tradeSide, setTradeSide] = useState<'long' | 'short'>('short');
+  const [tradeQuantity, setTradeQuantity] = useState('');
+  const [tradeEntryPrice, setTradeEntryPrice] = useState('');
+  const [tradeChartUrl, setTradeChartUrl] = useState('');
+  const [tradeNotes, setTradeNotes] = useState('');
+  const [tradeSendEmail, setTradeSendEmail] = useState(true);
+  const [tradeAddStatus, setTradeAddStatus] = useState('');
+  const [tradeAddSending, setTradeAddSending] = useState(false);
+  const [editingTradeId, setEditingTradeId] = useState<number | null>(null);
+  const [editTradeQuantity, setEditTradeQuantity] = useState('');
+  const [editTradeEntryPrice, setEditTradeEntryPrice] = useState('');
+  const [editTradeExitQuantity, setEditTradeExitQuantity] = useState('');
+  const [editTradeExitPrice, setEditTradeExitPrice] = useState('');
+  const [editTradeChartUrl, setEditTradeChartUrl] = useState('');
+  const [editTradeNotes, setEditTradeNotes] = useState('');
+  const [tradeUpdateStatus, setTradeUpdateStatus] = useState('');
+  const [deleteTradeId, setDeleteTradeId] = useState<number | null>(null);
+  const [deleteTradeStatus, setDeleteTradeStatus] = useState('');
+
   const handleLogin = async () => {
     setLoading(true);
     setError('');
@@ -392,6 +416,147 @@ export default function AdminPage() {
       }
     } catch (error: any) {
       setIndexUpdateStatus(`Error: ${error.message || 'Failed to update'}`);
+    }
+  };
+
+  const fetchLiveTrades = async () => {
+    setLiveTradesLoading(true);
+    setTradeUpdateStatus('');
+    setTradeAddStatus('');
+    try {
+      const res = await fetch('/api/trades');
+      const data = await res.json();
+      if (res.ok) {
+        setLiveTrades(data.trades || []);
+        setLiveTradesLoaded(true);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLiveTradesLoading(false);
+    }
+  };
+
+  const handleAddTrade = async () => {
+    const qty = parseInt(tradeQuantity, 10);
+    const entry = parseFloat(tradeEntryPrice);
+    if (!Number.isInteger(qty) || qty < 1 || !Number.isFinite(entry)) {
+      setTradeAddStatus('Invalid quantity or entry price');
+      return;
+    }
+    setTradeAddSending(true);
+    setTradeAddStatus('');
+    try {
+      const res = await fetch('/api/admin/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret,
+          symbol: tradeSymbol,
+          side: tradeSide,
+          quantity: qty,
+          entry_price: entry,
+          chart_url: tradeChartUrl.trim() || undefined,
+          notes: tradeNotes.trim() || undefined,
+          send_notification_email: tradeSendEmail,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTradeAddStatus(`✅ Trade added. Notification sent.${data.emailSent != null ? ` ${data.emailSent} email(s) sent.` : ''}`);
+        setTradeQuantity('');
+        setTradeEntryPrice('');
+        setTradeChartUrl('');
+        setTradeNotes('');
+        await fetchLiveTrades();
+        setTimeout(() => setTradeAddStatus(''), 4000);
+      } else {
+        setTradeAddStatus(`Error: ${data.error || 'Failed to add trade'}`);
+      }
+    } catch (e: any) {
+      setTradeAddStatus(`Error: ${e.message || 'Failed to add trade'}`);
+    } finally {
+      setTradeAddSending(false);
+    }
+  };
+
+  const openEditTrade = (t: { id: number; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null }) => {
+    setEditingTradeId(t.id);
+    setEditTradeQuantity(String(t.quantity));
+    setEditTradeEntryPrice(String(t.entryPrice));
+    setEditTradeExitQuantity(String(t.exitQuantity ?? 0));
+    setEditTradeExitPrice(t.exitPrice != null ? String(t.exitPrice) : '');
+    setEditTradeChartUrl(t.chartUrl || '');
+    setEditTradeNotes(t.notes || '');
+    setTradeUpdateStatus('');
+  };
+
+  const handleUpdateTrade = async (id: number) => {
+    const qty = parseInt(editTradeQuantity, 10);
+    const entry = parseFloat(editTradeEntryPrice);
+    const exitQty = parseInt(editTradeExitQuantity, 10);
+    const exitPrice = editTradeExitPrice.trim() ? parseFloat(editTradeExitPrice) : undefined;
+    if (!Number.isInteger(qty) || qty < 1 || !Number.isFinite(entry)) {
+      setTradeUpdateStatus('Invalid quantity or entry price');
+      return;
+    }
+    if (exitQty > qty || exitQty < 0) {
+      setTradeUpdateStatus('Exit quantity must be between 0 and quantity');
+      return;
+    }
+    setTradeUpdateStatus('Saving...');
+    try {
+      const res = await fetch(`/api/admin/trades/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret,
+          quantity: qty,
+          entry_price: entry,
+          exit_quantity: exitQty,
+          exit_price: exitPrice,
+          chart_url: editTradeChartUrl.trim() || null,
+          notes: editTradeNotes.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTradeUpdateStatus('✅ Trade updated');
+        setEditingTradeId(null);
+        await fetchLiveTrades();
+        setTimeout(() => setTradeUpdateStatus(''), 2000);
+      } else {
+        setTradeUpdateStatus(`Error: ${data.error || 'Failed to update'}`);
+      }
+    } catch (e: any) {
+      setTradeUpdateStatus(`Error: ${e.message || 'Failed to update'}`);
+    }
+  };
+
+  const handleDeleteTrade = async (id: number) => {
+    if (deleteTradeId !== id) {
+      setDeleteTradeId(id);
+      setDeleteTradeStatus('Click again to confirm delete');
+      setTimeout(() => { setDeleteTradeId(null); setDeleteTradeStatus(''); }, 4000);
+      return;
+    }
+    setDeleteTradeStatus('Deleting...');
+    try {
+      const res = await fetch(`/api/admin/trades/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      });
+      if (res.ok) {
+        setDeleteTradeStatus('Trade deleted');
+        await fetchLiveTrades();
+        setDeleteTradeId(null);
+      } else {
+        const data = await res.json();
+        setDeleteTradeStatus(data.error || 'Failed to delete');
+      }
+    } catch (e: any) {
+      setDeleteTradeStatus(e.message || 'Failed to delete');
     }
   };
 
@@ -895,6 +1060,245 @@ export default function AdminPage() {
               </span>
             )}
           </div>
+        </div>
+
+        {/* Live Trades */}
+        <div className="bg-zinc-900 border border-emerald-500/20 rounded-xl overflow-hidden mb-8">
+          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">📈 Live Trades</h2>
+            <button
+              onClick={fetchLiveTrades}
+              disabled={liveTradesLoading}
+              className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
+            >
+              {liveTradesLoading ? 'Loading...' : liveTradesLoaded ? 'Refresh' : 'Load Trades'}
+            </button>
+          </div>
+          <div className="p-6 space-y-6">
+            <p className="text-xs text-zinc-500">PnL uses CME point values: MNQ $2, NQ $20, MES $5, ES $12.50 per point.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Symbol</label>
+                <select
+                  value={tradeSymbol}
+                  onChange={(e) => setTradeSymbol(e.target.value)}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                >
+                  <option value="MNQ">MNQ (Micro $2/pt)</option>
+                  <option value="NQ">NQ (Mini $20/pt)</option>
+                  <option value="MES">MES (Micro $5/pt)</option>
+                  <option value="ES">ES (Mini $12.50/pt)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Side</label>
+                <select
+                  value={tradeSide}
+                  onChange={(e) => setTradeSide(e.target.value as 'long' | 'short')}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                >
+                  <option value="long">Long</option>
+                  <option value="short">Short</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Quantity (contracts)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={tradeQuantity}
+                  onChange={(e) => setTradeQuantity(e.target.value)}
+                  placeholder="e.g. 2"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Entry price</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={tradeEntryPrice}
+                  onChange={(e) => setTradeEntryPrice(e.target.value)}
+                  placeholder="e.g. 25406.25"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Chart URL (optional)</label>
+              <input
+                type="url"
+                value={tradeChartUrl}
+                onChange={(e) => setTradeChartUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Notes (optional)</label>
+              <textarea
+                value={tradeNotes}
+                onChange={(e) => setTradeNotes(e.target.value)}
+                placeholder="Reasoning, levels, etc."
+                rows={2}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm resize-none"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={tradeSendEmail}
+                onChange={(e) => setTradeSendEmail(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-600"
+              />
+              Send email to users who opted in to trade notifications
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleAddTrade}
+                disabled={tradeAddSending || !tradeQuantity || !tradeEntryPrice}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white font-semibold rounded-lg transition-colors"
+              >
+                {tradeAddSending ? 'Adding...' : 'Add Trade'}
+              </button>
+              {tradeAddStatus && (
+                <span className={`text-sm ${tradeAddStatus.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
+                  {tradeAddStatus}
+                </span>
+              )}
+            </div>
+          </div>
+          {liveTradesLoaded && (
+            <div className="border-t border-zinc-800 divide-y divide-zinc-800/50">
+              {liveTrades.length === 0 ? (
+                <div className="px-6 py-8 text-center text-zinc-500 text-sm">No trades yet. Add one above.</div>
+              ) : (
+                liveTrades.map((t) => (
+                  <div key={t.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
+                    {editingTradeId === t.id ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-0.5">Quantity</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={editTradeQuantity}
+                              onChange={(e) => setEditTradeQuantity(e.target.value)}
+                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-0.5">Entry price</label>
+                            <input
+                              type="number"
+                              step="any"
+                              value={editTradeEntryPrice}
+                              onChange={(e) => setEditTradeEntryPrice(e.target.value)}
+                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-0.5">Exit qty</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={t.quantity}
+                              value={editTradeExitQuantity}
+                              onChange={(e) => setEditTradeExitQuantity(e.target.value)}
+                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-0.5">Exit price</label>
+                            <input
+                              type="number"
+                              step="any"
+                              value={editTradeExitPrice}
+                              onChange={(e) => setEditTradeExitPrice(e.target.value)}
+                              placeholder="When closed"
+                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-0.5">Chart URL</label>
+                          <input
+                            type="url"
+                            value={editTradeChartUrl}
+                            onChange={(e) => setEditTradeChartUrl(e.target.value)}
+                            className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-0.5">Notes</label>
+                          <textarea
+                            value={editTradeNotes}
+                            onChange={(e) => setEditTradeNotes(e.target.value)}
+                            rows={2}
+                            className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm resize-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleUpdateTrade(t.id)}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => { setEditingTradeId(null); setTradeUpdateStatus(''); }}
+                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-semibold rounded-lg"
+                          >
+                            Cancel
+                          </button>
+                          {tradeUpdateStatus && <span className="text-xs text-zinc-400">{tradeUpdateStatus}</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-4">
+                          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-sm">
+                            {t.symbol} {t.side}
+                          </span>
+                          <span className="text-sm text-zinc-300">
+                            {t.quantity} @ {t.entryPrice.toFixed(2)}
+                            {(t.exitQuantity ?? 0) > 0 && (
+                              <span className="text-zinc-500 ml-1">
+                                (exit {t.exitQuantity} @ {t.exitPrice != null ? t.exitPrice.toFixed(2) : '—'})
+                              </span>
+                            )}
+                          </span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${t.status === 'open' ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-600 text-zinc-400'}`}>
+                            {t.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openEditTrade(t)}
+                            className="px-3 py-1.5 bg-zinc-700 hover:bg-emerald-600 text-zinc-300 hover:text-white text-xs font-semibold rounded-lg"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTrade(t.id)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${deleteTradeId === t.id ? 'bg-red-600 text-white' : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'}`}
+                          >
+                            {deleteTradeId === t.id ? 'Confirm' : 'Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          {deleteTradeStatus && (
+            <div className={`px-6 py-2 border-t border-zinc-800 text-sm ${deleteTradeStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
+              {deleteTradeStatus}
+            </div>
+          )}
         </div>
 
         {/* Video Upload to The Vault */}

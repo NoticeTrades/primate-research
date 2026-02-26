@@ -52,8 +52,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { enabled, soundEnabled, tradeNotificationsEnabled, tradeNotificationsEmail } = body;
+
+    // Trade notification preferences: accept if either key is present (allow updating one at a time)
+    const hasTradePref = 'tradeNotificationsEnabled' in body || 'tradeNotificationsEmail' in body;
+    if (hasTradePref) {
+      const sql = getDb();
+      const userCheck = await sql`
+        SELECT trade_notifications_enabled, trade_notifications_email FROM users WHERE email = ${userEmail}
+      `;
+      if (userCheck.length === 0) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      const current = userCheck[0];
+      const newInApp = typeof tradeNotificationsEnabled === 'boolean' ? tradeNotificationsEnabled : (current?.trade_notifications_enabled !== false);
+      const newEmail = typeof tradeNotificationsEmail === 'boolean' ? tradeNotificationsEmail : (current?.trade_notifications_email === true);
+      await sql`
+        UPDATE users SET trade_notifications_enabled = ${newInApp}, trade_notifications_email = ${newEmail}
+        WHERE email = ${userEmail}
+      `;
+      return NextResponse.json({
+        success: true,
+        tradeNotificationsEnabled: newInApp,
+        tradeNotificationsEmail: newEmail,
+      });
+    }
 
     // Support both old format (just enabled) and new format (enabled and soundEnabled)
     if (typeof enabled === 'boolean') {
@@ -133,31 +157,6 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         soundNotificationsEnabled: soundEnabled,
-      });
-    } else if (typeof tradeNotificationsEnabled === 'boolean' || typeof tradeNotificationsEmail === 'boolean') {
-      const sql = getDb();
-      const userCheck = await sql`SELECT id FROM users WHERE email = ${userEmail}`;
-      if (userCheck.length === 0) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-      if (typeof tradeNotificationsEnabled === 'boolean' && typeof tradeNotificationsEmail === 'boolean') {
-        await sql`
-          UPDATE users SET trade_notifications_enabled = ${tradeNotificationsEnabled}, trade_notifications_email = ${tradeNotificationsEmail}
-          WHERE email = ${userEmail}
-        `;
-      } else if (typeof tradeNotificationsEnabled === 'boolean') {
-        await sql`
-          UPDATE users SET trade_notifications_enabled = ${tradeNotificationsEnabled} WHERE email = ${userEmail}
-        `;
-      } else {
-        await sql`
-          UPDATE users SET trade_notifications_email = ${tradeNotificationsEmail} WHERE email = ${userEmail}
-        `;
-      }
-      return NextResponse.json({
-        success: true,
-        tradeNotificationsEnabled: tradeNotificationsEnabled !== undefined ? tradeNotificationsEnabled : undefined,
-        tradeNotificationsEmail: tradeNotificationsEmail !== undefined ? tradeNotificationsEmail : undefined,
       });
     } else {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });

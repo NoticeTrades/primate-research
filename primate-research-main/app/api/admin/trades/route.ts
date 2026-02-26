@@ -57,22 +57,29 @@ export async function POST(request: Request) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://primate-research.vercel.app';
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'Primate Research <notifications@resend.dev>';
       const resend = new Resend(process.env.RESEND_API_KEY);
+      const notesHtml = notes && notes.trim()
+        ? `<div style="background-color: #18181b; border: 1px solid #22c55e33; border-radius: 12px; padding: 20px; margin: 16px 0; border-left: 4px solid #22c55e;">
+            <p style="color: #22c55e; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px 0;">Notes / reasoning</p>
+            <p style="font-size: 14px; color: #e4e4e7; line-height: 1.6; margin: 0; white-space: pre-wrap;">${notes.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+          </div>`
+        : '';
       const emailHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #09090b; color: #fafafa; padding: 40px 24px; border-radius: 16px;">
           ${getEmailLogoHtml(siteUrl)}
-          <div style="text-align: center; margin-bottom: 32px;">
+          <div style="text-align: center; margin-bottom: 28px;">
             <h1 style="font-size: 20px; font-weight: 700; color: #fafafa; margin: 0;">Primate Research</h1>
           </div>
-          <div style="background-color: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-            <p style="color: #22c55e; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px 0;">New Live Trade</p>
-            <h2 style="font-size: 22px; font-weight: 700; color: #fafafa; margin: 0 0 12px 0;">${title}</h2>
-            ${description ? `<p style="font-size: 14px; color: #a1a1aa; line-height: 1.6; margin: 0;">${description}</p>` : ''}
+          <div style="background-color: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 24px; margin-bottom: 16px;">
+            <p style="color: #22c55e; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 10px 0;">New live trade</p>
+            <h2 style="font-size: 22px; font-weight: 700; color: #fafafa; margin: 0 0 8px 0; letter-spacing: -0.02em;">${title}</h2>
+            <p style="font-size: 14px; color: #a1a1aa; margin: 0;">View real-time P&L and updates on the Live Trades page.</p>
           </div>
-          <div style="text-align: center; margin-bottom: 32px;">
-            <a href="${siteUrl}/trades" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">View Live Trades →</a>
+          ${notesHtml}
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${siteUrl}/trades" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 28px; border-radius: 8px;">View live trades</a>
           </div>
           <div style="border-top: 1px solid #27272a; padding-top: 16px; text-align: center;">
-            <p style="font-size: 12px; color: #52525b; margin: 0;">You get these because you enabled trade email notifications.</p>
+            <p style="font-size: 12px; color: #52525b; margin: 0;">You received this because you enabled trade email notifications.</p>
           </div>
         </div>
       `;
