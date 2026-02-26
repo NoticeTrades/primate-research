@@ -338,6 +338,23 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_chat_message_files_message ON chat_message_files(message_id)
   `;
 
+  // Live trades table (admin-managed, displayed on /trades with real-time PnL)
+  await sql`
+    CREATE TABLE IF NOT EXISTS live_trades (
+      id SERIAL PRIMARY KEY,
+      symbol TEXT NOT NULL,
+      side TEXT NOT NULL CHECK (side IN ('long', 'short')),
+      quantity INTEGER NOT NULL CHECK (quantity > 0),
+      entry_price DECIMAL(20, 4) NOT NULL,
+      exit_quantity INTEGER DEFAULT 0,
+      exit_price DECIMAL(20, 4),
+      chart_url TEXT,
+      notes TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `;
+
   // Index market structure table (for ES, NQ, YM analysis)
   await sql`
     CREATE TABLE IF NOT EXISTS index_market_structure (

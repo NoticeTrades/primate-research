@@ -461,7 +461,14 @@ export default function AdminPage() {
           send_notification_email: tradeSendEmail,
         }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: { error?: string; emailSent?: number } = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        setTradeAddStatus(`Error: Server returned invalid response. Run Setup in Admin if you haven't.`);
+        return;
+      }
       if (res.ok) {
         setTradeAddStatus(`✅ Trade added. Notification sent.${data.emailSent != null ? ` ${data.emailSent} email(s) sent.` : ''}`);
         setTradeQuantity('');

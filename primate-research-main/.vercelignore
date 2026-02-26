@@ -1,5 +1,0 @@
-# Vercel ignore file - don't deploy these
-data/users.json
-data/README.md
-*.md
-!.vercelignore
