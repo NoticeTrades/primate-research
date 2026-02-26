@@ -15,20 +15,32 @@ export async function GET() {
     }
 
     const sql = getDb();
-    const result = await sql`
-      SELECT browser_notifications_enabled, sound_notifications_enabled
-      FROM users
-      WHERE email = ${userEmail}
-    `;
-
+    let result: { browser_notifications_enabled?: boolean; sound_notifications_enabled?: boolean; trade_notifications_enabled?: boolean; trade_notifications_email?: boolean }[];
+    try {
+      result = await sql`
+        SELECT browser_notifications_enabled, sound_notifications_enabled,
+               trade_notifications_enabled, trade_notifications_email
+        FROM users WHERE email = ${userEmail}
+      `;
+    } catch {
+      result = await sql`
+        SELECT browser_notifications_enabled, sound_notifications_enabled FROM users WHERE email = ${userEmail}
+      `;
+    }
     if (result.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      browserNotificationsEnabled: result[0].browser_notifications_enabled || false,
-      soundNotificationsEnabled: result[0].sound_notifications_enabled !== false, // Default to true
-    });
+    const r = result[0];
+    const out: Record<string, boolean> = {
+      browserNotificationsEnabled: r.browser_notifications_enabled || false,
+      soundNotificationsEnabled: r.sound_notifications_enabled !== false,
+    };
+    if ('trade_notifications_enabled' in r) {
+      out.tradeNotificationsEnabled = r.trade_notifications_enabled !== false;
+      out.tradeNotificationsEmail = r.trade_notifications_email === true;
+    }
+    return NextResponse.json(out);
   } catch (error) {
     console.error('Get notification preferences error:', error);
     return NextResponse.json(
@@ -48,8 +60,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { enabled, soundEnabled } = body;
+    const body = await request.json().catch(() => ({}));
+    const { enabled, soundEnabled, tradeNotificationsEnabled, tradeNotificationsEmail } = body;
+
+    // Trade notification preferences: accept if either key is present
+    const hasTradePref = 'tradeNotificationsEnabled' in body || 'tradeNotificationsEmail' in body;
+    if (hasTradePref) {
+      const sql = getDb();
+      try {
+        const userCheck = await sql`
+          SELECT trade_notifications_enabled, trade_notifications_email FROM users WHERE email = ${userEmail}
+        `;
+        if (userCheck.length === 0) {
+          return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+        const current = userCheck[0];
+        const newInApp = typeof tradeNotificationsEnabled === 'boolean' ? tradeNotificationsEnabled : (current?.trade_notifications_enabled !== false);
+        const newEmail = typeof tradeNotificationsEmail === 'boolean' ? tradeNotificationsEmail : (current?.trade_notifications_email === true);
+        await sql`
+          UPDATE users SET trade_notifications_enabled = ${newInApp}, trade_notifications_email = ${newEmail}
+          WHERE email = ${userEmail}
+        `;
+        return NextResponse.json({
+          success: true,
+          tradeNotificationsEnabled: newInApp,
+          tradeNotificationsEmail: newEmail,
+        });
+      } catch (dbErr: any) {
+        if (dbErr?.message?.includes('trade_notifications') || dbErr?.code === '42703') {
+          return NextResponse.json(
+            { error: 'Database setup required. Run Setup in Admin to add trade notification columns.' },
+            { status: 500 }
+          );
+        }
+        throw dbErr;
+      }
+    }
 
     // Support both old format (just enabled) and new format (enabled and soundEnabled)
     if (typeof enabled === 'boolean') {
