@@ -452,6 +452,12 @@ export default function NotificationsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         );
+      case 'trade':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+        );
       default:
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -477,6 +483,8 @@ export default function NotificationsPage() {
         return 'bg-orange-500/15 text-orange-400 border-orange-500/30';
       case 'dm':
         return 'bg-teal-500/15 text-teal-400 border-teal-500/30';
+      case 'trade':
+        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
       case 'alert':
         return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30';
       default:
@@ -501,6 +509,8 @@ export default function NotificationsPage() {
           return 'border-orange-500/30';
         case 'dm':
           return 'border-teal-500/30';
+        case 'trade':
+          return 'border-emerald-500/40';
         case 'alert':
           return 'border-zinc-500/30';
         default:
@@ -522,6 +532,8 @@ export default function NotificationsPage() {
           return 'border-orange-500/50';
         case 'dm':
           return 'border-teal-500/50';
+        case 'trade':
+          return 'border-emerald-500/50';
         case 'alert':
           return 'border-zinc-500/50';
         default:
@@ -546,6 +558,8 @@ export default function NotificationsPage() {
         return 'shadow-[0_0_20px_rgba(249,115,22,0.15)] bg-orange-500/5';
       case 'dm':
         return 'shadow-[0_0_20px_rgba(20,184,166,0.15)] bg-teal-500/5';
+      case 'trade':
+        return 'shadow-[0_0_20px_rgba(16,185,129,0.2)] bg-emerald-500/10';
       case 'alert':
         return 'shadow-[0_0_15px_rgba(161,161,170,0.08)]';
       default:
@@ -560,6 +574,8 @@ export default function NotificationsPage() {
         return 'Mention';
       case 'dm':
         return 'DM';
+      case 'trade':
+        return 'Trade';
       default:
         return type?.charAt(0).toUpperCase() + (type?.slice(1) || '');
     }
@@ -821,95 +837,98 @@ export default function NotificationsPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`bg-zinc-900/80 border rounded-xl overflow-hidden transition-all hover:opacity-90 ${
-                    notification.is_read
-                      ? `${getTypeBorderColor(notification.type, true)} opacity-75`
-                      : `${getTypeBorderColor(notification.type, false)} ${getTypeGlowColor(notification.type)}`
-                  }`}
-                >
-                  <div className="flex items-start gap-4 p-4">
-                    {/* Type Icon */}
-                    <div className={`p-2 rounded-lg ${getTypeColor(notification.type)} shrink-0`}>
-                      {getTypeIcon(notification.type)}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3 mb-1">
-                        <div className="flex-1 min-w-0">
-                          <h3 className={`text-sm font-semibold mb-0.5 ${notification.is_read ? 'text-zinc-400' : 'text-zinc-100'}`}>
-                            {notification.title}
-                          </h3>
-                          <p className="text-xs text-zinc-500 mb-2">{notification.description}</p>
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs text-zinc-600">{formatDate(notification.created_at)}</span>
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${getTypeColor(notification.type)}`}>
-                              {getTypeLabel(notification.type)}
-                            </span>
-                            {!notification.is_read && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                                New
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => handleDelete(notification.id)}
-                          disabled={deletingIds.has(notification.id)}
-                          className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Delete notification"
-                        >
-                          {deletingIds.has(notification.id) ? (
-                            <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          )}
-                        </button>
+            <div className="space-y-3">
+              {filteredNotifications.map((notification) => {
+                const isTrade = notification.type?.toLowerCase() === 'trade';
+                const linkContent = notification.link ? (() => {
+                  const chatParams = parseChatLink(notification.link);
+                  if (chatParams) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => openChat(chatParams)}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+                      >
+                        View
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    );
+                  }
+                  return (
+                    <a
+                      href={notification.link}
+                      className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                        isTrade
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30'
+                          : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30'
+                      }`}
+                    >
+                      View
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  );
+                })() : null;
+                return (
+                  <div
+                    key={notification.id}
+                    className={`relative rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg ${
+                      notification.is_read
+                        ? `bg-zinc-900/70 border ${getTypeBorderColor(notification.type, true)} opacity-80`
+                        : `bg-zinc-900/90 border-l-4 ${notification.type?.toLowerCase() === 'trade' ? 'border-l-emerald-500' : 'border-l-blue-500'} ${getTypeBorderColor(notification.type, false)} ${getTypeGlowColor(notification.type)}`
+                    }`}
+                  >
+                    <div className="flex items-start gap-4 p-5">
+                      <div className={`p-2.5 rounded-xl shrink-0 ${getTypeColor(notification.type)}`}>
+                        {getTypeIcon(notification.type)}
                       </div>
-
-                      {/* Link Button — open chat in-app for DM/mention, else navigate */}
-                      {notification.link && (
-                        (() => {
-                          const chatParams = parseChatLink(notification.link);
-                          if (chatParams) {
-                            return (
-                              <button
-                                type="button"
-                                onClick={() => openChat(chatParams)}
-                                className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-colors"
-                              >
-                                View
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                              </button>
-                            );
-                          }
-                          return (
-                            <a
-                              href={notification.link}
-                              className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-colors"
-                            >
-                              View
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className={`text-base font-bold mb-1 ${notification.is_read ? 'text-zinc-400' : 'text-zinc-50'}`}>
+                              {notification.title}
+                            </h3>
+                            <p className="text-sm text-zinc-400 mb-3">{notification.description}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs text-zinc-500">{formatDate(notification.created_at)}</span>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${getTypeColor(notification.type)}`}>
+                                {getTypeLabel(notification.type)}
+                              </span>
+                              {!notification.is_read && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/40">
+                                  New
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDelete(notification.id)}
+                            disabled={deletingIds.has(notification.id)}
+                            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0 disabled:opacity-50"
+                            title="Delete"
+                          >
+                            {deletingIds.has(notification.id) ? (
+                              <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
-                            </a>
-                          );
-                        })()
-                      )}
+                            )}
+                          </button>
+                        </div>
+                        {linkContent && (
+                          <div className="mt-4">
+                            {linkContent}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
