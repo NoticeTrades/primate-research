@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       `;
     }
 
-    const trades = rows.map((r: { id: number; symbol: string; side: string; quantity: number; entry_price: string | number; exit_quantity: number | null; exit_price: string | number | null; chart_url: string | null; notes: string | null; created_at: string; updated_at: string }) => ({
+    const trades = (rows as Array<{ id: number; symbol: string; side: string; quantity: number; entry_price: string | number; exit_quantity?: number | null; exit_price?: string | number | null; chart_url?: string | null; notes?: string | null; created_at: string; updated_at: string }>).map((r) => ({
       id: r.id,
       symbol: r.symbol,
       side: r.side,
