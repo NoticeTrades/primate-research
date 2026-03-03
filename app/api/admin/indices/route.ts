@@ -40,17 +40,30 @@ export async function POST(request: Request) {
     }
 
     const sql = getDb();
-    
+    const sym = symbol.toUpperCase();
+
     // Upsert market structure
     await sql`
       INSERT INTO index_market_structure (symbol, daily_structure, weekly_structure, monthly_structure, updated_at)
-      VALUES (${symbol.toUpperCase()}, ${daily}, ${weekly}, ${monthly || null}, NOW())
+      VALUES (${sym}, ${daily}, ${weekly}, ${monthly || null}, NOW())
       ON CONFLICT (symbol) 
       DO UPDATE SET 
         daily_structure = EXCLUDED.daily_structure,
         weekly_structure = EXCLUDED.weekly_structure,
         monthly_structure = EXCLUDED.monthly_structure,
         updated_at = NOW()
+    `;
+
+    // Bell notification for all users: market structure updated
+    const indexName = sym === 'ES' ? 'E-mini S&P 500' : sym === 'NQ' ? 'E-mini NASDAQ-100' : sym === 'YM' ? 'E-mini Dow' : sym;
+    await sql`
+      INSERT INTO notifications (title, description, link, type)
+      VALUES (
+        ${`Market structure updated: ${sym}`},
+        ${`${indexName} (${sym}) daily/weekly structure has been updated. View the ${sym} page for details.`},
+        ${`/indices/${sym}`},
+        'update'
+      )
     `;
 
     return NextResponse.json({ success: true, message: 'Market structure updated' });

@@ -503,22 +503,6 @@ export default function IndexAnalysisPage() {
               </div>
             </div>
           )}
-
-          {/* TradingView embed */}
-          <div className="mt-8 bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6">
-            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">
-              Price chart
-            </h3>
-            <div className="h-[500px] w-full rounded-xl overflow-hidden bg-zinc-950">
-              <iframe
-                title={`${data.symbol} chart`}
-                src={`https://www.tradingview.com/widgetembed/?symbol=CME:${data.symbol}1!&interval=D&theme=dark&style=1&locale=en&toolbar_bg=1a1a1a&enable_publishing=false&allow_symbol_change=true`}
-                className="w-full h-full"
-                frameBorder={0}
-                allow="clipboard-write"
-              />
-            </div>
-          </div>
         </div>
       </div>
     </div>
