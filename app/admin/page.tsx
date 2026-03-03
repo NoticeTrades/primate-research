@@ -582,6 +582,18 @@ export default function AdminPage() {
     setTradeUpdateStatus('');
   };
 
+  /** Open edit form with exit qty set to full quantity so user only needs to enter exit price and save (mark closed). */
+  const openEditTradeAsClose = (t: { id: number; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null }) => {
+    setEditingTradeId(t.id);
+    setEditTradeQuantity(String(t.quantity));
+    setEditTradeEntryPrice(String(t.entryPrice));
+    setEditTradeExitQuantity(String(t.quantity));
+    setEditTradeExitPrice(t.exitPrice != null ? String(t.exitPrice) : '');
+    setEditTradeChartUrl(t.chartUrl || '');
+    setEditTradeNotes(t.notes || '');
+    setTradeUpdateStatus('Enter exit price above and click Save to mark trade closed. Users will get a bell notification.');
+  };
+
   const handleUpdateTrade = async (id: number) => {
     const qty = parseInt(editTradeQuantity, 10);
     const entry = parseFloat(editTradeEntryPrice);
@@ -1268,6 +1280,11 @@ export default function AdminPage() {
                   <div key={t.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
                     {editingTradeId === t.id ? (
                       <div className="space-y-3">
+                        <p className="text-xs text-zinc-500 font-medium">Close or partial exit</p>
+                        <ul className="text-xs text-zinc-500 list-disc list-inside space-y-0.5 mb-2">
+                          <li><strong>Fully closed:</strong> set Exit qty = Quantity, enter Exit price, then Save. Users get a bell notification.</li>
+                          <li><strong>Partial:</strong> set Exit qty = contracts already closed, enter Exit price for that portion. Add details in Notes (e.g. &quot;Managed stop&quot;, &quot;Scaled out 1&quot;).</li>
+                        </ul>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                           <div>
                             <label className="block text-xs text-zinc-400 mb-0.5">Quantity</label>
@@ -1290,7 +1307,7 @@ export default function AdminPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-zinc-400 mb-0.5">Exit qty</label>
+                            <label className="block text-xs text-zinc-400 mb-0.5">Exit qty (closed)</label>
                             <input
                               type="number"
                               min={0}
@@ -1298,6 +1315,7 @@ export default function AdminPage() {
                               value={editTradeExitQuantity}
                               onChange={(e) => setEditTradeExitQuantity(e.target.value)}
                               className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                              title="Number of contracts closed so far (0 = still open, same as Quantity = fully closed)"
                             />
                           </div>
                           <div>
@@ -1307,7 +1325,7 @@ export default function AdminPage() {
                               step="any"
                               value={editTradeExitPrice}
                               onChange={(e) => setEditTradeExitPrice(e.target.value)}
-                              placeholder="When closed"
+                              placeholder="Avg exit price"
                               className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
                             />
                           </div>
@@ -1322,11 +1340,12 @@ export default function AdminPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-zinc-400 mb-0.5">Notes</label>
+                          <label className="block text-xs text-zinc-400 mb-0.5">Notes (e.g. Closed, Partial, Managed stop)</label>
                           <textarea
                             value={editTradeNotes}
                             onChange={(e) => setEditTradeNotes(e.target.value)}
                             rows={2}
+                            placeholder="Reasoning, levels, managed stop, scaled out, etc."
                             className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm resize-none"
                           />
                         </div>
@@ -1365,6 +1384,15 @@ export default function AdminPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
+                          {t.status === 'open' && (
+                            <button
+                              onClick={() => openEditTradeAsClose(t)}
+                              className="px-3 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg"
+                              title="Mark trade closed: enter exit price and save"
+                            >
+                              Close trade
+                            </button>
+                          )}
                           <button
                             onClick={() => openEditTrade(t)}
                             className="px-3 py-1.5 bg-zinc-700 hover:bg-emerald-600 text-zinc-300 hover:text-white text-xs font-semibold rounded-lg"
