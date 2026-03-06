@@ -1170,11 +1170,11 @@ export default function AdminPage() {
               )}
             </div>
           </div>
-          </>
-          )}
-  
-          {/* Tab: Live Trades */}
-          {activeTab === 'trades' && (
+        </>
+        )}
+
+        {/* Tab: Live Trades */}
+        {activeTab === 'trades' && (
           <>
           {/* Live Trades */}
           <div className="bg-zinc-900 border border-emerald-500/20 rounded-xl overflow-hidden mb-8">
@@ -1579,11 +1579,13 @@ export default function AdminPage() {
               )}
             </div>
           </div>
-          </>
-          )}
-  
-          {/* Tab: Feedback */}
-          {activeTab === 'feedback' && (
+        </>
+        )}
+        </>
+        )}
+
+        {/* Tab: Feedback */}
+        {activeTab === 'feedback' && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
             <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
               <h2 className="text-lg font-semibold">💬 User Feedback</h2>
@@ -1645,10 +1647,10 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-          )}
-  
-          {/* Tab: Indices */}
-          {activeTab === 'indices' && (
+        )}
+
+        {/* Tab: Indices */}
+        {activeTab === 'indices' && (
           <>
           <div className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden mb-8">
             <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
@@ -1885,10 +1887,10 @@ export default function AdminPage() {
             </div>
           </div>
           </>
-          )}
-  
-          {/* Tab: Videos (Manage) - same tab as Upload */}
-          {activeTab === 'videos' && (
+        )}
+
+        {/* Tab: Videos (Manage) - same tab as Upload */}
+        {activeTab === 'videos' && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
             <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
               <h2 className="text-lg font-semibold">🎬 Manage Videos</h2>
@@ -1949,10 +1951,10 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-          )}
-  
-          {/* Tab: Users */}
-          {activeTab === 'users' ? (
+        )}
+
+        {/* Tab: Users */}
+        {activeTab === 'users' && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
               <div className="px-6 py-4 border-b border-zinc-800">
                 <h2 className="text-lg font-semibold">Registered Users</h2>
@@ -1996,7 +1998,7 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
-          ) : null}
+          )}
         <span className="hidden" aria-hidden />
     </div>
   );
