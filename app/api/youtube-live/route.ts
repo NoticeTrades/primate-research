@@ -22,14 +22,25 @@ export async function GET() {
     let resolvedChannelId = channelId?.trim();
 
     if (!resolvedChannelId && channelHandle) {
-      const handle = channelHandle.replace(/^@/, '');
+      const handle = channelHandle.replace(/^@/, '').trim();
+      // forHandle is for @handle (e.g. @noticetrades); forUsername is legacy username only
       const channelsRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/channels?part=id&forUsername=${encodeURIComponent(handle)}&key=${apiKey}`,
-        { next: { revalidate: 3600 } }
+        `https://www.googleapis.com/youtube/v3/channels?part=id,snippet&forHandle=${encodeURIComponent(handle)}&key=${apiKey}`,
+        { cache: 'no-store' }
       );
       const channelsData = await channelsRes.json();
-      const first = channelsData?.items?.[0];
+      let first = channelsData?.items?.[0];
       if (first?.id) resolvedChannelId = first.id;
+      // Fallback: search for channel by handle (e.g. if forHandle not supported or returns nothing)
+      if (!resolvedChannelId && channelsData?.items?.length === 0) {
+        const searchRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q=${encodeURIComponent('@' + handle)}&type=channel&key=${apiKey}`,
+          { cache: 'no-store' }
+        );
+        const searchData = await searchRes.json();
+        const channelItem = searchData?.items?.[0];
+        if (channelItem?.id?.channelId) resolvedChannelId = channelItem.id.channelId;
+      }
     }
 
     if (!resolvedChannelId) {
