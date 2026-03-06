@@ -2020,49 +2020,49 @@ export default function AdminPage() {
 
         {/* Tab: Users */}
         {activeTab === 'users' && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-zinc-800">
-            <h2 className="text-lg font-semibold">Registered Users</h2>
-          </div>
-          {users.length === 0 ? (
-            <div className="px-6 py-12 text-center text-zinc-500">
-              No users have signed up yet.
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-zinc-800">
+              <h2 className="text-lg font-semibold">Registered Users</h2>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-800 text-zinc-400">
-                    <th className="text-left px-6 py-3 font-medium">#</th>
-                    <th className="text-left px-6 py-3 font-medium">Name</th>
-                    <th className="text-left px-6 py-3 font-medium">Email</th>
-                    <th className="text-left px-6 py-3 font-medium">Username</th>
-                    <th className="text-left px-6 py-3 font-medium">Signed Up</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user, i) => (
-                    <tr key={user.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-6 py-3 text-zinc-500">{i + 1}</td>
-                      <td className="px-6 py-3 font-medium">{user.name}</td>
-                      <td className="px-6 py-3 text-blue-400">{user.email}</td>
-                      <td className="px-6 py-3 text-zinc-300">{user.username}</td>
-                      <td className="px-6 py-3 text-zinc-500">
-                        {new Date(user.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
+            {users.length === 0 ? (
+              <div className="px-6 py-12 text-center text-zinc-500">
+                No users have signed up yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-zinc-400">
+                      <th className="text-left px-6 py-3 font-medium">#</th>
+                      <th className="text-left px-6 py-3 font-medium">Name</th>
+                      <th className="text-left px-6 py-3 font-medium">Email</th>
+                      <th className="text-left px-6 py-3 font-medium">Username</th>
+                      <th className="text-left px-6 py-3 font-medium">Signed Up</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {users.map((user, i) => (
+                      <tr key={user.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+                        <td className="px-6 py-3 text-zinc-500">{i + 1}</td>
+                        <td className="px-6 py-3 font-medium">{user.name}</td>
+                        <td className="px-6 py-3 text-blue-400">{user.email}</td>
+                        <td className="px-6 py-3 text-zinc-300">{user.username}</td>
+                        <td className="px-6 py-3 text-zinc-500">
+                          {new Date(user.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
