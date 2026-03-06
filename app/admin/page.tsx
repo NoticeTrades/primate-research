@@ -983,6 +983,1023 @@ export default function AdminPage() {
     );
   }
 
+  const AdminTabPanels = () => (
+    <>
+          {/* Tab: Overview */}
+          {activeTab === 'overview' && (
+            <div className="space-y-4 mb-8">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                <h2 className="text-lg font-semibold mb-2">Quick access</h2>
+                <p className="text-sm text-zinc-400 mb-4">Use the tabs above to jump to a section. No need to scroll.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <button onClick={() => setActiveTab('notifications')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                    <span className="text-lg">🔔</span>
+                    <p className="text-sm font-medium text-zinc-200 mt-1">Notifications</p>
+                    <p className="text-xs text-zinc-500">Report + bell + delete all</p>
+                  </button>
+                  <button onClick={() => setActiveTab('trades')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                    <span className="text-lg">📈</span>
+                    <p className="text-sm font-medium text-zinc-200 mt-1">Live Trades</p>
+                    <p className="text-xs text-zinc-500">Add, edit, close trades</p>
+                  </button>
+                  <button onClick={() => setActiveTab('videos')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                    <span className="text-lg">🎬</span>
+                    <p className="text-sm font-medium text-zinc-200 mt-1">Videos</p>
+                    <p className="text-xs text-zinc-500">Upload & manage vault</p>
+                  </button>
+                  <button onClick={() => setActiveTab('indices')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                    <span className="text-lg">📊</span>
+                    <p className="text-sm font-medium text-zinc-200 mt-1">Indices</p>
+                    <p className="text-xs text-zinc-500">ES/NQ/YM structure & charts</p>
+                  </button>
+                  <button onClick={() => setActiveTab('feedback')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                    <span className="text-lg">💬</span>
+                    <p className="text-sm font-medium text-zinc-200 mt-1">Feedback</p>
+                    <p className="text-xs text-zinc-500">User submissions</p>
+                  </button>
+                  <button onClick={() => setActiveTab('users')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                    <span className="text-lg">👥</span>
+                    <p className="text-sm font-medium text-zinc-200 mt-1">Users</p>
+                    <p className="text-xs text-zinc-500">Registered subscribers</p>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+  
+          {/* Tab: Notifications */}
+          {activeTab === 'notifications' && (
+          <>
+          {/* New Report / Article Notification */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
+            <h2 className="text-lg font-semibold mb-1">📢 New Report Notification</h2>
+            <p className="text-sm text-zinc-400 mb-4">
+              Creates a bell notification for all users and optionally sends an email blast.
+            </p>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={notifyTitle}
+                onChange={(e) => setNotifyTitle(e.target.value)}
+                placeholder="Report title (e.g. Weekly Market Outlook — 02/09/2026)"
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <textarea
+                value={notifyDesc}
+                onChange={(e) => setNotifyDesc(e.target.value)}
+                placeholder="Short description (shown in bell dropdown & email)"
+                rows={3}
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+              <input
+                type="text"
+                value={notifyLink}
+                onChange={(e) => setNotifyLink(e.target.value)}
+                placeholder="Link (optional — e.g. /research or a PDF URL)"
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500"
+                />
+                Also send email to all {totalUsers} subscriber{totalUsers !== 1 ? 's' : ''}
+              </label>
+              {sendEmail && (
+                <p className="text-xs text-zinc-500">
+                  Requires <code className="bg-zinc-800 px-1 rounded">RESEND_API_KEY</code> in your environment.
+                  With the default <code className="bg-zinc-800 px-1 rounded">notifications@resend.dev</code>, Resend only delivers to the email that owns your Resend account. To send to all subscribers, add and verify your own domain in Resend and set <code className="bg-zinc-800 px-1 rounded">RESEND_FROM_EMAIL</code>.
+                </p>
+              )}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleNotify}
+                  disabled={notifySending || !notifyTitle.trim()}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold rounded-lg transition-colors"
+                >
+                  {notifySending ? 'Sending...' : 'Publish Notification'}
+                </button>
+                {notifyStatus && (
+                  <span className={`text-sm ${notifyStatus.startsWith('Error') || notifyStatus.startsWith('Bell created, but') ? 'text-yellow-400' : 'text-green-400'}`}>
+                    {notifyStatus}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+  
+          {/* Bell-Only Notification */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
+            <h2 className="text-lg font-semibold mb-1">🔔 Bell-Only Notification</h2>
+            <p className="text-sm text-zinc-400 mb-4">
+              Creates a notification that appears in the bell dropdown only (no email). Good for site updates, new features, etc.
+            </p>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={bellTitle}
+                onChange={(e) => setBellTitle(e.target.value)}
+                placeholder="Title (e.g. New feature: Video section is live!)"
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <textarea
+                value={bellDesc}
+                onChange={(e) => setBellDesc(e.target.value)}
+                placeholder="Description (optional)"
+                rows={2}
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+              <input
+                type="text"
+                value={bellLink}
+                onChange={(e) => setBellLink(e.target.value)}
+                placeholder="Link (optional — e.g. /videos)"
+                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <div className="flex items-center gap-3">
+                <select
+                  value={bellType}
+                  onChange={(e) => setBellType(e.target.value)}
+                  className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="article">🔵 Article</option>
+                  <option value="update">🟡 Update</option>
+                  <option value="video">🟣 Video</option>
+                  <option value="alert">⚪ General</option>
+                </select>
+                <button
+                  onClick={handleBellOnly}
+                  disabled={bellSending || !bellTitle.trim()}
+                  className="px-6 py-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-700/50 text-white font-semibold rounded-lg transition-colors"
+                >
+                  {bellSending ? 'Creating...' : 'Create Bell Notification'}
+                </button>
+                {bellStatus && (
+                  <span className={`text-sm ${bellStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
+                    {bellStatus}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+  
+          {/* Delete All Notifications */}
+          <div className="bg-zinc-900 border border-red-500/20 rounded-xl p-6 mb-8">
+            <h2 className="text-lg font-semibold mb-1">🗑️ Delete All Notifications</h2>
+            <p className="text-sm text-zinc-400 mb-4">
+              Permanently removes all bell notifications from the database. New users won&apos;t see any old notifications.
+            </p>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleDeleteAllNotifications}
+                disabled={deleting}
+                className={`px-6 py-2.5 font-semibold rounded-lg transition-colors ${
+                  confirmDelete
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'
+                } disabled:opacity-50`}
+              >
+                {deleting ? 'Deleting...' : confirmDelete ? 'Confirm Delete All' : 'Delete All Notifications'}
+              </button>
+              {deleteStatus && (
+                <span className={`text-sm ${deleteStatus.startsWith('Error') || deleteStatus.startsWith('Failed') ? 'text-red-400' : deleteStatus.startsWith('Click') ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {deleteStatus}
+                </span>
+              )}
+            </div>
+          </div>
+          </>
+          )}
+  
+          {/* Tab: Live Trades */}
+          {activeTab === 'trades' && (
+          <>
+          {/* Live Trades */}
+          <div className="bg-zinc-900 border border-emerald-500/20 rounded-xl overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">📈 Live Trades</h2>
+              <button
+                onClick={fetchLiveTrades}
+                disabled={liveTradesLoading}
+                className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
+              >
+                {liveTradesLoading ? 'Loading...' : liveTradesLoaded ? 'Refresh' : 'Load Trades'}
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <p className="text-xs text-zinc-500">PnL uses CME point values: MNQ $2, NQ $20, MES $5, ES $12.50 per point.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-1">Symbol</label>
+                  <select
+                    value={tradeSymbol}
+                    onChange={(e) => setTradeSymbol(e.target.value)}
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                  >
+                    <option value="MNQ">MNQ (Micro $2/pt)</option>
+                    <option value="NQ">NQ (Mini $20/pt)</option>
+                    <option value="MES">MES (Micro $5/pt)</option>
+                    <option value="ES">ES (Mini $12.50/pt)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-1">Side</label>
+                  <select
+                    value={tradeSide}
+                    onChange={(e) => setTradeSide(e.target.value as 'long' | 'short')}
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                  >
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-1">Quantity (contracts)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={tradeQuantity}
+                    onChange={(e) => setTradeQuantity(e.target.value)}
+                    placeholder="e.g. 2"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-1">Entry price</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={tradeEntryPrice}
+                    onChange={(e) => setTradeEntryPrice(e.target.value)}
+                    placeholder="e.g. 25406.25"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Chart URL (optional)</label>
+                <input
+                  type="url"
+                  value={tradeChartUrl}
+                  onChange={(e) => setTradeChartUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Notes (optional)</label>
+                <textarea
+                  value={tradeNotes}
+                  onChange={(e) => setTradeNotes(e.target.value)}
+                  placeholder="Reasoning, levels, etc."
+                  rows={2}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm resize-none"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={tradeSendEmail}
+                  onChange={(e) => setTradeSendEmail(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-600"
+                />
+                Send email to users who opted in to trade notifications
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleAddTrade}
+                  disabled={tradeAddSending || !tradeQuantity || !tradeEntryPrice}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white font-semibold rounded-lg transition-colors"
+                >
+                  {tradeAddSending ? 'Adding...' : 'Add Trade'}
+                </button>
+                {tradeAddStatus && (
+                  <span className={`text-sm ${tradeAddStatus.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
+                    {tradeAddStatus}
+                  </span>
+                )}
+              </div>
+            </div>
+            {liveTradesLoaded && (
+              <div className="border-t border-zinc-800 divide-y divide-zinc-800/50">
+                {liveTrades.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-zinc-500 text-sm">No trades yet. Add one above.</div>
+                ) : (
+                  liveTrades.map((t) => (
+                    <div key={t.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
+                      {editingTradeId === t.id ? (
+                        <div className="space-y-3">
+                          <p className="text-xs text-zinc-500 font-medium">Close or partial exit</p>
+                          <ul className="text-xs text-zinc-500 list-disc list-inside space-y-0.5 mb-2">
+                            <li><strong>Fully closed:</strong> set Exit qty = Quantity, enter Exit price, then Save. Users get a bell notification.</li>
+                            <li><strong>Partial:</strong> set Exit qty = contracts already closed, enter Exit price for that portion. Add details in Notes (e.g. &quot;Managed stop&quot;, &quot;Scaled out 1&quot;).</li>
+                          </ul>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-0.5">Quantity</label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={editTradeQuantity}
+                                onChange={(e) => setEditTradeQuantity(e.target.value)}
+                                className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-0.5">Entry price</label>
+                              <input
+                                type="number"
+                                step="any"
+                                value={editTradeEntryPrice}
+                                onChange={(e) => setEditTradeEntryPrice(e.target.value)}
+                                className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-0.5">Exit qty (closed)</label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={t.quantity}
+                                value={editTradeExitQuantity}
+                                onChange={(e) => setEditTradeExitQuantity(e.target.value)}
+                                className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                                title="Number of contracts closed so far (0 = still open, same as Quantity = fully closed)"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-0.5">Exit price</label>
+                              <input
+                                type="number"
+                                step="any"
+                                value={editTradeExitPrice}
+                                onChange={(e) => setEditTradeExitPrice(e.target.value)}
+                                placeholder="Avg exit price"
+                                className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-0.5">Chart URL</label>
+                            <input
+                              type="url"
+                              value={editTradeChartUrl}
+                              onChange={(e) => setEditTradeChartUrl(e.target.value)}
+                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-0.5">Notes (e.g. Closed, Partial, Managed stop)</label>
+                            <textarea
+                              value={editTradeNotes}
+                              onChange={(e) => setEditTradeNotes(e.target.value)}
+                              rows={2}
+                              placeholder="Reasoning, levels, managed stop, scaled out, etc."
+                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm resize-none"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleUpdateTrade(t.id)}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => { setEditingTradeId(null); setTradeUpdateStatus(''); }}
+                              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-semibold rounded-lg"
+                            >
+                              Cancel
+                            </button>
+                            {tradeUpdateStatus && <span className="text-xs text-zinc-400">{tradeUpdateStatus}</span>}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <div className="flex items-center gap-4">
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-sm">
+                              {t.symbol} {t.side}
+                            </span>
+                            <span className="text-sm text-zinc-300">
+                              {t.quantity} @ {t.entryPrice.toFixed(2)}
+                              {(t.exitQuantity ?? 0) > 0 && (
+                                <span className="text-zinc-500 ml-1">
+                                  (exit {t.exitQuantity} @ {t.exitPrice != null ? t.exitPrice.toFixed(2) : '—'})
+                                </span>
+                              )}
+                            </span>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${t.status === 'open' ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-600 text-zinc-400'}`}>
+                              {t.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {t.status === 'open' && (
+                              <button
+                                onClick={() => openEditTradeAsClose(t)}
+                                className="px-3 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg"
+                                title="Mark trade closed: enter exit price and save"
+                              >
+                                Close trade
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openEditTrade(t)}
+                              className="px-3 py-1.5 bg-zinc-700 hover:bg-emerald-600 text-zinc-300 hover:text-white text-xs font-semibold rounded-lg"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTrade(t.id)}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${deleteTradeId === t.id ? 'bg-red-600 text-white' : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'}`}
+                            >
+                              {deleteTradeId === t.id ? 'Confirm' : 'Delete'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+            {deleteTradeStatus && (
+              <div className={`px-6 py-2 border-t border-zinc-800 text-sm ${deleteTradeStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
+                {deleteTradeStatus}
+              </div>
+            )}
+          </div>
+          </>
+          )}
+  
+          {/* Tab: Videos */}
+          {activeTab === 'videos' && (
+          <>
+          {/* Tab: Videos (Upload + Manage) */}
+          {activeTab === 'videos' && (
+          <>
+          <div className="bg-zinc-900 border border-blue-500/20 rounded-xl p-6 mb-8">
+            <h2 className="text-lg font-semibold mb-1">🎬 Upload Video to The Vault</h2>
+            <p className="text-sm text-zinc-400 mb-4">
+              Upload exclusive videos to The Vault. Videos are stored on Vercel Blob and automatically added to the videos page.
+            </p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Video File <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="video-input"
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                    className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  />
+                  {videoFile && (
+                    <p className="text-xs text-zinc-500 mt-1">
+                      {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Thumbnail (Optional)
+                  </label>
+                  <input
+                    id="thumbnail-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
+                    className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
+                  />
+                  {thumbnailFile && (
+                    <p className="text-xs text-zinc-500 mt-1">{thumbnailFile.name}</p>
+                  )}
+                </div>
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Title <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={videoTitle}
+                  onChange={(e) => setVideoTitle(e.target.value)}
+                  placeholder="Video title"
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Description <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={videoDescription}
+                  onChange={(e) => setVideoDescription(e.target.value)}
+                  placeholder="Video description"
+                  rows={4}
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+              </div>
+  
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Category
+                  </label>
+                  <select
+                    value={videoCategory}
+                    onChange={(e) => setVideoCategory(e.target.value as any)}
+                    className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="market-analysis">Market Analysis</option>
+                    <option value="trading-strategies">Trading Strategies</option>
+                    <option value="educational">Educational</option>
+                    <option value="live-trading">Live Trading</option>
+                    <option value="market-structure">Market Structure</option>
+                    <option value="risk-management">Risk Management</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Date (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={videoDate}
+                    onChange={(e) => setVideoDate(e.target.value)}
+                    placeholder="e.g. Jan 2025"
+                    className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Duration (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={videoDuration}
+                    onChange={(e) => setVideoDuration(e.target.value)}
+                    placeholder="e.g. 15:30"
+                    className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+  
+              <div className="flex items-center gap-4 pt-2">
+                <button
+                  onClick={handleVideoUpload}
+                  disabled={videoUploading || !videoFile || !videoTitle.trim() || !videoDescription.trim()}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold rounded-lg transition-colors"
+                >
+                  {videoUploading ? 'Uploading...' : 'Upload to The Vault'}
+                </button>
+                {videoStatus && (
+                  <span className={`text-sm ${
+                    videoStatus.startsWith('Error') || videoStatus.startsWith('❌')
+                      ? 'text-red-400'
+                      : videoStatus.startsWith('✅')
+                      ? 'text-green-400'
+                      : 'text-yellow-400'
+                  }`}>
+                    {videoStatus}
+                  </span>
+                )}
+              </div>
+  
+              {uploadedVideoUrl && (
+                <div className="mt-4 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg">
+                  <p className="text-xs text-zinc-400 mb-1">Video URL:</p>
+                  <p className="text-xs text-zinc-500 break-all">{uploadedVideoUrl}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          </>
+          )}
+  
+          {/* Tab: Feedback */}
+          {activeTab === 'feedback' && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">💬 User Feedback</h2>
+              <div className="flex items-center gap-3">
+                {feedbackLoaded && feedbackList.length > 0 && (
+                  <button
+                    onClick={handleDeleteAllFeedback}
+                    className="text-xs font-medium text-zinc-400 hover:text-red-400 transition-colors"
+                  >
+                    Delete All
+                  </button>
+                )}
+                <button
+                  onClick={fetchFeedback}
+                  disabled={feedbackLoading}
+                  className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
+                >
+                  {feedbackLoading ? 'Loading...' : feedbackLoaded ? 'Refresh' : 'Load Feedback'}
+                </button>
+              </div>
+            </div>
+            {!feedbackLoaded ? (
+              <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+                Click &quot;Load Feedback&quot; to view user submissions.
+              </div>
+            ) : feedbackList.length === 0 ? (
+              <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+                No feedback submitted yet.
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-800/50">
+                {feedbackList.map((item) => (
+                  <div key={item.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-sm font-medium text-zinc-200">{item.username || 'Unknown'}</span>
+                      <span className="text-xs text-zinc-500">{item.user_email}</span>
+                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                        item.category === 'feature'
+                          ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                          : item.category === 'bug'
+                          ? 'bg-red-500/15 text-red-400 border border-red-500/30'
+                          : 'bg-zinc-700 text-zinc-400'
+                      }`}>
+                        {item.category}
+                      </span>
+                      <span className="text-xs text-zinc-600 ml-auto">
+                        {new Date(item.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-zinc-300 leading-relaxed">{item.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          )}
+  
+          {/* Tab: Indices */}
+          {activeTab === 'indices' && (
+          <>
+          <div className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">📊 Index Market Structure</h2>
+              <button
+                onClick={fetchIndexStructures}
+                disabled={indexStructuresLoading}
+                className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
+              >
+                {indexStructuresLoading ? 'Loading...' : indexStructuresLoaded ? 'Refresh' : 'Load Structures'}
+              </button>
+            </div>
+            {!indexStructuresLoaded ? (
+              <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+                Click &quot;Load Structures&quot; to view and edit market structure data.
+              </div>
+            ) : indexStructures.length === 0 ? (
+              <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+                No market structures found. Run database setup first.
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-800/50">
+                {indexStructures.map((index) => (
+                  <div key={index.symbol} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
+                    {editingIndex === index.symbol ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 font-mono font-bold text-sm">
+                            {index.symbol}
+                          </span>
+                          <span className="text-sm text-zinc-400">Edit Market Structure</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-zinc-400 mb-1">Daily Structure</label>
+                            <input
+                              type="text"
+                              value={editDaily}
+                              onChange={(e) => setEditDaily(e.target.value)}
+                              placeholder="e.g. Mixed, Bullish, Bearish"
+                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-zinc-400 mb-1">Weekly (HTF) Structure</label>
+                            <input
+                              type="text"
+                              value={editWeekly}
+                              onChange={(e) => setEditWeekly(e.target.value)}
+                              placeholder="e.g. Consolidating, Bullish, Bearish"
+                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-zinc-400 mb-1">Monthly Structure (Optional)</label>
+                            <input
+                              type="text"
+                              value={editMonthly}
+                              onChange={(e) => setEditMonthly(e.target.value)}
+                              placeholder="e.g. Bullish, Bearish"
+                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleSaveIndex(index.symbol)}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-semibold rounded-lg transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          {indexUpdateStatus && (
+                            <span className={`text-xs ${
+                              indexUpdateStatus.startsWith('✅') ? 'text-green-400' : 
+                              indexUpdateStatus.startsWith('Error') ? 'text-red-400' : 
+                              'text-yellow-400'
+                            }`}>
+                              {indexUpdateStatus}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                          <span className="px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 font-mono font-bold text-sm">
+                            {index.symbol}
+                          </span>
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <span className="text-xs text-zinc-500">Daily: </span>
+                              <span className="text-sm font-medium text-zinc-300">{index.daily_structure || 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-zinc-500">Weekly: </span>
+                              <span className="text-sm font-medium text-zinc-300">{index.weekly_structure || 'N/A'}</span>
+                            </div>
+                            {index.monthly_structure && (
+                              <div>
+                                <span className="text-xs text-zinc-500">Monthly: </span>
+                                <span className="text-sm font-medium text-zinc-300">{index.monthly_structure}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleEditIndex(index)}
+                          className="px-4 py-2 bg-zinc-700 hover:bg-purple-600 text-zinc-300 hover:text-white text-sm font-semibold rounded-lg transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+  
+          {/* Index Charts (ES / NQ / YM) — show on ticker pages */}
+          <div className="bg-zinc-900 border border-blue-500/20 rounded-xl overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold">📈 Index Charts (ES / NQ / YM)</h2>
+              <div className="flex items-center gap-3">
+                <select
+                  value={chartFilterSymbol}
+                  onChange={(e) => setChartFilterSymbol(e.target.value as 'ES' | 'NQ' | 'YM' | '')}
+                  className="px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
+                >
+                  <option value="">All symbols</option>
+                  <option value="ES">ES</option>
+                  <option value="NQ">NQ</option>
+                  <option value="YM">YM</option>
+                </select>
+                <button
+                  onClick={fetchIndexCharts}
+                  disabled={indexChartsLoading}
+                  className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
+                >
+                  {indexChartsLoading ? 'Loading...' : indexChartsLoaded ? 'Refresh' : 'Load charts'}
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="p-4 rounded-xl bg-zinc-800/50 border border-zinc-700">
+                <h3 className="text-sm font-semibold text-zinc-300 mb-3">Upload chart for index page</h3>
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Symbol</label>
+                    <select
+                      value={chartUploadSymbol}
+                      onChange={(e) => setChartUploadSymbol(e.target.value as 'ES' | 'NQ' | 'YM')}
+                      className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
+                    >
+                      <option value="ES">ES</option>
+                      <option value="NQ">NQ</option>
+                      <option value="YM">YM</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Title (optional)</label>
+                    <input
+                      type="text"
+                      value={chartUploadTitle}
+                      onChange={(e) => setChartUploadTitle(e.target.value)}
+                      placeholder="e.g. ES 5m 03/03"
+                      className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm w-48"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Date (optional)</label>
+                    <input
+                      type="date"
+                      value={chartUploadDate}
+                      onChange={(e) => setChartUploadDate(e.target.value)}
+                      className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Image (PNG, JPEG, WebP, GIF, max 10MB)</label>
+                    <input
+                      id="index-chart-file"
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={(e) => setChartFile(e.target.files?.[0] || null)}
+                      className="block text-sm text-zinc-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white file:text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={handleUploadIndexChart}
+                    disabled={chartUploading || !chartFile}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    {chartUploading ? 'Uploading...' : 'Upload'}
+                  </button>
+                </div>
+                {chartUploadStatus && (
+                  <p className={`mt-3 text-sm ${chartUploadStatus.startsWith('✅') ? 'text-green-400' : 'text-amber-400'}`}>
+                    {chartUploadStatus}
+                  </p>
+                )}
+              </div>
+              {!indexChartsLoaded ? (
+                <p className="text-zinc-500 text-sm">Click &quot;Load charts&quot; to view uploaded charts.</p>
+              ) : indexCharts.length === 0 ? (
+                <p className="text-zinc-500 text-sm">No charts yet. Upload one above; they will show on the ES / NQ / YM ticker pages in a dropdown.</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-zinc-500">{indexCharts.length} chart(s)</p>
+                  {indexCharts.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 font-mono text-xs shrink-0">{c.symbol}</span>
+                        <span className="text-sm text-zinc-300 truncate">{c.title || 'Untitled'}</span>
+                        <span className="text-xs text-zinc-500 shrink-0">{new Date(c.chart_date).toLocaleDateString()}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteIndexChart(c.id)}
+                        disabled={deletingChartId === c.id}
+                        className="text-red-400 hover:text-red-300 text-sm font-medium shrink-0"
+                      >
+                        {deletingChartId === c.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          </>
+          )}
+  
+          {/* Tab: Videos (Manage) - same tab as Upload */}
+          {activeTab === 'videos' && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">🎬 Manage Videos</h2>
+              <button
+                onClick={fetchVideos}
+                disabled={videosLoading}
+                className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
+              >
+                {videosLoading ? 'Loading...' : videosLoaded ? 'Refresh' : 'Load Videos'}
+              </button>
+            </div>
+            {!videosLoaded ? (
+              <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+                Click &quot;Load Videos&quot; to view uploaded videos.
+              </div>
+            ) : videosList.length === 0 ? (
+              <div className="px-6 py-12 text-center text-zinc-500 text-sm">
+                No videos uploaded yet.
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-800/50">
+                {videosList.map((video) => (
+                  <div key={video.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-zinc-200 mb-1 truncate">{video.title}</h3>
+                        <p className="text-xs text-zinc-500 truncate">{video.videoUrl}</p>
+                        <p className="text-xs text-zinc-600 mt-1">
+                          {new Date(video.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteVideo(video.id)}
+                        className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                          deleteVideoId === video.id
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'
+                        }`}
+                      >
+                        {deleteVideoId === video.id ? 'Confirm Delete' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {deleteVideoStatus && (
+              <div className={`px-6 py-3 border-t border-zinc-800 ${
+                deleteVideoStatus.startsWith('Error') ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'
+              }`}>
+                <p className="text-sm">{deleteVideoStatus}</p>
+              </div>
+            )}
+          </div>
+          )}
+  
+          {/* Tab: Users */}
+          {activeTab === 'users' ? (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-zinc-800">
+                <h2 className="text-lg font-semibold">Registered Users</h2>
+              </div>
+              {users.length === 0 ? (
+                <div className="px-6 py-12 text-center text-zinc-500">
+                  No users have signed up yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-800 text-zinc-400">
+                        <th className="text-left px-6 py-3 font-medium">#</th>
+                        <th className="text-left px-6 py-3 font-medium">Name</th>
+                        <th className="text-left px-6 py-3 font-medium">Email</th>
+                        <th className="text-left px-6 py-3 font-medium">Username</th>
+                        <th className="text-left px-6 py-3 font-medium">Signed Up</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((user, i) => (
+                        <tr key={user.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+                          <td className="px-6 py-3 text-zinc-500">{i + 1}</td>
+                          <td className="px-6 py-3 font-medium">{user.name}</td>
+                          <td className="px-6 py-3 text-blue-400">{user.email}</td>
+                          <td className="px-6 py-3 text-zinc-300">{user.username}</td>
+                          <td className="px-6 py-3 text-zinc-500">
+                            {new Date(user.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : null}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 px-4 py-8">
       <div className="max-w-5xl mx-auto">
@@ -1052,1020 +2069,7 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        <div className="contents">
-        {/* Tab: Overview */}
-        {activeTab === 'overview' && (
-          <div className="space-y-4 mb-8">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-2">Quick access</h2>
-              <p className="text-sm text-zinc-400 mb-4">Use the tabs above to jump to a section. No need to scroll.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                <button onClick={() => setActiveTab('notifications')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
-                  <span className="text-lg">🔔</span>
-                  <p className="text-sm font-medium text-zinc-200 mt-1">Notifications</p>
-                  <p className="text-xs text-zinc-500">Report + bell + delete all</p>
-                </button>
-                <button onClick={() => setActiveTab('trades')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
-                  <span className="text-lg">📈</span>
-                  <p className="text-sm font-medium text-zinc-200 mt-1">Live Trades</p>
-                  <p className="text-xs text-zinc-500">Add, edit, close trades</p>
-                </button>
-                <button onClick={() => setActiveTab('videos')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
-                  <span className="text-lg">🎬</span>
-                  <p className="text-sm font-medium text-zinc-200 mt-1">Videos</p>
-                  <p className="text-xs text-zinc-500">Upload & manage vault</p>
-                </button>
-                <button onClick={() => setActiveTab('indices')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
-                  <span className="text-lg">📊</span>
-                  <p className="text-sm font-medium text-zinc-200 mt-1">Indices</p>
-                  <p className="text-xs text-zinc-500">ES/NQ/YM structure & charts</p>
-                </button>
-                <button onClick={() => setActiveTab('feedback')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
-                  <span className="text-lg">💬</span>
-                  <p className="text-sm font-medium text-zinc-200 mt-1">Feedback</p>
-                  <p className="text-xs text-zinc-500">User submissions</p>
-                </button>
-                <button onClick={() => setActiveTab('users')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
-                  <span className="text-lg">👥</span>
-                  <p className="text-sm font-medium text-zinc-200 mt-1">Users</p>
-                  <p className="text-xs text-zinc-500">Registered subscribers</p>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab: Notifications */}
-        {activeTab === 'notifications' && (
-        <>
-        {/* New Report / Article Notification */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-1">📢 New Report Notification</h2>
-          <p className="text-sm text-zinc-400 mb-4">
-            Creates a bell notification for all users and optionally sends an email blast.
-          </p>
-          <div className="space-y-3">
-            <input
-              type="text"
-              value={notifyTitle}
-              onChange={(e) => setNotifyTitle(e.target.value)}
-              placeholder="Report title (e.g. Weekly Market Outlook — 02/09/2026)"
-              className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <textarea
-              value={notifyDesc}
-              onChange={(e) => setNotifyDesc(e.target.value)}
-              placeholder="Short description (shown in bell dropdown & email)"
-              rows={3}
-              className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            />
-            <input
-              type="text"
-              value={notifyLink}
-              onChange={(e) => setNotifyLink(e.target.value)}
-              placeholder="Link (optional — e.g. /research or a PDF URL)"
-              className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={sendEmail}
-                onChange={(e) => setSendEmail(e.target.checked)}
-                className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500"
-              />
-              Also send email to all {totalUsers} subscriber{totalUsers !== 1 ? 's' : ''}
-            </label>
-            {sendEmail && (
-              <p className="text-xs text-zinc-500">
-                Requires <code className="bg-zinc-800 px-1 rounded">RESEND_API_KEY</code> in your environment.
-                With the default <code className="bg-zinc-800 px-1 rounded">notifications@resend.dev</code>, Resend only delivers to the email that owns your Resend account. To send to all subscribers, add and verify your own domain in Resend and set <code className="bg-zinc-800 px-1 rounded">RESEND_FROM_EMAIL</code>.
-              </p>
-            )}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleNotify}
-                disabled={notifySending || !notifyTitle.trim()}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold rounded-lg transition-colors"
-              >
-                {notifySending ? 'Sending...' : 'Publish Notification'}
-              </button>
-              {notifyStatus && (
-                <span className={`text-sm ${notifyStatus.startsWith('Error') || notifyStatus.startsWith('Bell created, but') ? 'text-yellow-400' : 'text-green-400'}`}>
-                  {notifyStatus}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Bell-Only Notification */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-1">🔔 Bell-Only Notification</h2>
-          <p className="text-sm text-zinc-400 mb-4">
-            Creates a notification that appears in the bell dropdown only (no email). Good for site updates, new features, etc.
-          </p>
-          <div className="space-y-3">
-            <input
-              type="text"
-              value={bellTitle}
-              onChange={(e) => setBellTitle(e.target.value)}
-              placeholder="Title (e.g. New feature: Video section is live!)"
-              className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <textarea
-              value={bellDesc}
-              onChange={(e) => setBellDesc(e.target.value)}
-              placeholder="Description (optional)"
-              rows={2}
-              className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            />
-            <input
-              type="text"
-              value={bellLink}
-              onChange={(e) => setBellLink(e.target.value)}
-              placeholder="Link (optional — e.g. /videos)"
-              className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <div className="flex items-center gap-3">
-              <select
-                value={bellType}
-                onChange={(e) => setBellType(e.target.value)}
-                className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="article">🔵 Article</option>
-                <option value="update">🟡 Update</option>
-                <option value="video">🟣 Video</option>
-                <option value="alert">⚪ General</option>
-              </select>
-              <button
-                onClick={handleBellOnly}
-                disabled={bellSending || !bellTitle.trim()}
-                className="px-6 py-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-700/50 text-white font-semibold rounded-lg transition-colors"
-              >
-                {bellSending ? 'Creating...' : 'Create Bell Notification'}
-              </button>
-              {bellStatus && (
-                <span className={`text-sm ${bellStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
-                  {bellStatus}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Delete All Notifications */}
-        <div className="bg-zinc-900 border border-red-500/20 rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-1">🗑️ Delete All Notifications</h2>
-          <p className="text-sm text-zinc-400 mb-4">
-            Permanently removes all bell notifications from the database. New users won&apos;t see any old notifications.
-          </p>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleDeleteAllNotifications}
-              disabled={deleting}
-              className={`px-6 py-2.5 font-semibold rounded-lg transition-colors ${
-                confirmDelete
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'
-              } disabled:opacity-50`}
-            >
-              {deleting ? 'Deleting...' : confirmDelete ? 'Confirm Delete All' : 'Delete All Notifications'}
-            </button>
-            {deleteStatus && (
-              <span className={`text-sm ${deleteStatus.startsWith('Error') || deleteStatus.startsWith('Failed') ? 'text-red-400' : deleteStatus.startsWith('Click') ? 'text-yellow-400' : 'text-green-400'}`}>
-                {deleteStatus}
-              </span>
-            )}
-          </div>
-        </div>
-        </>
-        )}
-
-        {/* Tab: Live Trades */}
-        {activeTab === 'trades' && (
-        <>
-        {/* Live Trades */}
-        <div className="bg-zinc-900 border border-emerald-500/20 rounded-xl overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">📈 Live Trades</h2>
-            <button
-              onClick={fetchLiveTrades}
-              disabled={liveTradesLoading}
-              className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
-            >
-              {liveTradesLoading ? 'Loading...' : liveTradesLoaded ? 'Refresh' : 'Load Trades'}
-            </button>
-          </div>
-          <div className="p-6 space-y-6">
-            <p className="text-xs text-zinc-500">PnL uses CME point values: MNQ $2, NQ $20, MES $5, ES $12.50 per point.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Symbol</label>
-                <select
-                  value={tradeSymbol}
-                  onChange={(e) => setTradeSymbol(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
-                >
-                  <option value="MNQ">MNQ (Micro $2/pt)</option>
-                  <option value="NQ">NQ (Mini $20/pt)</option>
-                  <option value="MES">MES (Micro $5/pt)</option>
-                  <option value="ES">ES (Mini $12.50/pt)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Side</label>
-                <select
-                  value={tradeSide}
-                  onChange={(e) => setTradeSide(e.target.value as 'long' | 'short')}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
-                >
-                  <option value="long">Long</option>
-                  <option value="short">Short</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Quantity (contracts)</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={tradeQuantity}
-                  onChange={(e) => setTradeQuantity(e.target.value)}
-                  placeholder="e.g. 2"
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">Entry price</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={tradeEntryPrice}
-                  onChange={(e) => setTradeEntryPrice(e.target.value)}
-                  placeholder="e.g. 25406.25"
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Chart URL (optional)</label>
-              <input
-                type="url"
-                value={tradeChartUrl}
-                onChange={(e) => setTradeChartUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Notes (optional)</label>
-              <textarea
-                value={tradeNotes}
-                onChange={(e) => setTradeNotes(e.target.value)}
-                placeholder="Reasoning, levels, etc."
-                rows={2}
-                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm resize-none"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={tradeSendEmail}
-                onChange={(e) => setTradeSendEmail(e.target.checked)}
-                className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-600"
-              />
-              Send email to users who opted in to trade notifications
-            </label>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleAddTrade}
-                disabled={tradeAddSending || !tradeQuantity || !tradeEntryPrice}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white font-semibold rounded-lg transition-colors"
-              >
-                {tradeAddSending ? 'Adding...' : 'Add Trade'}
-              </button>
-              {tradeAddStatus && (
-                <span className={`text-sm ${tradeAddStatus.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
-                  {tradeAddStatus}
-                </span>
-              )}
-            </div>
-          </div>
-          {liveTradesLoaded && (
-            <div className="border-t border-zinc-800 divide-y divide-zinc-800/50">
-              {liveTrades.length === 0 ? (
-                <div className="px-6 py-8 text-center text-zinc-500 text-sm">No trades yet. Add one above.</div>
-              ) : (
-                liveTrades.map((t) => (
-                  <div key={t.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
-                    {editingTradeId === t.id ? (
-                      <div className="space-y-3">
-                        <p className="text-xs text-zinc-500 font-medium">Close or partial exit</p>
-                        <ul className="text-xs text-zinc-500 list-disc list-inside space-y-0.5 mb-2">
-                          <li><strong>Fully closed:</strong> set Exit qty = Quantity, enter Exit price, then Save. Users get a bell notification.</li>
-                          <li><strong>Partial:</strong> set Exit qty = contracts already closed, enter Exit price for that portion. Add details in Notes (e.g. &quot;Managed stop&quot;, &quot;Scaled out 1&quot;).</li>
-                        </ul>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-0.5">Quantity</label>
-                            <input
-                              type="number"
-                              min={1}
-                              value={editTradeQuantity}
-                              onChange={(e) => setEditTradeQuantity(e.target.value)}
-                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-0.5">Entry price</label>
-                            <input
-                              type="number"
-                              step="any"
-                              value={editTradeEntryPrice}
-                              onChange={(e) => setEditTradeEntryPrice(e.target.value)}
-                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-0.5">Exit qty (closed)</label>
-                            <input
-                              type="number"
-                              min={0}
-                              max={t.quantity}
-                              value={editTradeExitQuantity}
-                              onChange={(e) => setEditTradeExitQuantity(e.target.value)}
-                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
-                              title="Number of contracts closed so far (0 = still open, same as Quantity = fully closed)"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-0.5">Exit price</label>
-                            <input
-                              type="number"
-                              step="any"
-                              value={editTradeExitPrice}
-                              onChange={(e) => setEditTradeExitPrice(e.target.value)}
-                              placeholder="Avg exit price"
-                              className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-0.5">Chart URL</label>
-                          <input
-                            type="url"
-                            value={editTradeChartUrl}
-                            onChange={(e) => setEditTradeChartUrl(e.target.value)}
-                            className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-0.5">Notes (e.g. Closed, Partial, Managed stop)</label>
-                          <textarea
-                            value={editTradeNotes}
-                            onChange={(e) => setEditTradeNotes(e.target.value)}
-                            rows={2}
-                            placeholder="Reasoning, levels, managed stop, scaled out, etc."
-                            className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm resize-none"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleUpdateTrade(t.id)}
-                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => { setEditingTradeId(null); setTradeUpdateStatus(''); }}
-                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-semibold rounded-lg"
-                          >
-                            Cancel
-                          </button>
-                          {tradeUpdateStatus && <span className="text-xs text-zinc-400">{tradeUpdateStatus}</span>}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between flex-wrap gap-3">
-                        <div className="flex items-center gap-4">
-                          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-sm">
-                            {t.symbol} {t.side}
-                          </span>
-                          <span className="text-sm text-zinc-300">
-                            {t.quantity} @ {t.entryPrice.toFixed(2)}
-                            {(t.exitQuantity ?? 0) > 0 && (
-                              <span className="text-zinc-500 ml-1">
-                                (exit {t.exitQuantity} @ {t.exitPrice != null ? t.exitPrice.toFixed(2) : '—'})
-                              </span>
-                            )}
-                          </span>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${t.status === 'open' ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-600 text-zinc-400'}`}>
-                            {t.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {t.status === 'open' && (
-                            <button
-                              onClick={() => openEditTradeAsClose(t)}
-                              className="px-3 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg"
-                              title="Mark trade closed: enter exit price and save"
-                            >
-                              Close trade
-                            </button>
-                          )}
-                          <button
-                            onClick={() => openEditTrade(t)}
-                            className="px-3 py-1.5 bg-zinc-700 hover:bg-emerald-600 text-zinc-300 hover:text-white text-xs font-semibold rounded-lg"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTrade(t.id)}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${deleteTradeId === t.id ? 'bg-red-600 text-white' : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'}`}
-                          >
-                            {deleteTradeId === t.id ? 'Confirm' : 'Delete'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-          {deleteTradeStatus && (
-            <div className={`px-6 py-2 border-t border-zinc-800 text-sm ${deleteTradeStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
-              {deleteTradeStatus}
-            </div>
-          )}
-        </div>
-        </>
-        )}
-
-        {/* Tab: Videos */}
-        {activeTab === 'videos' && (
-        <>
-        {/* Tab: Videos (Upload + Manage) */}
-        {activeTab === 'videos' && (
-        <>
-        <div className="bg-zinc-900 border border-blue-500/20 rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-1">🎬 Upload Video to The Vault</h2>
-          <p className="text-sm text-zinc-400 mb-4">
-            Upload exclusive videos to The Vault. Videos are stored on Vercel Blob and automatically added to the videos page.
-          </p>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Video File <span className="text-red-400">*</span>
-                </label>
-                <input
-                  id="video-input"
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                />
-                {videoFile && (
-                  <p className="text-xs text-zinc-500 mt-1">
-                    {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(2)} MB)
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Thumbnail (Optional)
-                </label>
-                <input
-                  id="thumbnail-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
-                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
-                />
-                {thumbnailFile && (
-                  <p className="text-xs text-zinc-500 mt-1">{thumbnailFile.name}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Title <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={videoTitle}
-                onChange={(e) => setVideoTitle(e.target.value)}
-                placeholder="Video title"
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Description <span className="text-red-400">*</span>
-              </label>
-              <textarea
-                value={videoDescription}
-                onChange={(e) => setVideoDescription(e.target.value)}
-                placeholder="Video description"
-                rows={4}
-                className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Category
-                </label>
-                <select
-                  value={videoCategory}
-                  onChange={(e) => setVideoCategory(e.target.value as any)}
-                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="market-analysis">Market Analysis</option>
-                  <option value="trading-strategies">Trading Strategies</option>
-                  <option value="educational">Educational</option>
-                  <option value="live-trading">Live Trading</option>
-                  <option value="market-structure">Market Structure</option>
-                  <option value="risk-management">Risk Management</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Date (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={videoDate}
-                  onChange={(e) => setVideoDate(e.target.value)}
-                  placeholder="e.g. Jan 2025"
-                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Duration (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={videoDuration}
-                  onChange={(e) => setVideoDuration(e.target.value)}
-                  placeholder="e.g. 15:30"
-                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 pt-2">
-              <button
-                onClick={handleVideoUpload}
-                disabled={videoUploading || !videoFile || !videoTitle.trim() || !videoDescription.trim()}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold rounded-lg transition-colors"
-              >
-                {videoUploading ? 'Uploading...' : 'Upload to The Vault'}
-              </button>
-              {videoStatus && (
-                <span className={`text-sm ${
-                  videoStatus.startsWith('Error') || videoStatus.startsWith('❌')
-                    ? 'text-red-400'
-                    : videoStatus.startsWith('✅')
-                    ? 'text-green-400'
-                    : 'text-yellow-400'
-                }`}>
-                  {videoStatus}
-                </span>
-              )}
-            </div>
-
-            {uploadedVideoUrl && (
-              <div className="mt-4 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg">
-                <p className="text-xs text-zinc-400 mb-1">Video URL:</p>
-                <p className="text-xs text-zinc-500 break-all">{uploadedVideoUrl}</p>
-              </div>
-            )}
-          </div>
-        </div>
-        </>
-        )}
-
-        {/* Tab: Feedback */}
-        {activeTab === 'feedback' && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">💬 User Feedback</h2>
-            <div className="flex items-center gap-3">
-              {feedbackLoaded && feedbackList.length > 0 && (
-                <button
-                  onClick={handleDeleteAllFeedback}
-                  className="text-xs font-medium text-zinc-400 hover:text-red-400 transition-colors"
-                >
-                  Delete All
-                </button>
-              )}
-              <button
-                onClick={fetchFeedback}
-                disabled={feedbackLoading}
-                className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
-              >
-                {feedbackLoading ? 'Loading...' : feedbackLoaded ? 'Refresh' : 'Load Feedback'}
-              </button>
-            </div>
-          </div>
-          {!feedbackLoaded ? (
-            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
-              Click &quot;Load Feedback&quot; to view user submissions.
-            </div>
-          ) : feedbackList.length === 0 ? (
-            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
-              No feedback submitted yet.
-            </div>
-          ) : (
-            <div className="divide-y divide-zinc-800/50">
-              {feedbackList.map((item) => (
-                <div key={item.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm font-medium text-zinc-200">{item.username || 'Unknown'}</span>
-                    <span className="text-xs text-zinc-500">{item.user_email}</span>
-                    <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                      item.category === 'feature'
-                        ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
-                        : item.category === 'bug'
-                        ? 'bg-red-500/15 text-red-400 border border-red-500/30'
-                        : 'bg-zinc-700 text-zinc-400'
-                    }`}>
-                      {item.category}
-                    </span>
-                    <span className="text-xs text-zinc-600 ml-auto">
-                      {new Date(item.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-sm text-zinc-300 leading-relaxed">{item.message}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        )}
-
-        {/* Tab: Indices */}
-        {activeTab === 'indices' && (
-        <>
-        <div className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">📊 Index Market Structure</h2>
-            <button
-              onClick={fetchIndexStructures}
-              disabled={indexStructuresLoading}
-              className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
-            >
-              {indexStructuresLoading ? 'Loading...' : indexStructuresLoaded ? 'Refresh' : 'Load Structures'}
-            </button>
-          </div>
-          {!indexStructuresLoaded ? (
-            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
-              Click &quot;Load Structures&quot; to view and edit market structure data.
-            </div>
-          ) : indexStructures.length === 0 ? (
-            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
-              No market structures found. Run database setup first.
-            </div>
-          ) : (
-            <div className="divide-y divide-zinc-800/50">
-              {indexStructures.map((index) => (
-                <div key={index.symbol} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
-                  {editingIndex === index.symbol ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 font-mono font-bold text-sm">
-                          {index.symbol}
-                        </span>
-                        <span className="text-sm text-zinc-400">Edit Market Structure</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">Daily Structure</label>
-                          <input
-                            type="text"
-                            value={editDaily}
-                            onChange={(e) => setEditDaily(e.target.value)}
-                            placeholder="e.g. Mixed, Bullish, Bearish"
-                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">Weekly (HTF) Structure</label>
-                          <input
-                            type="text"
-                            value={editWeekly}
-                            onChange={(e) => setEditWeekly(e.target.value)}
-                            placeholder="e.g. Consolidating, Bullish, Bearish"
-                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">Monthly Structure (Optional)</label>
-                          <input
-                            type="text"
-                            value={editMonthly}
-                            onChange={(e) => setEditMonthly(e.target.value)}
-                            placeholder="e.g. Bullish, Bearish"
-                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => handleSaveIndex(index.symbol)}
-                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        {indexUpdateStatus && (
-                          <span className={`text-xs ${
-                            indexUpdateStatus.startsWith('✅') ? 'text-green-400' : 
-                            indexUpdateStatus.startsWith('Error') ? 'text-red-400' : 
-                            'text-yellow-400'
-                          }`}>
-                            {indexUpdateStatus}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-6">
-                        <span className="px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 font-mono font-bold text-sm">
-                          {index.symbol}
-                        </span>
-                        <div className="flex items-center gap-4">
-                          <div>
-                            <span className="text-xs text-zinc-500">Daily: </span>
-                            <span className="text-sm font-medium text-zinc-300">{index.daily_structure || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-xs text-zinc-500">Weekly: </span>
-                            <span className="text-sm font-medium text-zinc-300">{index.weekly_structure || 'N/A'}</span>
-                          </div>
-                          {index.monthly_structure && (
-                            <div>
-                              <span className="text-xs text-zinc-500">Monthly: </span>
-                              <span className="text-sm font-medium text-zinc-300">{index.monthly_structure}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleEditIndex(index)}
-                        className="px-4 py-2 bg-zinc-700 hover:bg-purple-600 text-zinc-300 hover:text-white text-sm font-semibold rounded-lg transition-colors"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Index Charts (ES / NQ / YM) — show on ticker pages */}
-        <div className="bg-zinc-900 border border-blue-500/20 rounded-xl overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold">📈 Index Charts (ES / NQ / YM)</h2>
-            <div className="flex items-center gap-3">
-              <select
-                value={chartFilterSymbol}
-                onChange={(e) => setChartFilterSymbol(e.target.value as 'ES' | 'NQ' | 'YM' | '')}
-                className="px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
-              >
-                <option value="">All symbols</option>
-                <option value="ES">ES</option>
-                <option value="NQ">NQ</option>
-                <option value="YM">YM</option>
-              </select>
-              <button
-                onClick={fetchIndexCharts}
-                disabled={indexChartsLoading}
-                className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
-              >
-                {indexChartsLoading ? 'Loading...' : indexChartsLoaded ? 'Refresh' : 'Load charts'}
-              </button>
-            </div>
-          </div>
-          <div className="p-6 space-y-6">
-            <div className="p-4 rounded-xl bg-zinc-800/50 border border-zinc-700">
-              <h3 className="text-sm font-semibold text-zinc-300 mb-3">Upload chart for index page</h3>
-              <div className="flex flex-wrap gap-4 items-end">
-                <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Symbol</label>
-                  <select
-                    value={chartUploadSymbol}
-                    onChange={(e) => setChartUploadSymbol(e.target.value as 'ES' | 'NQ' | 'YM')}
-                    className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
-                  >
-                    <option value="ES">ES</option>
-                    <option value="NQ">NQ</option>
-                    <option value="YM">YM</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Title (optional)</label>
-                  <input
-                    type="text"
-                    value={chartUploadTitle}
-                    onChange={(e) => setChartUploadTitle(e.target.value)}
-                    placeholder="e.g. ES 5m 03/03"
-                    className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm w-48"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Date (optional)</label>
-                  <input
-                    type="date"
-                    value={chartUploadDate}
-                    onChange={(e) => setChartUploadDate(e.target.value)}
-                    className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-zinc-500 mb-1">Image (PNG, JPEG, WebP, GIF, max 10MB)</label>
-                  <input
-                    id="index-chart-file"
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={(e) => setChartFile(e.target.files?.[0] || null)}
-                    className="block text-sm text-zinc-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white file:text-sm"
-                  />
-                </div>
-                <button
-                  onClick={handleUploadIndexChart}
-                  disabled={chartUploading || !chartFile}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
-                >
-                  {chartUploading ? 'Uploading...' : 'Upload'}
-                </button>
-              </div>
-              {chartUploadStatus && (
-                <p className={`mt-3 text-sm ${chartUploadStatus.startsWith('✅') ? 'text-green-400' : 'text-amber-400'}`}>
-                  {chartUploadStatus}
-                </p>
-              )}
-            </div>
-            {!indexChartsLoaded ? (
-              <p className="text-zinc-500 text-sm">Click &quot;Load charts&quot; to view uploaded charts.</p>
-            ) : indexCharts.length === 0 ? (
-              <p className="text-zinc-500 text-sm">No charts yet. Upload one above; they will show on the ES / NQ / YM ticker pages in a dropdown.</p>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-zinc-500">{indexCharts.length} chart(s)</p>
-                {indexCharts.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 font-mono text-xs shrink-0">{c.symbol}</span>
-                      <span className="text-sm text-zinc-300 truncate">{c.title || 'Untitled'}</span>
-                      <span className="text-xs text-zinc-500 shrink-0">{new Date(c.chart_date).toLocaleDateString()}</span>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteIndexChart(c.id)}
-                      disabled={deletingChartId === c.id}
-                      className="text-red-400 hover:text-red-300 text-sm font-medium shrink-0"
-                    >
-                      {deletingChartId === c.id ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        </>
-        )}
-
-        {/* Tab: Videos (Manage) - same tab as Upload */}
-        {activeTab === 'videos' && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">🎬 Manage Videos</h2>
-            <button
-              onClick={fetchVideos}
-              disabled={videosLoading}
-              className="text-xs font-medium text-blue-400 hover:text-blue-300 underline transition-colors"
-            >
-              {videosLoading ? 'Loading...' : videosLoaded ? 'Refresh' : 'Load Videos'}
-            </button>
-          </div>
-          {!videosLoaded ? (
-            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
-              Click &quot;Load Videos&quot; to view uploaded videos.
-            </div>
-          ) : videosList.length === 0 ? (
-            <div className="px-6 py-12 text-center text-zinc-500 text-sm">
-              No videos uploaded yet.
-            </div>
-          ) : (
-            <div className="divide-y divide-zinc-800/50">
-              {videosList.map((video) => (
-                <div key={video.id} className="px-6 py-4 hover:bg-zinc-800/30 transition-colors">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-zinc-200 mb-1 truncate">{video.title}</h3>
-                      <p className="text-xs text-zinc-500 truncate">{video.videoUrl}</p>
-                      <p className="text-xs text-zinc-600 mt-1">
-                        {new Date(video.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteVideo(video.id)}
-                      className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                        deleteVideoId === video.id
-                          ? 'bg-red-600 hover:bg-red-700 text-white'
-                          : 'bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white'
-                      }`}
-                    >
-                      {deleteVideoId === video.id ? 'Confirm Delete' : 'Delete'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {deleteVideoStatus && (
-            <div className={`px-6 py-3 border-t border-zinc-800 ${
-              deleteVideoStatus.startsWith('Error') ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'
-            }`}>
-              <p className="text-sm">{deleteVideoStatus}</p>
-            </div>
-          )}
-        </div>
-        )}
-
-        {/* Tab: Users */}
-        {activeTab === 'users' ? (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-800">
-              <h2 className="text-lg font-semibold">Registered Users</h2>
-            </div>
-            {users.length === 0 ? (
-              <div className="px-6 py-12 text-center text-zinc-500">
-                No users have signed up yet.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-zinc-800 text-zinc-400">
-                      <th className="text-left px-6 py-3 font-medium">#</th>
-                      <th className="text-left px-6 py-3 font-medium">Name</th>
-                      <th className="text-left px-6 py-3 font-medium">Email</th>
-                      <th className="text-left px-6 py-3 font-medium">Username</th>
-                      <th className="text-left px-6 py-3 font-medium">Signed Up</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user, i) => (
-                      <tr key={user.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                        <td className="px-6 py-3 text-zinc-500">{i + 1}</td>
-                        <td className="px-6 py-3 font-medium">{user.name}</td>
-                        <td className="px-6 py-3 text-blue-400">{user.email}</td>
-                        <td className="px-6 py-3 text-zinc-300">{user.username}</td>
-                        <td className="px-6 py-3 text-zinc-500">
-                          {new Date(user.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        ) : null}
-        </div>
+        <AdminTabPanels />
       </div>
     </div>
   );
