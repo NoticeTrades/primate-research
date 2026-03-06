@@ -106,17 +106,9 @@ function LoginPageContent() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="password" className="block text-sm font-medium text-zinc-400">
-                  Password
-                </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-zinc-500 hover:text-blue-400 transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <label htmlFor="password" className="block text-sm font-medium text-zinc-400 mb-1.5">
+                Password
+              </label>
               <input
                 id="password"
                 name="password"
@@ -127,6 +119,14 @@ function LoginPageContent() {
                 placeholder="••••••••"
                 className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-xl text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
               />
+              <p className="mt-2 text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-zinc-500 hover:text-blue-400 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </p>
             </div>
 
             <button

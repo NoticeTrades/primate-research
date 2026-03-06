@@ -115,6 +115,9 @@ export default function AdminPage() {
   const [deleteTradeId, setDeleteTradeId] = useState<number | null>(null);
   const [deleteTradeStatus, setDeleteTradeStatus] = useState('');
 
+  type AdminTab = 'overview' | 'notifications' | 'trades' | 'videos' | 'indices' | 'feedback' | 'users';
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+
   const handleLogin = async () => {
     setLoading(true);
     setError('');
@@ -995,7 +998,7 @@ export default function AdminPage() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
             <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Total Subscribers</p>
             <p className="text-3xl font-bold text-blue-400 mt-1">{totalUsers}</p>
@@ -1024,6 +1027,76 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <nav className="flex flex-wrap gap-1 mb-6 border-b border-zinc-800 pb-2 overflow-x-auto">
+          {[
+            { id: 'overview' as const, label: 'Overview', icon: '📋' },
+            { id: 'notifications' as const, label: 'Notifications', icon: '🔔' },
+            { id: 'trades' as const, label: 'Live Trades', icon: '📈' },
+            { id: 'videos' as const, label: 'Videos', icon: '🎬' },
+            { id: 'indices' as const, label: 'Indices', icon: '📊' },
+            { id: 'feedback' as const, label: 'Feedback', icon: '💬' },
+            { id: 'users' as const, label: 'Users', icon: '👥' },
+          ].map(({ id, label, icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 border border-zinc-700'
+              }`}
+            >
+              {icon} {label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Tab: Overview */}
+        {activeTab === 'overview' && (
+          <div className="space-y-4 mb-8">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold mb-2">Quick access</h2>
+              <p className="text-sm text-zinc-400 mb-4">Use the tabs above to jump to a section. No need to scroll.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <button onClick={() => setActiveTab('notifications')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                  <span className="text-lg">🔔</span>
+                  <p className="text-sm font-medium text-zinc-200 mt-1">Notifications</p>
+                  <p className="text-xs text-zinc-500">Report + bell + delete all</p>
+                </button>
+                <button onClick={() => setActiveTab('trades')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                  <span className="text-lg">📈</span>
+                  <p className="text-sm font-medium text-zinc-200 mt-1">Live Trades</p>
+                  <p className="text-xs text-zinc-500">Add, edit, close trades</p>
+                </button>
+                <button onClick={() => setActiveTab('videos')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                  <span className="text-lg">🎬</span>
+                  <p className="text-sm font-medium text-zinc-200 mt-1">Videos</p>
+                  <p className="text-xs text-zinc-500">Upload & manage vault</p>
+                </button>
+                <button onClick={() => setActiveTab('indices')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                  <span className="text-lg">📊</span>
+                  <p className="text-sm font-medium text-zinc-200 mt-1">Indices</p>
+                  <p className="text-xs text-zinc-500">ES/NQ/YM structure & charts</p>
+                </button>
+                <button onClick={() => setActiveTab('feedback')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                  <span className="text-lg">💬</span>
+                  <p className="text-sm font-medium text-zinc-200 mt-1">Feedback</p>
+                  <p className="text-xs text-zinc-500">User submissions</p>
+                </button>
+                <button onClick={() => setActiveTab('users')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
+                  <span className="text-lg">👥</span>
+                  <p className="text-sm font-medium text-zinc-200 mt-1">Users</p>
+                  <p className="text-xs text-zinc-500">Registered subscribers</p>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Notifications */}
+        {activeTab === 'notifications' && (
+        <>
         {/* New Report / Article Notification */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
           <h2 className="text-lg font-semibold mb-1">📢 New Report Notification</h2>
@@ -1164,7 +1237,12 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+        </>
+        )}
 
+        {/* Tab: Live Trades */}
+        {activeTab === 'trades' && (
+        <>
         {/* Live Trades */}
         <div className="bg-zinc-900 border border-emerald-500/20 rounded-xl overflow-hidden mb-8">
           <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
@@ -1419,8 +1497,15 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        </>
+        )}
 
-        {/* Video Upload to The Vault */}
+        {/* Tab: Videos */}
+        {activeTab === 'videos' && (
+        <>
+        {/* Tab: Videos (Upload + Manage) */}
+        {activeTab === 'videos' && (
+        <>
         <div className="bg-zinc-900 border border-blue-500/20 rounded-xl p-6 mb-8">
           <h2 className="text-lg font-semibold mb-1">🎬 Upload Video to The Vault</h2>
           <p className="text-sm text-zinc-400 mb-4">
@@ -1561,8 +1646,11 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+        </>
+        )}
 
-        {/* User Feedback */}
+        {/* Tab: Feedback */}
+        {activeTab === 'feedback' && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
           <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
             <h2 className="text-lg font-semibold">💬 User Feedback</h2>
@@ -1624,8 +1712,11 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        )}
 
-        {/* Index Market Structure Management */}
+        {/* Tab: Indices */}
+        {activeTab === 'indices' && (
+        <>
         <div className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden mb-8">
           <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
             <h2 className="text-lg font-semibold">📊 Index Market Structure</h2>
@@ -1860,8 +1951,11 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+        </>
+        )}
 
-        {/* Video Management */}
+        {/* Tab: Videos (Manage) - same tab as Upload */}
+        {activeTab === 'videos' && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
           <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
             <h2 className="text-lg font-semibold">🎬 Manage Videos</h2>
@@ -1922,8 +2016,10 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        )}
 
-        {/* Users Table */}
+        {/* Tab: Users */}
+        {activeTab === 'users' && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-zinc-800">
             <h2 className="text-lg font-semibold">Registered Users</h2>
@@ -1967,6 +2063,7 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
