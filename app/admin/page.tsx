@@ -2020,7 +2020,7 @@ export default function AdminPage() {
         )}
 
         {/* Tab: Users */}
-        {activeTab === 'users' && (
+        {activeTab === 'users' ? (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
             <div className="px-6 py-4 border-b border-zinc-800">
               <h2 className="text-lg font-semibold">Registered Users</h2>
@@ -2064,7 +2064,7 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
         </div>
       </div>
     </div>
