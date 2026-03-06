@@ -18,7 +18,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { secret, quantity, entry_price, exit_quantity, exit_price, chart_url, notes } = body;
+    const { secret, quantity, entry_price, exit_quantity, exit_price, chart_url, notes, stop_loss, take_profit } = body;
 
     if (!process.env.NOTIFY_SECRET || secret !== process.env.NOTIFY_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,7 +26,7 @@ export async function PATCH(
 
     const sql = getDb();
     const existing = await sql`
-      SELECT id, symbol, side, quantity, entry_price, exit_quantity, exit_price, chart_url, notes
+      SELECT id, symbol, side, quantity, entry_price, exit_quantity, exit_price, chart_url, notes, stop_loss, take_profit
       FROM live_trades WHERE id = ${id}
     `;
     if (existing.length === 0) {
@@ -55,12 +55,16 @@ export async function PATCH(
       newExitPrice = exit_price;
     }
 
+    const newStopLoss = stop_loss === undefined ? (row.stop_loss != null ? Number(row.stop_loss) : null) : (stop_loss === null || stop_loss === '' ? null : (() => { const n = parseFloat(stop_loss); return Number.isFinite(n) ? n : null; })());
+    const newTakeProfit = take_profit === undefined ? (row.take_profit != null ? Number(row.take_profit) : null) : (take_profit === null || take_profit === '' ? null : (() => { const n = parseFloat(take_profit); return Number.isFinite(n) ? n : null; })());
     await sql`
       UPDATE live_trades
       SET quantity = ${newQuantity}, entry_price = ${newEntryPrice},
           exit_quantity = ${newExitQuantity}, exit_price = ${newExitPrice},
           chart_url = ${chart_url !== undefined ? chart_url : row.chart_url},
           notes = ${notes !== undefined ? notes : row.notes},
+          stop_loss = ${newStopLoss},
+          take_profit = ${newTakeProfit},
           updated_at = NOW()
       WHERE id = ${id}
     `;
@@ -122,7 +126,7 @@ export async function PATCH(
     }
 
     const updated = await sql`
-      SELECT id, symbol, side, quantity, entry_price, exit_quantity, exit_price, chart_url, notes, updated_at
+      SELECT id, symbol, side, quantity, entry_price, exit_quantity, exit_price, chart_url, notes, stop_loss, take_profit, updated_at
       FROM live_trades WHERE id = ${id}
     `;
     const u = updated[0];
@@ -138,6 +142,8 @@ export async function PATCH(
         exitPrice: u.exit_price != null ? Number(u.exit_price) : null,
         chartUrl: u.chart_url,
         notes: u.notes,
+        stopLoss: u.stop_loss != null ? Number(u.stop_loss) : null,
+        takeProfit: u.take_profit != null ? Number(u.take_profit) : null,
         updatedAt: u.updated_at,
         status: (u.exit_quantity ?? 0) < u.quantity ? 'open' : 'closed',
       },

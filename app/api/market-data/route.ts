@@ -14,12 +14,85 @@ const YAHOO_SYMBOLS: Record<string, string> = {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // No caching - always fetch fresh data
 
+/** Fetch today's session open from Yahoo chart when quote API doesn't provide it. */
+async function fetchSessionOpenFromChart(yahooSymbol: string): Promise<number> {
+  try {
+    const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=5m&range=1d`;
+    const chartRes = await fetch(chartUrl, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      cache: 'no-store',
+    });
+    if (!chartRes.ok) return 0;
+    const chartData = await chartRes.json();
+    const meta = chartData?.chart?.result?.[0]?.meta;
+    const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
+    if (meta?.regularMarketOpen && meta.regularMarketOpen > 0) return meta.regularMarketOpen;
+    if (quote?.open && Array.isArray(quote.open)) {
+      const opens = quote.open.filter((n: number) => n != null && typeof n === 'number' && n > 0);
+      if (opens.length > 0) return opens[0];
+    }
+  } catch {
+    // ignore
+  }
+  return 0;
+}
+
+/** Twelve Data: get real-time price and session open for index futures (ES, NQ, YM, RTY). */
+async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
+  const apiKey = process.env.TWELVE_DATA_API_KEY;
+  if (!apiKey) return null;
+  const twelveSymbols: Record<string, string[]> = {
+    ES: ['ES1!', 'ES=F', 'ES'],
+    NQ: ['NQ1!', 'NQ=F', 'NQ'],
+    YM: ['YM1!', 'YM=F', 'YM'],
+    RTY: ['RTY1!', 'RTY=F', 'RTY'],
+  };
+  const variants = twelveSymbols[symbol] || [];
+  for (const twelveSymbol of variants) {
+    try {
+      const [priceRes, quoteRes] = await Promise.all([
+        fetch(`https://api.twelvedata.com/price?symbol=${twelveSymbol}&apikey=${apiKey}`, { cache: 'no-store' }),
+        fetch(`https://api.twelvedata.com/quote?symbol=${twelveSymbol}&apikey=${apiKey}`, { cache: 'no-store' }),
+      ]);
+      if (!priceRes.ok || !quoteRes.ok) continue;
+      const priceData = await priceRes.json();
+      const quoteData = await quoteRes.json();
+      if (priceData.code || quoteData.code || priceData.status === 'error' || quoteData.status === 'error') continue;
+      const price = parseFloat(priceData.price);
+      const open = parseFloat(quoteData.open || '0');
+      const previousClose = parseFloat(quoteData.previous_close || '0');
+      if (!price || isNaN(price)) continue;
+      const sessionOpen = open > 0 ? open : previousClose;
+      const change = sessionOpen > 0 ? price - sessionOpen : 0;
+      const changePercent = sessionOpen > 0 ? (change / sessionOpen) * 100 : 0;
+      return { price, change, changePercent, previousClose };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const symbol = (searchParams.get('symbol') || '').toUpperCase();
   const yahooSymbol = YAHOO_SYMBOLS[symbol] || symbol;
 
   try {
+    // Index futures: try Twelve Data first (session open → current price is reliable)
+    const indexFutures = ['ES', 'NQ', 'YM', 'RTY'];
+    if (indexFutures.includes(symbol)) {
+      const twelve = await fetchTwelveDataFutures(symbol);
+      if (twelve) {
+        return NextResponse.json({
+          symbol,
+          price: twelve.price,
+          change: twelve.change,
+          changePercent: twelve.changePercent,
+          previousClose: twelve.previousClose,
+        });
+      }
+    }
     // Use CoinMarketCap for BTC/ETH if API key is available
     if ((symbol === 'BTC' || symbol === 'ETH') && process.env.COINMARKETCAP_API_KEY) {
       try {
@@ -126,8 +199,8 @@ export async function GET(request: Request) {
         
         console.log(`[Market Data API] ${symbol} raw data: price=${regularMarketPrice}, prevClose=${previousClose}, dayOpen=${dayOpen}, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}, marketState=${marketState}, marketTime=${marketTime}`);
         
-        // For futures (ES, NQ, YM, RTY, GC, SI, N225), use Yahoo's regularMarketChangePercent
-        // For crypto (BTC/ETH), calculate from day's open for accurate intraday change
+        // For futures (ES, NQ, YM, RTY, GC, SI, N225): change = current price - SESSION OPEN (not previous close)
+        // For crypto (BTC/ETH): change from day's open
         const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'N225'].includes(symbol);
         const isCrypto = symbol === 'BTC' || symbol === 'ETH';
         
@@ -135,37 +208,17 @@ export async function GET(request: Request) {
         let changePercent = 0;
         
         if (isFutures) {
-          // For futures, ALWAYS use Yahoo Finance's built-in change values when available
-          // Yahoo Finance handles market holidays and early closes correctly
-          // Only calculate ourselves if Yahoo's values are completely missing
-          
-          // When market is closed, Yahoo's values are still correct (they show change from last trading day)
-          // Check for rawChangePercent first (even if it's 0, that's valid)
-          if (rawChangePercent != null && typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)) {
-            // Yahoo's changePercent is the most reliable, especially on holidays
-            // Even if it's 0, that's a valid value (no change)
-            changePercent = rawChangePercent;
-            // Calculate change from percent if rawChange is not available
-            if (rawChange != null && typeof rawChange === 'number' && !Number.isNaN(rawChange)) {
-              change = rawChange;
-            } else if (previousClose > 0) {
-              change = (changePercent / 100) * previousClose;
-            } else {
-              change = 0;
-            }
-            console.log(`[Market Data API] ${symbol} (futures): Using Yahoo's changePercent: price=${regularMarketPrice}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%, marketState=${marketState}, isClosed=${isMarketClosed}`);
-          } else if (rawChange != null && typeof rawChange === 'number' && !Number.isNaN(rawChange) && previousClose > 0) {
-            // Fallback: if we have rawChange but not changePercent, calculate percent
-            change = rawChange;
-            changePercent = (change / previousClose) * 100;
-            console.log(`[Market Data API] ${symbol} (futures): Calculated percent from rawChange: price=${regularMarketPrice}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%`);
-          } else if (regularMarketPrice > 0 && previousClose > 0 && previousClose !== regularMarketPrice) {
-            // Last resort: calculate from previous close
-            change = regularMarketPrice - previousClose;
-            changePercent = (change / previousClose) * 100;
-            console.log(`[Market Data API] ${symbol} (futures): Calculated from prevClose (last resort): price=${regularMarketPrice}, prevClose=${previousClose}, change=${changePercent.toFixed(2)}%`);
+          // Always use session/day open → current price for exact intraday change (futures open to now)
+          let sessionOpen = dayOpen && dayOpen > 0 ? dayOpen : 0;
+          if (sessionOpen === 0 && regularMarketPrice > 0) {
+            sessionOpen = await fetchSessionOpenFromChart(yahooSymbol);
+          }
+          if (sessionOpen > 0 && regularMarketPrice > 0) {
+            change = regularMarketPrice - sessionOpen;
+            changePercent = (change / sessionOpen) * 100;
+            console.log(`[Market Data API] ${symbol} (futures): session open→now: price=${regularMarketPrice}, sessionOpen=${sessionOpen}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%`);
           } else {
-            console.warn(`[Market Data API] ${symbol} (futures): Could not get change - price=${regularMarketPrice}, prevClose=${previousClose}, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}`);
+            console.warn(`[Market Data API] ${symbol} (futures): No session open - price=${regularMarketPrice}, dayOpen=${dayOpen}, sessionOpen=${sessionOpen}`);
             change = 0;
             changePercent = 0;
           }
@@ -285,8 +338,6 @@ export async function GET(request: Request) {
       }
       if (price != null && typeof price === 'number') {
         const prev = typeof previousClose === 'number' ? previousClose : price;
-        // For futures, calculate from previous close (not day's open)
-        // For crypto, calculate from day's open
         const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'N225'].includes(symbol);
         const isCrypto = symbol === 'BTC' || symbol === 'ETH';
         
@@ -294,11 +345,14 @@ export async function GET(request: Request) {
         let changePercent = 0;
         
         if (isFutures) {
-          // For futures, always calculate from previous close
-          if (prev > 0 && prev !== price) {
-            change = price - prev;
-            changePercent = (change / prev) * 100;
-            console.log(`[Market Data API] ${symbol} (futures, chart fallback): price=${price}, prevClose=${prev}, change=${changePercent.toFixed(2)}%`);
+          // For futures (chart fallback): get today's session open from intraday chart; 5d chart open may be stale
+          let sessionOpen = meta?.regularMarketOpen && meta.regularMarketOpen > 0 ? meta.regularMarketOpen : 0;
+          if (sessionOpen === 0) sessionOpen = await fetchSessionOpenFromChart(yahooSymbol);
+          if (sessionOpen === 0) sessionOpen = dayOpen > 0 ? dayOpen : prev;
+          if (sessionOpen > 0 && sessionOpen !== price) {
+            change = price - sessionOpen;
+            changePercent = (change / sessionOpen) * 100;
+            console.log(`[Market Data API] ${symbol} (futures, chart fallback): price=${price}, sessionOpen=${sessionOpen}, change=${changePercent.toFixed(2)}%`);
           }
         } else if (isCrypto && dayOpen > 0) {
           // For crypto, calculate from day's open

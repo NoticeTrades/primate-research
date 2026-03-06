@@ -22,6 +22,8 @@ interface Trade {
   exitPrice: number | null;
   chartUrl: string | null;
   notes: string | null;
+  stopLoss: number | null;
+  takeProfit: number | null;
   createdAt: string;
   updatedAt: string;
   status: 'open' | 'closed';
@@ -330,6 +332,13 @@ export default function TradesPage() {
                                 </div>
                               )}
                             </div>
+                            {(t.stopLoss != null || t.takeProfit != null) && (
+                              <p className="text-xs text-zinc-500 mb-2">
+                                {t.stopLoss != null && <span>SL: {t.stopLoss.toFixed(2)}</span>}
+                                {t.stopLoss != null && t.takeProfit != null && ' · '}
+                                {t.takeProfit != null && <span>TP: {t.takeProfit.toFixed(2)}</span>}
+                              </p>
+                            )}
                             {unrealizedPnL != null && (
                               <p className={`text-xl font-bold tabular-nums ${unrealizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                 {formatCurrency(unrealizedPnL)} unrealized
@@ -406,6 +415,13 @@ export default function TradesPage() {
                                   {t.quantity} @ {t.entryPrice.toFixed(2)} → exit {exitQty} @ {t.exitPrice?.toFixed(2) ?? '—'}
                                 </span>
                               </div>
+                              {(t.stopLoss != null || t.takeProfit != null) && (
+                                <p className="text-xs text-zinc-600 w-full">
+                                  {t.stopLoss != null && <span>SL: {t.stopLoss.toFixed(2)}</span>}
+                                  {t.stopLoss != null && t.takeProfit != null && ' · '}
+                                  {t.takeProfit != null && <span>TP: {t.takeProfit.toFixed(2)}</span>}
+                                </p>
+                              )}
                               <p className={`font-bold tabular-nums ${realizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                 {formatCurrency(realizedPnL)}
                               </p>

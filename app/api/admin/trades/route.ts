@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { secret, symbol, side, quantity, entry_price, chart_url, notes, send_notification_email } = body;
+    const { secret, symbol, side, quantity, entry_price, chart_url, notes, send_notification_email, stop_loss, take_profit } = body;
 
     if (!process.env.NOTIFY_SECRET || secret !== process.env.NOTIFY_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,10 +29,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid quantity or entry_price.' }, { status: 400 });
     }
 
+    const stopLossNum = stop_loss != null && stop_loss !== '' ? parseFloat(stop_loss) : null;
+    const takeProfitNum = take_profit != null && take_profit !== '' ? parseFloat(take_profit) : null;
     const sql = getDb();
     const inserted = await sql`
-      INSERT INTO live_trades (symbol, side, quantity, entry_price, chart_url, notes)
-      VALUES (${sym}, ${sid}, ${qty}, ${entry}, ${chart_url || null}, ${notes || null})
+      INSERT INTO live_trades (symbol, side, quantity, entry_price, chart_url, notes, stop_loss, take_profit)
+      VALUES (${sym}, ${sid}, ${qty}, ${entry}, ${chart_url || null}, ${notes || null}, ${Number.isFinite(stopLossNum) ? stopLossNum : null}, ${Number.isFinite(takeProfitNum) ? takeProfitNum : null})
       RETURNING id, symbol, side, quantity, entry_price, created_at
     `;
     const row = inserted[0];

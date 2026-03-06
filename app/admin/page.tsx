@@ -92,13 +92,15 @@ export default function AdminPage() {
   const [deletingChartId, setDeletingChartId] = useState<number | null>(null);
 
   // Live trades state
-  const [liveTrades, setLiveTrades] = useState<{ id: number; symbol: string; side: string; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null; status: string }[]>([]);
+  const [liveTrades, setLiveTrades] = useState<{ id: number; symbol: string; side: string; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null; stopLoss: number | null; takeProfit: number | null; status: string }[]>([]);
   const [liveTradesLoading, setLiveTradesLoading] = useState(false);
   const [liveTradesLoaded, setLiveTradesLoaded] = useState(false);
   const [tradeSymbol, setTradeSymbol] = useState('MNQ');
   const [tradeSide, setTradeSide] = useState<'long' | 'short'>('short');
   const [tradeQuantity, setTradeQuantity] = useState('');
   const [tradeEntryPrice, setTradeEntryPrice] = useState('');
+  const [tradeStopLoss, setTradeStopLoss] = useState('');
+  const [tradeTakeProfit, setTradeTakeProfit] = useState('');
   const [tradeChartUrl, setTradeChartUrl] = useState('');
   const [tradeNotes, setTradeNotes] = useState('');
   const [tradeSendEmail, setTradeSendEmail] = useState(true);
@@ -109,6 +111,8 @@ export default function AdminPage() {
   const [editTradeEntryPrice, setEditTradeEntryPrice] = useState('');
   const [editTradeExitQuantity, setEditTradeExitQuantity] = useState('');
   const [editTradeExitPrice, setEditTradeExitPrice] = useState('');
+  const [editTradeStopLoss, setEditTradeStopLoss] = useState('');
+  const [editTradeTakeProfit, setEditTradeTakeProfit] = useState('');
   const [editTradeChartUrl, setEditTradeChartUrl] = useState('');
   const [editTradeNotes, setEditTradeNotes] = useState('');
   const [tradeUpdateStatus, setTradeUpdateStatus] = useState('');
@@ -543,6 +547,8 @@ export default function AdminPage() {
           side: tradeSide,
           quantity: qty,
           entry_price: entry,
+          stop_loss: tradeStopLoss.trim() ? parseFloat(tradeStopLoss) : undefined,
+          take_profit: tradeTakeProfit.trim() ? parseFloat(tradeTakeProfit) : undefined,
           chart_url: tradeChartUrl.trim() || undefined,
           notes: tradeNotes.trim() || undefined,
           send_notification_email: tradeSendEmail,
@@ -560,6 +566,8 @@ export default function AdminPage() {
         setTradeAddStatus(`✅ Trade added. Notification sent.${data.emailSent != null ? ` ${data.emailSent} email(s) sent.` : ''}`);
         setTradeQuantity('');
         setTradeEntryPrice('');
+        setTradeStopLoss('');
+        setTradeTakeProfit('');
         setTradeChartUrl('');
         setTradeNotes('');
         await fetchLiveTrades();
@@ -574,24 +582,28 @@ export default function AdminPage() {
     }
   };
 
-  const openEditTrade = (t: { id: number; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null }) => {
+  const openEditTrade = (t: { id: number; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null; stopLoss: number | null; takeProfit: number | null }) => {
     setEditingTradeId(t.id);
     setEditTradeQuantity(String(t.quantity));
     setEditTradeEntryPrice(String(t.entryPrice));
     setEditTradeExitQuantity(String(t.exitQuantity ?? 0));
     setEditTradeExitPrice(t.exitPrice != null ? String(t.exitPrice) : '');
+    setEditTradeStopLoss(t.stopLoss != null ? String(t.stopLoss) : '');
+    setEditTradeTakeProfit(t.takeProfit != null ? String(t.takeProfit) : '');
     setEditTradeChartUrl(t.chartUrl || '');
     setEditTradeNotes(t.notes || '');
     setTradeUpdateStatus('');
   };
 
   /** Open edit form with exit qty set to full quantity so user only needs to enter exit price and save (mark closed). */
-  const openEditTradeAsClose = (t: { id: number; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null }) => {
+  const openEditTradeAsClose = (t: { id: number; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null; stopLoss: number | null; takeProfit: number | null }) => {
     setEditingTradeId(t.id);
     setEditTradeQuantity(String(t.quantity));
     setEditTradeEntryPrice(String(t.entryPrice));
     setEditTradeExitQuantity(String(t.quantity));
     setEditTradeExitPrice(t.exitPrice != null ? String(t.exitPrice) : '');
+    setEditTradeStopLoss(t.stopLoss != null ? String(t.stopLoss) : '');
+    setEditTradeTakeProfit(t.takeProfit != null ? String(t.takeProfit) : '');
     setEditTradeChartUrl(t.chartUrl || '');
     setEditTradeNotes(t.notes || '');
     setTradeUpdateStatus('Enter exit price above and click Save to mark trade closed. Users will get a bell notification.');
@@ -621,6 +633,8 @@ export default function AdminPage() {
           entry_price: entry,
           exit_quantity: exitQty,
           exit_price: exitPrice,
+          stop_loss: editTradeStopLoss.trim() ? parseFloat(editTradeStopLoss) : null,
+          take_profit: editTradeTakeProfit.trim() ? parseFloat(editTradeTakeProfit) : null,
           chart_url: editTradeChartUrl.trim() || null,
           notes: editTradeNotes.trim() || null,
         }),
@@ -1238,6 +1252,30 @@ export default function AdminPage() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-1">Stop loss (optional)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={tradeStopLoss}
+                    onChange={(e) => setTradeStopLoss(e.target.value)}
+                    placeholder="e.g. 25350.00"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-1">Profit target (optional)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={tradeTakeProfit}
+                    onChange={(e) => setTradeTakeProfit(e.target.value)}
+                    placeholder="e.g. 25500.00"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 text-sm"
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-1">Chart URL (optional)</label>
                 <input
@@ -1341,6 +1379,30 @@ export default function AdminPage() {
                               />
                             </div>
                           </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-0.5">Stop loss (optional)</label>
+                              <input
+                                type="number"
+                                step="any"
+                                value={editTradeStopLoss}
+                                onChange={(e) => setEditTradeStopLoss(e.target.value)}
+                                placeholder="—"
+                                className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-0.5">Profit target (optional)</label>
+                              <input
+                                type="number"
+                                step="any"
+                                value={editTradeTakeProfit}
+                                onChange={(e) => setEditTradeTakeProfit(e.target.value)}
+                                placeholder="—"
+                                className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-50 text-sm"
+                              />
+                            </div>
+                          </div>
                           <div>
                             <label className="block text-xs text-zinc-400 mb-0.5">Chart URL</label>
                             <input
@@ -1387,6 +1449,13 @@ export default function AdminPage() {
                               {(t.exitQuantity ?? 0) > 0 && (
                                 <span className="text-zinc-500 ml-1">
                                   (exit {t.exitQuantity} @ {t.exitPrice != null ? t.exitPrice.toFixed(2) : '—'})
+                                </span>
+                              )}
+                              {(t.stopLoss != null || t.takeProfit != null) && (
+                                <span className="text-zinc-500 ml-2 text-xs">
+                                  {t.stopLoss != null && `SL: ${t.stopLoss.toFixed(2)}`}
+                                  {t.stopLoss != null && t.takeProfit != null && ' | '}
+                                  {t.takeProfit != null && `TP: ${t.takeProfit.toFixed(2)}`}
                                 </span>
                               )}
                             </span>

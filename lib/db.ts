@@ -360,6 +360,8 @@ export async function initDb() {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE live_trades ADD COLUMN IF NOT EXISTS stop_loss DECIMAL(20, 4)`;
+  await sql`ALTER TABLE live_trades ADD COLUMN IF NOT EXISTS take_profit DECIMAL(20, 4)`;
 
   // Index market structure table (for ES, NQ, YM analysis)
   await sql`
