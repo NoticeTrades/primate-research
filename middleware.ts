@@ -32,44 +32,35 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const url = request.nextUrl.clone();
   const hostname = request.headers.get('host') || '';
-  
-  // Canonical domain: www.primatetrading.com (HTTPS)
-  const canonicalHost = 'www.primatetrading.com';
-  const isProduction = hostname.includes('primatetrading.com');
-  
-  // Force HTTPS and www in production
-  if (isProduction) {
-    const needsRedirect = 
-      request.nextUrl.protocol !== 'https:' || 
-      !hostname.startsWith('www.');
-    
-    if (needsRedirect) {
-      // Build canonical URL
-      url.protocol = 'https:';
-      url.hostname = canonicalHost;
-      // Preserve pathname and search params
-      return NextResponse.redirect(url, 301); // Permanent redirect
-    }
-  }
-
+  const userAgent = request.headers.get('user-agent') || '';
   const sessionToken = request.cookies.get('session_token')?.value;
   const isAuthenticated = !!sessionToken;
-  const userAgent = request.headers.get('user-agent');
 
-  // Check if the current path is a protected route
+  // Protected routes: require login to view (research, videos, jungle tabs, etc.)
   const isProtectedRoute = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
-
-  // Allow search engine crawlers to access protected routes for SEO
   const isCrawler = isSearchEngineCrawler(userAgent);
 
-  // Redirect unauthenticated users from protected routes to signup
-  // BUT allow search engine crawlers to access these pages
+  // Redirect unauthenticated users to login so they can sign in or create an account
   if (isProtectedRoute && !isAuthenticated && !isCrawler) {
-    const signupUrl = new URL('/signup', request.url);
-    signupUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(signupUrl);
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Force HTTPS and www in production (after auth check so one redirect for guests)
+  const canonicalHost = 'www.primatetrading.com';
+  const isProduction = hostname.includes('primatetrading.com');
+  if (isProduction) {
+    const needsRedirect =
+      request.nextUrl.protocol !== 'https:' ||
+      !hostname.startsWith('www.');
+    if (needsRedirect) {
+      url.protocol = 'https:';
+      url.hostname = canonicalHost;
+      return NextResponse.redirect(url, 301);
+    }
   }
 
   return NextResponse.next();

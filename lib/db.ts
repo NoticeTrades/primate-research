@@ -43,6 +43,12 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires TIMESTAMP WITH TIME ZONE
   `;
   await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_code TEXT
+  `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP WITH TIME ZONE
+  `;
+  await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_cleared_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
   `;
   await sql`

@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CursorGlow from '../components/CursorGlow';
 import DiscordSign from '../components/DiscordSign';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = useMemo(() => searchParams.get('redirect'), [searchParams]);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -44,9 +46,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect to the page they were trying to access, or home
-      const params = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect') || '/';
+      const redirect = redirectTo || '/';
       router.push(redirect);
     } catch {
       setError('Network error. Please try again.');
@@ -71,14 +71,16 @@ export default function LoginPage() {
             </h1>
           </Link>
           <p className="text-zinc-400 mt-2 text-sm">
-            Welcome back. Log in to access your research.
+            {redirectTo ? 'Log in to view this page.' : 'Welcome back. Log in to access your research.'}
           </p>
         </div>
 
         {/* Form Card */}
         <div className="bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 shadow-2xl shadow-black/20">
           <h2 className="text-xl font-semibold text-zinc-50 mb-1">Log in</h2>
-          <p className="text-zinc-500 text-sm mb-6">Access your research and trading tools</p>
+          <p className="text-zinc-500 text-sm mb-6">
+            {redirectTo ? 'Sign in to access research, videos, and more.' : 'Access your research and trading tools'}
+          </p>
 
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -104,9 +106,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-400 mb-1.5">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password" className="block text-sm font-medium text-zinc-400">
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-zinc-500 hover:text-blue-400 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 id="password"
                 name="password"
@@ -140,7 +150,10 @@ export default function LoginPage() {
 
           <p className="text-sm text-zinc-400 text-center mt-6">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
+            <Link
+              href={redirectTo ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : '/signup'}
+              className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+            >
               Create account
             </Link>
           </p>

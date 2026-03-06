@@ -43,16 +43,12 @@ export default function Home() {
 
   const handleLatestClick = () => {
     if (!latestContent?.link) return;
-    if (latestContent.type === 'report') {
-      const match = document.cookie.match(/(^| )user_email=([^;]+)/);
-      const isLoggedIn = !!match;
-      if (isLoggedIn) {
-        router.push(latestContent.link);
-      } else {
-        router.push(`/signup?redirect=${encodeURIComponent(latestContent.link)}`);
-      }
-    } else {
+    const match = document.cookie.match(/(^| )user_email=([^;]+)/);
+    const isLoggedIn = !!match;
+    if (isLoggedIn) {
       router.push(latestContent.link);
+    } else {
+      router.push(`/login?redirect=${encodeURIComponent(latestContent.link)}`);
     }
   };
 
