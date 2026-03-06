@@ -1997,6 +1997,7 @@ export default function AdminPage() {
               )}
             </div>
           ) : null}
+        <span className="hidden" aria-hidden />
     </div>
   );
 
