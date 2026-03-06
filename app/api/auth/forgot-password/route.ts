@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '../../../../../lib/db';
+import { getDb } from '../../../../lib/db';
 import { Resend } from 'resend';
 
 function generateCode(): string {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'Primate Research <notifications@resend.dev>';
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://primatetrading.com';
-      const { getEmailLogoHtml } = await import('../../../../../lib/email-logo');
+      const { getEmailLogoHtml } = await import('../../../../lib/email-logo');
 
       await resend.emails.send({
         from: fromEmail,
