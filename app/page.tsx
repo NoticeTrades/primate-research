@@ -12,6 +12,7 @@ import ProfilePicture from './components/ProfilePicture';
 import CursorGlow from './components/CursorGlow';
 import CursorHover from './components/CursorHover';
 import DiscordSign from './components/DiscordSign';
+import YouTubeLiveIndicator from './components/YouTubeLiveIndicator';
 import { researchArticles, generateSlug } from '../data/research';
 import StructuredData from './components/StructuredData';
 
@@ -192,15 +193,16 @@ export default function Home() {
             <p className="text-xl md:text-2xl text-zinc-700 dark:text-zinc-300 mb-8 leading-relaxed max-w-3xl mx-auto">
               Weekly market outlooks, daily research reports, and actionable trade ideas across equities, crypto, and macro markets. Everything you need to stay ahead of the markets.
             </p>
-            <div className="flex flex-wrap gap-4 mb-8 justify-center">
+            <div className="flex flex-wrap gap-4 mb-8 justify-center items-center">
               <ScrollButton targetId="research" variant="primary">
                 View Research
               </ScrollButton>
               <ScrollButton targetId="videos" variant="secondary">
                 Watch Videos
               </ScrollButton>
+              <YouTubeLiveIndicator />
             </div>
-            
+
           </div>
         </div>
       </section>
