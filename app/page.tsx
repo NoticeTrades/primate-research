@@ -13,27 +13,46 @@ import CursorGlow from './components/CursorGlow';
 import CursorHover from './components/CursorHover';
 import DiscordSign from './components/DiscordSign';
 import YouTubeLiveIndicator from './components/YouTubeLiveIndicator';
-import { researchArticles, generateSlug } from '../data/research';
 import StructuredData from './components/StructuredData';
+
+type LatestContent = {
+  type: 'report' | 'video' | null;
+  title: string | null;
+  description: string | null;
+  date: string | null;
+  link: string | null;
+  badge: string | null;
+  category: string | null;
+  tags: string[] | null;
+  videoId?: number;
+};
 
 export default function Home() {
   const router = useRouter();
   const [researchOpacity, setResearchOpacity] = useState(0);
+  const [latestContent, setLatestContent] = useState<LatestContent | null>(null);
 
-  // Get the latest article from research data
-  const latestArticle = researchArticles[0] || null;
+  useEffect(() => {
+    fetch('/api/latest-content', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.type && data?.title) setLatestContent(data);
+      })
+      .catch(() => {});
+  }, []);
 
-  const handleLatestArticleClick = () => {
-    // Check if user is logged in via cookie
-    const match = document.cookie.match(/(^| )user_email=([^;]+)/);
-    const isLoggedIn = !!match;
-    const slug = latestArticle?.slug || generateSlug(latestArticle?.title || '');
-    const reportPath = `/research/${slug}`;
-
-    if (isLoggedIn) {
-      router.push(reportPath);
+  const handleLatestClick = () => {
+    if (!latestContent?.link) return;
+    if (latestContent.type === 'report') {
+      const match = document.cookie.match(/(^| )user_email=([^;]+)/);
+      const isLoggedIn = !!match;
+      if (isLoggedIn) {
+        router.push(latestContent.link);
+      } else {
+        router.push(`/signup?redirect=${encodeURIComponent(latestContent.link)}`);
+      }
     } else {
-      router.push(`/signup?redirect=${encodeURIComponent(reportPath)}`);
+      router.push(latestContent.link);
     }
   };
 
@@ -207,50 +226,47 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Latest Article Section */}
-      {latestArticle && (
+      {/* Latest Report or Video — whichever was posted most recently */}
+      {latestContent?.title && (
         <section className="px-6 -mt-12 pb-12 relative z-10">
           <div className="max-w-4xl mx-auto">
             <div className="relative group">
-              {/* Glow effect behind the card */}
               <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/20 via-blue-500/10 to-blue-600/20 rounded-2xl blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div
-                onClick={handleLatestArticleClick}
+                onClick={handleLatestClick}
                 className="relative bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 md:p-8 cursor-pointer hover:border-zinc-700 transition-all duration-300 backdrop-blur-sm"
               >
-                {/* Top row: badge + date */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-bold uppercase tracking-wider text-blue-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                      Latest Report
+                      {latestContent.badge || 'Latest'}
                     </span>
-                    <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                      {latestArticle.category}
-                    </span>
+                    {latestContent.category && (
+                      <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                        {latestContent.category}
+                      </span>
+                    )}
                   </div>
-                  {latestArticle.date && (
+                  {latestContent.date && (
                     <span className="text-xs text-zinc-500 font-medium hidden sm:block">
-                      {latestArticle.date}
+                      {latestContent.date}
                     </span>
                   )}
                 </div>
 
-                {/* Title */}
                 <h3 className="text-xl md:text-2xl font-bold text-zinc-50 mb-3 group-hover:text-blue-400 transition-colors duration-300">
-                  {latestArticle.title}
+                  {latestContent.title}
                 </h3>
 
-                {/* Description */}
                 <p className="text-sm md:text-base text-zinc-400 leading-relaxed mb-5 line-clamp-3">
-                  {latestArticle.description}
+                  {latestContent.description}
                 </p>
 
-                {/* Tags */}
-                {latestArticle.tags && latestArticle.tags.length > 0 && (
+                {latestContent.tags && latestContent.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-5">
-                    {latestArticle.tags.slice(0, 6).map((tag) => (
+                    {latestContent.tags.slice(0, 6).map((tag) => (
                       <span
                         key={tag}
                         className="px-2 py-0.5 text-[11px] font-medium rounded-md bg-zinc-800 text-zinc-400 border border-zinc-700/50"
@@ -258,25 +274,26 @@ export default function Home() {
                         {tag}
                       </span>
                     ))}
-                    {latestArticle.tags.length > 6 && (
+                    {latestContent.tags.length > 6 && (
                       <span className="px-2 py-0.5 text-[11px] font-medium text-zinc-500">
-                        +{latestArticle.tags.length - 6} more
+                        +{latestContent.tags.length - 6} more
                       </span>
                     )}
                   </div>
                 )}
 
-                {/* CTA */}
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-400 group-hover:text-blue-300 transition-colors">
-                    Read Full Report
+                    {latestContent.type === 'video' ? 'Watch Video' : 'Read Full Report'}
                     <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
                   </span>
-                  <span className="text-[11px] text-zinc-600 hidden sm:block">
-                    Free account required
-                  </span>
+                  {latestContent.type === 'report' && (
+                    <span className="text-[11px] text-zinc-600 hidden sm:block">
+                      Free account required
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
