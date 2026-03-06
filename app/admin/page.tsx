@@ -984,7 +984,7 @@ export default function AdminPage() {
   }
 
   const AdminTabPanels = () => (
-    <>
+    <div className="contents">
           {/* Tab: Overview */}
           {activeTab === 'overview' && (
             <div className="space-y-4 mb-8">
@@ -1997,7 +1997,7 @@ export default function AdminPage() {
               )}
             </div>
           ) : null}
-    </>
+    </div>
   );
 
   return (
