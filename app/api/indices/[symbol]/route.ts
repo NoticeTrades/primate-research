@@ -9,6 +9,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   NQ: 'NQ=F',
   YM: 'YM=F',
   RTY: 'RTY=F',
+  CL: 'CL=F',
 };
 
 const ALPHA_VANTAGE_SYMBOLS: Record<string, string> = {
@@ -16,6 +17,7 @@ const ALPHA_VANTAGE_SYMBOLS: Record<string, string> = {
   NQ: 'NQ',
   YM: 'YM',
   RTY: 'RTY',
+  CL: 'CL',
 };
 
 const INDEX_NAMES: Record<string, string> = {
@@ -23,6 +25,7 @@ const INDEX_NAMES: Record<string, string> = {
   NQ: 'E-mini NASDAQ-100',
   YM: 'E-mini Dow Jones',
   RTY: 'E-mini Russell 2000',
+  CL: 'WTI Crude Oil',
 };
 
 // Fetch data from Alpha Vantage (more reliable for futures)
@@ -61,6 +64,7 @@ async function fetchTwelveData(symbol: string) {
       NQ: ['NQ1!', 'NQ=F', 'NQ'],
       YM: ['YM1!', 'YM=F', 'YM'],
       RTY: ['RTY1!', 'RTY=F', 'RTY'],
+      CL: ['CL1!', 'CL=F', 'CL'],
     };
     
     const symbolVariants = twelveSymbols[symbol] || [symbol];

@@ -82,8 +82,8 @@ export default function AdminPage() {
   const [indexCharts, setIndexCharts] = useState<{ id: number; symbol: string; chart_url: string; title: string | null; chart_date: string; created_at: string }[]>([]);
   const [indexChartsLoading, setIndexChartsLoading] = useState(false);
   const [indexChartsLoaded, setIndexChartsLoaded] = useState(false);
-  const [chartFilterSymbol, setChartFilterSymbol] = useState<'ES' | 'NQ' | 'YM' | ''>('');
-  const [chartUploadSymbol, setChartUploadSymbol] = useState<'ES' | 'NQ' | 'YM'>('ES');
+  const [chartFilterSymbol, setChartFilterSymbol] = useState<'ES' | 'NQ' | 'YM' | 'CL' | ''>('');
+  const [chartUploadSymbol, setChartUploadSymbol] = useState<'ES' | 'NQ' | 'YM' | 'CL'>('ES');
   const [chartUploadTitle, setChartUploadTitle] = useState('');
   const [chartUploadDate, setChartUploadDate] = useState('');
   const [chartFile, setChartFile] = useState<File | null>(null);
@@ -1024,7 +1024,7 @@ export default function AdminPage() {
                   <button onClick={() => setActiveTab('indices')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
                     <span className="text-lg">📊</span>
                     <p className="text-sm font-medium text-zinc-200 mt-1">Indices</p>
-                    <p className="text-xs text-zinc-500">ES/NQ/YM structure & charts</p>
+                    <p className="text-xs text-zinc-500">ES/NQ/YM/CL structure & charts</p>
                   </button>
                   <button onClick={() => setActiveTab('feedback')} className="p-3 rounded-lg bg-zinc-800/80 border border-zinc-700 text-left hover:bg-zinc-700/80 transition-colors">
                     <span className="text-lg">💬</span>
@@ -1845,20 +1845,21 @@ export default function AdminPage() {
             )}
           </div>
   
-          {/* Index Charts (ES / NQ / YM) — show on ticker pages */}
+          {/* Index Charts (ES / NQ / YM / CL) — show on index pages */}
           <div className="bg-zinc-900 border border-blue-500/20 rounded-xl overflow-hidden mb-8">
             <div className="px-6 py-4 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold">📈 Index Charts (ES / NQ / YM)</h2>
+              <h2 className="text-lg font-semibold">📈 Index Charts (ES / NQ / YM / CL)</h2>
               <div className="flex items-center gap-3">
                 <select
                   value={chartFilterSymbol}
-                  onChange={(e) => setChartFilterSymbol(e.target.value as 'ES' | 'NQ' | 'YM' | '')}
+                  onChange={(e) => setChartFilterSymbol(e.target.value as 'ES' | 'NQ' | 'YM' | 'CL' | '')}
                   className="px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
                 >
                   <option value="">All symbols</option>
                   <option value="ES">ES</option>
                   <option value="NQ">NQ</option>
                   <option value="YM">YM</option>
+                  <option value="CL">CL</option>
                 </select>
                 <button
                   onClick={fetchIndexCharts}
@@ -1877,12 +1878,13 @@ export default function AdminPage() {
                     <label className="block text-xs text-zinc-500 mb-1">Symbol</label>
                     <select
                       value={chartUploadSymbol}
-                      onChange={(e) => setChartUploadSymbol(e.target.value as 'ES' | 'NQ' | 'YM')}
+                      onChange={(e) => setChartUploadSymbol(e.target.value as 'ES' | 'NQ' | 'YM' | 'CL')}
                       className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
                     >
                       <option value="ES">ES</option>
                       <option value="NQ">NQ</option>
                       <option value="YM">YM</option>
+                      <option value="CL">CL</option>
                     </select>
                   </div>
                   <div>
@@ -1931,7 +1933,7 @@ export default function AdminPage() {
               {!indexChartsLoaded ? (
                 <p className="text-zinc-500 text-sm">Click &quot;Load charts&quot; to view uploaded charts.</p>
               ) : indexCharts.length === 0 ? (
-                <p className="text-zinc-500 text-sm">No charts yet. Upload one above; they will show on the ES / NQ / YM ticker pages in a dropdown.</p>
+                <p className="text-zinc-500 text-sm">No charts yet. Upload one above; they will show on the ES / NQ / YM / CL index pages in a dropdown.</p>
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-zinc-500">{indexCharts.length} chart(s)</p>

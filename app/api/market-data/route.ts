@@ -7,6 +7,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   RTY: 'RTY=F',
   GC: 'GC=F',
   SI: 'SI=F',
+  CL: 'CL=F',
   N225: '^N225',
   BTC: 'BTC-USD',
 };
@@ -75,7 +76,7 @@ async function fetchN225SessionOpen(yahooSymbol: string): Promise<number> {
   }
 }
 
-/** Twelve Data: get real-time price and session open for index futures (ES, NQ, YM, RTY). */
+/** Twelve Data: get real-time price and session open for index/commodity futures (ES, NQ, YM, RTY, CL). */
 async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
   if (!apiKey) return null;
@@ -84,6 +85,7 @@ async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; 
     NQ: ['NQ1!', 'NQ=F', 'NQ'],
     YM: ['YM1!', 'YM=F', 'YM'],
     RTY: ['RTY1!', 'RTY=F', 'RTY'],
+    CL: ['CL1!', 'CL=F', 'CL'],
   };
   const variants = twelveSymbols[symbol] || [];
   for (const twelveSymbol of variants) {
@@ -117,8 +119,8 @@ export async function GET(request: Request) {
   const yahooSymbol = YAHOO_SYMBOLS[symbol] || symbol;
 
   try {
-    // Index futures: try Twelve Data first (session open → current price is reliable)
-    const indexFutures = ['ES', 'NQ', 'YM', 'RTY'];
+    // Index/commodity futures: try Twelve Data first (session open → current price is reliable)
+    const indexFutures = ['ES', 'NQ', 'YM', 'RTY', 'CL'];
     if (indexFutures.includes(symbol)) {
       const twelve = await fetchTwelveDataFutures(symbol);
       if (twelve) {
@@ -239,7 +241,7 @@ export async function GET(request: Request) {
         
         // For futures (ES, NQ, YM, RTY, GC, SI, N225): change = current price - SESSION OPEN (not previous close)
         // For crypto (BTC/ETH): change from day's open
-        const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'N225'].includes(symbol);
+        const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'CL', 'N225'].includes(symbol);
         const isCrypto = symbol === 'BTC' || symbol === 'ETH';
         
         let change = 0;
@@ -380,7 +382,7 @@ export async function GET(request: Request) {
       }
       if (price != null && typeof price === 'number') {
         const prev = typeof previousClose === 'number' ? previousClose : price;
-        const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'N225'].includes(symbol);
+        const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'CL', 'N225'].includes(symbol);
         const isCrypto = symbol === 'BTC' || symbol === 'ETH';
         
         let change = 0;

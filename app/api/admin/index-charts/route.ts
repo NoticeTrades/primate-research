@@ -4,7 +4,7 @@ import { put } from '@vercel/blob';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_SYMBOLS = ['ES', 'NQ', 'YM'];
+const VALID_SYMBOLS = ['ES', 'NQ', 'YM', 'CL'];
 
 function isAdminAuth(request: Request, body?: { secret?: string }): boolean {
   const urlSecret = new URL(request.url).searchParams.get('secret');
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     if (!file || !symbol || !VALID_SYMBOLS.includes(symbol)) {
       return NextResponse.json(
-        { error: 'Missing file or invalid symbol (ES, NQ, YM)' },
+        { error: 'Missing file or invalid symbol (ES, NQ, YM, CL)' },
         { status: 400 }
       );
     }

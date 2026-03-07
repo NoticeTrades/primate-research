@@ -26,7 +26,7 @@ export default function Navigation() {
   const { openEquityIndex } = useEquityIndex();
 
   const TERMINAL_PLACEHOLDER = 'Search Terminal... (Press ` to open)';
-  const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'BTC'];
+  const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'CL', 'BTC'];
 
   useEffect(() => {
     let i = 0;

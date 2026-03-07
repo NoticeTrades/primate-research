@@ -4,7 +4,7 @@ import { getDb } from '../../../../../lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const VALID_SYMBOLS = ['ES', 'NQ', 'YM'];
+const VALID_SYMBOLS = ['ES', 'NQ', 'YM', 'CL'];
 
 export async function GET(
   request: Request,
