@@ -61,8 +61,12 @@ export default function NotificationsPage() {
   const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [soundNotificationsEnabled, setSoundNotificationsEnabled] = useState(true);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [tradeNotifSms, setTradeNotifSms] = useState(false);
   const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
   const [isUpdatingSoundPreferences, setIsUpdatingSoundPreferences] = useState(false);
+  const [smsSaving, setSmsSaving] = useState(false);
+  const [smsMessage, setSmsMessage] = useState('');
   const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
   const playedSoundForIdsRef = useRef<Set<number>>(new Set());
   const [isClient, setIsClient] = useState(false);
@@ -98,6 +102,8 @@ export default function NotificationsPage() {
           const data = await res.json();
           setBrowserNotificationsEnabled(data.browserNotificationsEnabled || false);
           setSoundNotificationsEnabled(data.soundNotificationsEnabled !== false); // Default to true
+          if (data.phoneNumber != null) setPhoneNumber(data.phoneNumber || '');
+          if (data.tradeNotificationsSms !== undefined) setTradeNotifSms(data.tradeNotificationsSms);
         }
       } catch (err) {
         console.error('Failed to fetch preferences:', err);
@@ -396,6 +402,34 @@ export default function NotificationsPage() {
     }
   };
 
+  const saveSmsPrefs = async () => {
+    setSmsSaving(true);
+    setSmsMessage('');
+    try {
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber.trim() || null,
+          tradeNotificationsSms: tradeNotifSms,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPhoneNumber(data.phoneNumber ?? '');
+        setTradeNotifSms(data.tradeNotificationsSms ?? false);
+        setSmsMessage('Saved');
+        setTimeout(() => setSmsMessage(''), 2000);
+      } else {
+        setSmsMessage(data.error || 'Failed to save');
+      }
+    } catch {
+      setSmsMessage('Failed to save');
+    } finally {
+      setSmsSaving(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -685,6 +719,65 @@ export default function NotificationsPage() {
                   Notifications are blocked. Please enable them in your browser settings.
                 </p>
               )}
+            </div>
+
+            {/* Live trade SMS */}
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl px-5 py-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-emerald-600/20 rounded-lg">
+                  <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-100">Live trade SMS alerts</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Get a text when a new live trade is posted (entry, size, stop/target)
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="5551234567 or +1 555 123 4567"
+                  className="flex-1 min-w-[180px] px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                />
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <button
+                    type="button"
+                    onClick={() => setTradeNotifSms(!tradeNotifSms)}
+                    disabled={smsSaving}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 ${
+                      tradeNotifSms ? 'bg-emerald-600' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        tradeNotifSms ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm text-zinc-300 group-hover:text-zinc-100">Send to my phone</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={saveSmsPrefs}
+                  disabled={smsSaving || (tradeNotifSms && !phoneNumber.trim())}
+                  className="px-3 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {smsSaving ? 'Saving…' : 'Save'}
+                </button>
+                {smsMessage && (
+                  <span className={`text-xs ${smsMessage === 'Saved' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {smsMessage}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-2">
+                US numbers (10 digits) or E.164. Message and data rates may apply.
+              </p>
             </div>
           </div>
 
