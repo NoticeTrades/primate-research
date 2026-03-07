@@ -85,6 +85,12 @@ export async function initDb() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS trade_notifications_email BOOLEAN DEFAULT FALSE
   `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number TEXT
+  `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS trade_notifications_sms BOOLEAN DEFAULT FALSE
+  `;
 
   // Set noticetrades as owner/founder
   await sql`

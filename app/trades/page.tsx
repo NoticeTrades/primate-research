@@ -46,8 +46,12 @@ export default function TradesPage() {
   const [showClosed, setShowClosed] = useState(false);
   const [tradeNotifEnabled, setTradeNotifEnabled] = useState(true);
   const [tradeNotifEmail, setTradeNotifEmail] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [tradeNotifSms, setTradeNotifSms] = useState(false);
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsMessage, setPrefsMessage] = useState('');
+  const [smsSaving, setSmsSaving] = useState(false);
+  const [smsMessage, setSmsMessage] = useState('');
 
   const fetchTrades = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
@@ -99,6 +103,8 @@ export default function TradesPage() {
       .then((data) => {
         if (data.tradeNotificationsEnabled !== undefined) setTradeNotifEnabled(data.tradeNotificationsEnabled);
         if (data.tradeNotificationsEmail !== undefined) setTradeNotifEmail(data.tradeNotificationsEmail);
+        if (data.phoneNumber != null) setPhoneNumber(data.phoneNumber || '');
+        if (data.tradeNotificationsSms !== undefined) setTradeNotifSms(data.tradeNotificationsSms);
       })
       .catch(() => {});
   }, []);
@@ -128,6 +134,34 @@ export default function TradesPage() {
       setPrefsMessage('Failed to save');
     } finally {
       setPrefsSaving(false);
+    }
+  };
+
+  const saveSmsPrefs = async () => {
+    setSmsSaving(true);
+    setSmsMessage('');
+    try {
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber.trim() || null,
+          tradeNotificationsSms: tradeNotifSms,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPhoneNumber(data.phoneNumber ?? '');
+        setTradeNotifSms(data.tradeNotificationsSms ?? false);
+        setSmsMessage('Saved');
+        setTimeout(() => setSmsMessage(''), 2000);
+      } else {
+        setSmsMessage(data.error || 'Failed to save');
+      }
+    } catch {
+      setSmsMessage('Failed to save');
+    } finally {
+      setSmsSaving(false);
     }
   };
 
@@ -218,7 +252,7 @@ export default function TradesPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-zinc-200">New trade notifications</p>
-                  <p className="text-xs text-zinc-500">Bell icon and email alerts</p>
+                  <p className="text-xs text-zinc-500">Bell, email, and optional SMS to your phone</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-6">
@@ -243,6 +277,44 @@ export default function TradesPage() {
                   <span className="text-sm text-zinc-300 group-hover:text-zinc-100">Email when a trade is added</span>
                 </label>
                 {prefsMessage && <span className="text-xs text-emerald-400">{prefsMessage}</span>}
+              </div>
+              <div className="mt-4 pt-4 border-t border-zinc-800">
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Live trades via SMS</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="5551234567 or +1 555 123 4567"
+                    className="w-48 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={tradeNotifSms}
+                      onChange={(e) => setTradeNotifSms(e.target.checked)}
+                      disabled={smsSaving}
+                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-sm text-zinc-300 group-hover:text-zinc-100">Send to my phone</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={saveSmsPrefs}
+                    disabled={smsSaving || (tradeNotifSms && !phoneNumber.trim())}
+                    className="px-3 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {smsSaving ? 'Saving…' : 'Save'}
+                  </button>
+                  {smsMessage && (
+                    <span className={`text-xs ${smsMessage === 'Saved' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {smsMessage}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1.5">
+                  Add your number and enable to get a text when a new live trade is posted. US numbers (10 digits) or E.164. Message and data rates may apply.
+                </p>
               </div>
             </div>
           )}

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getDb } from '../../../../lib/db';
+import { normalizePhoneToE164 } from '../../../../lib/sms';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/notifications/preferences — get user's browser notification preference
+// GET /api/notifications/preferences — get user's notification preferences
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -15,16 +16,19 @@ export async function GET() {
     }
 
     const sql = getDb();
-    let result: { browser_notifications_enabled?: boolean; sound_notifications_enabled?: boolean; trade_notifications_enabled?: boolean; trade_notifications_email?: boolean }[];
+    let result: { browser_notifications_enabled?: boolean; sound_notifications_enabled?: boolean; trade_notifications_enabled?: boolean; trade_notifications_email?: boolean; phone_number?: string | null; trade_notifications_sms?: boolean }[];
     try {
       result = await sql`
         SELECT browser_notifications_enabled, sound_notifications_enabled,
-               trade_notifications_enabled, trade_notifications_email
+               trade_notifications_enabled, trade_notifications_email,
+               phone_number, trade_notifications_sms
         FROM users WHERE email = ${userEmail}
       `;
     } catch {
       result = await sql`
-        SELECT browser_notifications_enabled, sound_notifications_enabled FROM users WHERE email = ${userEmail}
+        SELECT browser_notifications_enabled, sound_notifications_enabled,
+               trade_notifications_enabled, trade_notifications_email
+        FROM users WHERE email = ${userEmail}
       `;
     }
     if (result.length === 0) {
@@ -32,7 +36,7 @@ export async function GET() {
     }
 
     const r = result[0];
-    const out: Record<string, boolean> = {
+    const out: Record<string, boolean | string | null> = {
       browserNotificationsEnabled: r.browser_notifications_enabled || false,
       soundNotificationsEnabled: r.sound_notifications_enabled !== false,
     };
@@ -40,6 +44,8 @@ export async function GET() {
       out.tradeNotificationsEnabled = r.trade_notifications_enabled !== false;
       out.tradeNotificationsEmail = r.trade_notifications_email === true;
     }
+    if ('phone_number' in r) out.phoneNumber = r.phone_number ?? null;
+    if ('trade_notifications_sms' in r) out.tradeNotificationsSms = r.trade_notifications_sms === true;
     return NextResponse.json(out);
   } catch (error) {
     console.error('Get notification preferences error:', error);
@@ -61,9 +67,53 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { enabled, soundEnabled, tradeNotificationsEnabled, tradeNotificationsEmail } = body;
+    const { enabled, soundEnabled, tradeNotificationsEnabled, tradeNotificationsEmail, phoneNumber, tradeNotificationsSms } = body;
 
-    // Trade notification preferences: accept if either key is present
+    // SMS / phone preferences
+    const hasSmsPref = 'phoneNumber' in body || 'tradeNotificationsSms' in body;
+    if (hasSmsPref) {
+      const sql = getDb();
+      try {
+        const userCheck = await sql`
+          SELECT phone_number, trade_notifications_sms FROM users WHERE email = ${userEmail}
+        `;
+        if (userCheck.length === 0) {
+          return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+        const current = userCheck[0];
+        let newPhone: string | null = current?.phone_number ?? null;
+        if ('phoneNumber' in body) {
+          const raw = phoneNumber == null ? '' : String(phoneNumber).trim();
+          newPhone = raw === '' ? null : normalizePhoneToE164(raw) ?? newPhone;
+          if (raw !== '' && !normalizePhoneToE164(raw)) {
+            return NextResponse.json({ error: 'Invalid phone number. Use 10-digit US number or E.164 (e.g. +1 555 123 4567).' }, { status: 400 });
+          }
+        }
+        const newSms = typeof tradeNotificationsSms === 'boolean' ? tradeNotificationsSms : (current?.trade_notifications_sms === true);
+        if (newSms && !newPhone) {
+          return NextResponse.json({ error: 'Add a phone number to enable SMS alerts.' }, { status: 400 });
+        }
+        await sql`
+          UPDATE users SET phone_number = ${newPhone}, trade_notifications_sms = ${newSms && !!newPhone}
+          WHERE email = ${userEmail}
+        `;
+        return NextResponse.json({
+          success: true,
+          phoneNumber: newPhone,
+          tradeNotificationsSms: newSms && !!newPhone,
+        });
+      } catch (dbErr: any) {
+        if (dbErr?.message?.includes('phone_number') || dbErr?.message?.includes('trade_notifications_sms') || dbErr?.code === '42703') {
+          return NextResponse.json(
+            { error: 'Database setup required. Run Setup in Admin to add SMS columns.' },
+            { status: 500 }
+          );
+        }
+        throw dbErr;
+      }
+    }
+
+    // Trade notification preferences (in-app + email): accept if either key is present
     const hasTradePref = 'tradeNotificationsEnabled' in body || 'tradeNotificationsEmail' in body;
     if (hasTradePref) {
       const sql = getDb();

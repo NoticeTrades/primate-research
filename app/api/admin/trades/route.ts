@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '../../../../lib/db';
 import { Resend } from 'resend';
 import { getEmailLogoHtml } from '../../../../lib/email-logo';
+import { sendSms } from '../../../../lib/sms';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +97,27 @@ export async function POST(request: Request) {
       }
     }
 
+    let smsSent = 0;
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+      const smsUsers = await sql`
+        SELECT phone_number FROM users
+        WHERE verified = true AND trade_notifications_sms = true AND phone_number IS NOT NULL AND phone_number != ''
+      `;
+      const entryStr = Number(row.entry_price).toFixed(2);
+      let smsBody = `Primate Trading — Trade Alert: ${sid.charAt(0).toUpperCase() + sid.slice(1)} ${sym} ${qty} @ ${entryStr}`;
+      if (Number.isFinite(stopLossNum)) smsBody += `. SL: ${Number(stopLossNum).toFixed(2)}`;
+      if (Number.isFinite(takeProfitNum)) smsBody += `. TP: ${Number(takeProfitNum).toFixed(2)}`;
+      smsBody += `. Please log in to your dashboard on PC for detailed breakdown and analysis.`;
+      for (const u of smsUsers) {
+        const phone = u.phone_number?.trim();
+        if (phone) {
+          const result = await sendSms(phone, smsBody);
+          if (result.success) smsSent++;
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       trade: {
@@ -108,6 +130,7 @@ export async function POST(request: Request) {
       },
       notificationCreated: true,
       emailSent: sendEmail ? emailSent : undefined,
+      smsSent: smsSent > 0 ? smsSent : undefined,
     });
   } catch (error) {
     console.error('POST /api/admin/trades error:', error);
