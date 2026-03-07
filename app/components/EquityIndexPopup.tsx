@@ -6,8 +6,9 @@ import { useEquityIndex } from '../contexts/EquityIndexContext';
 const POLL_MS = 3000;
 const EI_SYMBOLS = [
   { ticker: 'ES', name: 'S&P 500 E-Mini' },
-  { ticker: 'YM', name: 'Dow Futures Mini' },
   { ticker: 'NQ', name: 'Nasdaq 100 E-Mini' },
+  { ticker: 'YM', name: 'Dow E-Mini' },
+  { ticker: 'RTY', name: 'Russell 2000 E-Mini' },
 ];
 
 interface RowData {
@@ -23,8 +24,8 @@ interface RowData {
 function getDefaultPosition() {
   if (typeof window === 'undefined') return { x: 120, y: 120 };
   return {
-    x: Math.max(16, (window.innerWidth - 420) / 2),
-    y: Math.max(16, (window.innerHeight - 240) / 2),
+    x: Math.max(16, (window.innerWidth - 480) / 2),
+    y: Math.max(16, (window.innerHeight - 320) / 2),
   };
 }
 
@@ -101,48 +102,62 @@ export default function EquityIndexPopup() {
 
   if (!isEquityIndexOpen) return null;
 
-  const delayText = `~${POLL_MS / 1000}s`;
-
   return (
     <div
-      className="fixed z-50 flex flex-col w-[400px] rounded-lg overflow-hidden border border-zinc-700/80 bg-zinc-900/95 shadow-xl backdrop-blur-sm"
+      className="fixed z-50 flex flex-col min-w-[440px] max-w-[500px] rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl backdrop-blur-sm"
       style={{
         left: position.x,
         top: position.y,
         cursor: isDragging ? 'grabbing' : 'default',
       }}
     >
+      {/* Header */}
       <div
         onMouseDown={(e) => {
           if ((e.target as HTMLElement).closest('button')) return;
           setIsDragging(true);
           dragStart.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y };
         }}
-        className="flex items-center justify-between px-2.5 py-1.5 bg-zinc-800/90 border-b border-zinc-700/80 cursor-grab active:cursor-grabbing select-none"
+        className="flex items-center justify-between px-4 py-3 bg-zinc-800/95 border-b border-zinc-700/80 cursor-grab active:cursor-grabbing select-none"
       >
-        <span className="text-xs font-semibold text-white">US Equity Index Futures</span>
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-xs font-bold">
+            EI
+          </span>
+          <span className="text-sm font-semibold text-white tracking-tight">US Equity Index Futures</span>
+        </div>
         <button
           type="button"
           onClick={closeEquityIndex}
-          className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
           aria-label="Close"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
-      <div className="p-2 overflow-x-auto">
-        <table className="w-full text-xs border-collapse">
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-zinc-700/80">
-              <th className="text-left py-1.5 px-1.5 text-zinc-400 font-medium">Ticker</th>
-              <th className="text-left py-1.5 px-1.5 text-zinc-400 font-medium">Name</th>
-              <th className="text-right py-1.5 px-1.5 text-zinc-400 font-medium">Last</th>
-              <th className="text-right py-1.5 px-1.5 text-zinc-400 font-medium">Chg</th>
-              <th className="text-right py-1.5 px-1.5 text-zinc-400 font-medium">Chg %</th>
-              <th className="text-right py-1.5 px-1.5 text-zinc-400 font-medium">YTD %</th>
-              <th className="text-right py-1.5 px-1.5 text-zinc-400 font-medium">Delay</th>
+            <tr className="border-b border-zinc-700/60">
+              <th className="text-left py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Contract
+              </th>
+              <th className="text-right py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Last
+              </th>
+              <th className="text-right py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Chg
+              </th>
+              <th className="text-right py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Chg %
+              </th>
+              <th className="text-right py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                YTD %
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -152,34 +167,46 @@ export default function EquityIndexPopup() {
               const ytdUp = (row.ytdPercent ?? 0) >= 0;
               const ytdClass = ytdUp ? 'text-emerald-400' : 'text-red-400';
               return (
-                <tr key={row.symbol} className="border-b border-zinc-800/80 last:border-b-0">
-                  <td className="py-1.5 px-1.5 font-medium text-white">{row.symbol}</td>
-                  <td className="py-1.5 px-1.5 text-zinc-300">{row.name}</td>
-                  <td className="py-1.5 px-1.5 text-right text-white tabular-nums">
-                    {row.price != null
-                      ? row.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                      : '--'}
+                <tr
+                  key={row.symbol}
+                  className="border-b border-zinc-800/60 last:border-b-0 hover:bg-zinc-800/40 transition-colors"
+                >
+                  <td className="py-3 px-4">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold text-white tabular-nums">{row.symbol}</span>
+                      <span className="text-xs text-zinc-500">{row.name}</span>
+                    </div>
                   </td>
-                  <td className={`py-1.5 px-1.5 text-right tabular-nums ${chgClass}`}>
+                  <td className="py-3 px-4 text-right">
+                    <span className="text-sm font-medium text-white tabular-nums">
+                      {row.price != null
+                        ? row.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        : '—'}
+                    </span>
+                  </td>
+                  <td className={`py-3 px-4 text-right text-sm font-medium tabular-nums ${chgClass}`}>
                     {row.change != null
-                      ? `${row.change >= 0 ? '+' : ''}${row.change.toFixed(2)} pts`
-                      : '--'}
+                      ? `${row.change >= 0 ? '+' : ''}${row.change.toFixed(2)}`
+                      : '—'}
                   </td>
-                  <td className={`py-1.5 px-1.5 text-right tabular-nums ${chgClass}`}>
+                  <td className={`py-3 px-4 text-right text-sm font-medium tabular-nums ${chgClass}`}>
                     {row.changePercent != null
                       ? `${row.changePercent >= 0 ? '+' : ''}${row.changePercent.toFixed(2)}%`
-                      : '--'}
+                      : '—'}
                   </td>
-                  <td className={`py-1.5 px-1.5 text-right tabular-nums ${ytdClass}`}>
-                    {row.ytdPercent != null ? `${row.ytdPercent >= 0 ? '+' : ''}${row.ytdPercent.toFixed(2)}%` : '--'}
+                  <td className={`py-3 px-4 text-right text-sm font-medium tabular-nums ${ytdClass}`}>
+                    {row.ytdPercent != null ? `${row.ytdPercent >= 0 ? '+' : ''}${row.ytdPercent.toFixed(2)}%` : '—'}
                   </td>
-                  <td className="py-1.5 px-1.5 text-right text-zinc-500 text-[10px]">{delayText}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        <p className="text-[10px] text-zinc-500 mt-1.5">Data updates every {POLL_MS / 1000}s.</p>
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-2.5 bg-zinc-800/50 border-t border-zinc-700/60 flex items-center justify-between">
+        <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Points · Data ~{POLL_MS / 1000}s delay</span>
       </div>
     </div>
   );
