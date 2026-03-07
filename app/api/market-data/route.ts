@@ -76,6 +76,39 @@ async function fetchN225SessionOpen(yahooSymbol: string): Promise<number> {
   }
 }
 
+/** Fetch YTD % from Yahoo chart (1y daily). Used for futures when Twelve Data doesn't provide YTD. */
+async function fetchYtdFromYahoo(yahooSymbol: string): Promise<number | null> {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1y`;
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const result = data?.chart?.result?.[0];
+    const timestamps = result?.timestamp as number[] | undefined;
+    const closes = result?.indicators?.quote?.[0]?.close as number[] | undefined;
+    if (!Array.isArray(closes) || !Array.isArray(timestamps) || timestamps.length !== closes.length || closes.length === 0) return null;
+    const yearStart = Math.floor(new Date(new Date().getFullYear(), 0, 1).getTime() / 1000);
+    let ytdStart: number | null = null;
+    const lastClose = closes[closes.length - 1];
+    for (let i = 0; i < timestamps.length; i++) {
+      if (timestamps[i] >= yearStart && typeof closes[i] === 'number') {
+        ytdStart = closes[i];
+        break;
+      }
+    }
+    if (ytdStart == null && typeof closes[0] === 'number') ytdStart = closes[0];
+    if (typeof ytdStart === 'number' && typeof lastClose === 'number' && ytdStart > 0) {
+      return ((lastClose - ytdStart) / ytdStart) * 100;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** Twelve Data: get real-time price and session open for index/commodity futures (ES, NQ, YM, RTY, CL). */
 async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
@@ -124,12 +157,15 @@ export async function GET(request: Request) {
     if (indexFutures.includes(symbol)) {
       const twelve = await fetchTwelveDataFutures(symbol);
       if (twelve) {
+        const yahooSymbolForYtd = YAHOO_SYMBOLS[symbol] || symbol;
+        const ytdPercent = await fetchYtdFromYahoo(yahooSymbolForYtd);
         return NextResponse.json({
           symbol,
           price: twelve.price,
           change: twelve.change,
           changePercent: twelve.changePercent,
           previousClose: twelve.previousClose,
+          ytdPercent: ytdPercent ?? undefined,
         });
       }
     }

@@ -153,16 +153,16 @@ export default function EquityIndexPopup() {
               const ytdClass = ytdUp ? 'text-emerald-400' : 'text-red-400';
               return (
                 <tr key={row.symbol} className="border-b border-zinc-800/80 last:border-b-0">
-                  <td className="py-1.5 px-1.5 font-medium text-white">{row.symbol}1</td>
+                  <td className="py-1.5 px-1.5 font-medium text-white">{row.symbol}</td>
                   <td className="py-1.5 px-1.5 text-zinc-300">{row.name}</td>
                   <td className="py-1.5 px-1.5 text-right text-white tabular-nums">
                     {row.price != null
-                      ? `$${row.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      ? row.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       : '--'}
                   </td>
                   <td className={`py-1.5 px-1.5 text-right tabular-nums ${chgClass}`}>
                     {row.change != null
-                      ? `${row.change >= 0 ? '+' : ''}$${row.change.toFixed(2)}`
+                      ? `${row.change >= 0 ? '+' : ''}${row.change.toFixed(2)} pts`
                       : '--'}
                   </td>
                   <td className={`py-1.5 px-1.5 text-right tabular-nums ${chgClass}`}>
