@@ -47,6 +47,7 @@ export default function TradesPage() {
   const [tradeNotifEnabled, setTradeNotifEnabled] = useState(true);
   const [tradeNotifEmail, setTradeNotifEmail] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [showPhoneNumber, setShowPhoneNumber] = useState(false);
   const [tradeNotifSms, setTradeNotifSms] = useState(false);
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsMessage, setPrefsMessage] = useState('');
@@ -281,13 +282,23 @@ export default function TradesPage() {
               <div className="mt-4 pt-4 border-t border-zinc-800">
                 <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Live trades via SMS</p>
                 <div className="flex flex-wrap items-center gap-3">
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="5551234567 or +1 555 123 4567"
-                    className="w-48 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
-                  />
+                  <div className="relative flex items-center">
+                    <input
+                      type={showPhoneNumber ? 'tel' : 'password'}
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="5551234567 or +1 555 123 4567"
+                      autoComplete="tel"
+                      className="w-48 pl-3 pr-16 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPhoneNumber((v) => !v)}
+                      className="absolute right-2 px-2 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+                    >
+                      {showPhoneNumber ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"

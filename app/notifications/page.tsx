@@ -62,6 +62,7 @@ export default function NotificationsPage() {
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [soundNotificationsEnabled, setSoundNotificationsEnabled] = useState(true);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [showPhoneNumber, setShowPhoneNumber] = useState(false);
   const [tradeNotifSms, setTradeNotifSms] = useState(false);
   const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false);
   const [isUpdatingSoundPreferences, setIsUpdatingSoundPreferences] = useState(false);
@@ -737,13 +738,23 @@ export default function NotificationsPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="5551234567 or +1 555 123 4567"
-                  className="flex-1 min-w-[180px] px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
-                />
+                <div className="relative flex items-center flex-1 min-w-[180px]">
+                  <input
+                    type={showPhoneNumber ? 'tel' : 'password'}
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="5551234567 or +1 555 123 4567"
+                    autoComplete="tel"
+                    className="w-full pl-3 pr-14 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPhoneNumber((v) => !v)}
+                    className="absolute right-2 px-2 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {showPhoneNumber ? 'Hide' : 'Show'}
+                  </button>
+                </div>
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <button
                     type="button"
