@@ -7,6 +7,7 @@ import { researchArticles, generateSlug } from '../../data/research';
 import { useChat } from '../contexts/ChatContext';
 import { useTicker } from '../contexts/TickerContext';
 import { useEquityIndex } from '../contexts/EquityIndexContext';
+import { useVolatility } from '../contexts/VolatilityContext';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -24,6 +25,7 @@ export default function Navigation() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const { openTicker } = useTicker();
   const { openEquityIndex } = useEquityIndex();
+  const { openVolatility } = useVolatility();
 
   const TERMINAL_PLACEHOLDER = 'Search Terminal... (Press ` to open)';
   const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'CL', 'BTC'];
@@ -352,6 +354,7 @@ export default function Navigation() {
     { name: 'E-mini NASDAQ-100', ticker: 'NQ' },
     { name: 'E-mini Dow Jones', ticker: 'YM' },
     { name: 'E-mini Russell 2000', ticker: 'RTY' },
+    { name: 'WTI Crude Oil', ticker: 'CL' },
   ];
 
   // Crypto autocomplete options (name + ticker pairs)
@@ -435,7 +438,7 @@ export default function Navigation() {
   // Check if search query is an index (ticker)
   const isIndexTicker = (query: string): boolean => {
     const trimmed = query.trim().toUpperCase();
-    return ['ES', 'NQ', 'YM', 'RTY'].includes(trimmed);
+    return ['ES', 'NQ', 'YM', 'RTY', 'CL'].includes(trimmed);
   };
 
   // Check if search query is a crypto (ticker or name)
@@ -501,6 +504,12 @@ export default function Navigation() {
     }
     if (q === 'V') {
       router.push('/videos');
+      setSearchQuery('');
+      searchRef.current?.blur();
+      return;
+    }
+    if (q === 'VOL') {
+      openVolatility();
       setSearchQuery('');
       searchRef.current?.blur();
       return;
@@ -604,12 +613,12 @@ export default function Navigation() {
               if (showCommands) {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
-                  setSelectedCommandIndex((i) => (i + 1) % 5);
+                  setSelectedCommandIndex((i) => (i + 1) % 6);
                   return;
                 }
                 if (e.key === 'ArrowUp') {
                   e.preventDefault();
-                  setSelectedCommandIndex((i) => (i - 1 + 5) % 5);
+                  setSelectedCommandIndex((i) => (i - 1 + 6) % 6);
                   return;
                 }
                 if (e.key === 'Enter') {
@@ -633,8 +642,13 @@ export default function Navigation() {
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
-                  } else {
+                  } else if (selectedCommandIndex === 4) {
                     router.push('/videos');
+                    setIsDropdownOpen(false);
+                    setSearchQuery('');
+                    searchRef.current?.blur();
+                  } else {
+                    openVolatility();
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
@@ -792,6 +806,7 @@ export default function Navigation() {
                         { cmd: 'EI', label: 'US Equity Index Futures (ES, YM, NQ)', onSelect: () => { openEquityIndex(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'R', label: 'Research', onSelect: () => { router.push('/research'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'V', label: 'The Vault / Videos', onSelect: () => { router.push('/videos'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'VOL', label: 'Volatility (VIX, VVIX, term structure)', onSelect: () => { openVolatility(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                       ].map((item, idx) => (
                         <button
                           key={item.cmd}
@@ -820,7 +835,8 @@ export default function Navigation() {
               const showEIDropdown = raw.toUpperCase() === 'EI';
               const showRDropdown = raw.toUpperCase() === 'R';
               const showVDropdown = raw.toUpperCase() === 'V';
-              const showOther = !showPriceDropdown && !showEIDropdown && !showRDropdown && !showVDropdown && (indexAutocomplete.length > 0 || isIndexTicker(searchQuery) || cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
+              const showVOLDropdown = raw.toUpperCase() === 'VOL';
+              const showOther = !showPriceDropdown && !showEIDropdown && !showRDropdown && !showVDropdown && !showVOLDropdown && (indexAutocomplete.length > 0 || isIndexTicker(searchQuery) || cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
               if (showRDropdown) {
                 return (
                   <div
@@ -869,6 +885,32 @@ export default function Navigation() {
                       className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
                     >
                       Go to The Vault (Videos)
+                    </button>
+                  </div>
+                );
+              }
+              if (showVOLDropdown) {
+                return (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full mt-1.5 right-0 w-64 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                  >
+                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">VOL</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Volatility (VIX, VVIX, term structure)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        openVolatility();
+                        setSearchQuery('');
+                        setIsDropdownOpen(false);
+                        searchRef.current?.blur();
+                      }}
+                      className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
+                    >
+                      Open Volatility Dashboard
                     </button>
                   </div>
                 );

@@ -6,10 +6,12 @@ import { ThemeProvider } from "./providers/ThemeProvider";
 import { ChatProvider } from "./contexts/ChatContext";
 import { TickerProvider } from "./contexts/TickerContext";
 import { EquityIndexProvider } from "./contexts/EquityIndexContext";
+import { VolatilityProvider } from "./contexts/VolatilityContext";
 import FeedbackWidget from "./components/FeedbackWidget";
 import ChatPopup from "./components/ChatPopup";
 import PriceTerminalWrapper from "./components/PriceTerminalWrapper";
 import EquityIndexPopup from "./components/EquityIndexPopup";
+import VolatilityPanel from "./components/VolatilityPanel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -93,10 +95,13 @@ export default function RootLayout({
           <ChatProvider>
             <TickerProvider>
               <EquityIndexProvider>
-                {children}
-                <ChatPopup />
-                <PriceTerminalWrapper />
-                <EquityIndexPopup />
+                <VolatilityProvider>
+                  {children}
+                  <ChatPopup />
+                  <PriceTerminalWrapper />
+                  <EquityIndexPopup />
+                  <VolatilityPanel />
+                </VolatilityProvider>
               </EquityIndexProvider>
             </TickerProvider>
           </ChatProvider>
