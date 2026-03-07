@@ -37,6 +37,44 @@ async function fetchSessionOpenFromChart(yahooSymbol: string): Promise<number> {
   return 0;
 }
 
+/** Nikkei 225 (^N225) trades in Tokyo (JST). Yahoo quote "regularMarketOpen" can be wrong. Use chart to get first open of current trading day in Asia/Tokyo. */
+async function fetchN225SessionOpen(yahooSymbol: string): Promise<number> {
+  try {
+    const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=5m&range=2d`;
+    const chartRes = await fetch(chartUrl, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      cache: 'no-store',
+    });
+    if (!chartRes.ok) return 0;
+    const chartData = await chartRes.json();
+    const result = chartData?.chart?.result?.[0];
+    const timestamps = result?.timestamp as number[] | undefined;
+    const quote = result?.indicators?.quote?.[0];
+    const opens = quote?.open as (number | null)[] | undefined;
+    if (!Array.isArray(timestamps) || !Array.isArray(opens) || timestamps.length !== opens.length) return 0;
+
+    const todayJst = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
+    let firstOpenToday: number | null = null;
+    const firstOpenByDate: Record<string, number> = {};
+    for (let i = 0; i < timestamps.length; i++) {
+      const ts = timestamps[i];
+      const openVal = opens[i];
+      if (openVal == null || typeof openVal !== 'number' || openVal <= 0) continue;
+      const dateJst = new Date(ts * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
+      if (dateJst === todayJst) {
+        if (firstOpenToday == null) firstOpenToday = openVal;
+      }
+      if (!firstOpenByDate[dateJst]) firstOpenByDate[dateJst] = openVal;
+    }
+    if (firstOpenToday != null) return firstOpenToday;
+    const dates = Object.keys(firstOpenByDate).sort().reverse();
+    if (dates.length > 0) return firstOpenByDate[dates[0]];
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Twelve Data: get real-time price and session open for index futures (ES, NQ, YM, RTY). */
 async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
@@ -210,6 +248,10 @@ export async function GET(request: Request) {
         if (isFutures) {
           // Always use session/day open → current price for exact intraday change (futures open to now)
           let sessionOpen = dayOpen && dayOpen > 0 ? dayOpen : 0;
+          if (symbol === 'N225') {
+            const n225Open = await fetchN225SessionOpen(yahooSymbol);
+            if (n225Open > 0) sessionOpen = n225Open;
+          }
           if (sessionOpen === 0 && regularMarketPrice > 0) {
             sessionOpen = await fetchSessionOpenFromChart(yahooSymbol);
           }
@@ -345,8 +387,12 @@ export async function GET(request: Request) {
         let changePercent = 0;
         
         if (isFutures) {
-          // For futures (chart fallback): get today's session open from intraday chart; 5d chart open may be stale
+          // For futures (chart fallback): get today's session open; for N225 use Tokyo session
           let sessionOpen = meta?.regularMarketOpen && meta.regularMarketOpen > 0 ? meta.regularMarketOpen : 0;
+          if (symbol === 'N225') {
+            const n225Open = await fetchN225SessionOpen(yahooSymbol);
+            if (n225Open > 0) sessionOpen = n225Open;
+          }
           if (sessionOpen === 0) sessionOpen = await fetchSessionOpenFromChart(yahooSymbol);
           if (sessionOpen === 0) sessionOpen = dayOpen > 0 ? dayOpen : prev;
           if (sessionOpen > 0 && sessionOpen !== price) {
