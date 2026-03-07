@@ -39,11 +39,11 @@ export default function VolatilityPanel() {
   const fetchData = async () => {
     try {
       setError(null);
-      const res = await fetch('/api/volatility', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
-      if (!res.ok) throw new Error('Failed to fetch');
+      const res = await fetch(`/api/volatility?t=${Date.now()}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
       const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to fetch');
       if (json.error) throw new Error(json.error);
-      setData(json.data ?? []);
+      setData(Array.isArray(json.data) ? json.data : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to load volatility data');
       setData([]);
@@ -113,10 +113,21 @@ export default function VolatilityPanel() {
         </div>
 
         <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
-          {loading && data.length === 0 ? (
+          {loading && data.length === 0 && !error ? (
             <p className="text-sm text-zinc-400">Loading volatility data…</p>
           ) : error ? (
-            <p className="text-sm text-red-400">{error}</p>
+            <div className="space-y-2">
+              <p className="text-sm text-red-400">{error}</p>
+              <button
+                type="button"
+                onClick={() => { setLoading(true); fetchData(); }}
+                className="text-xs px-3 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : data.length === 0 ? (
+            <p className="text-sm text-zinc-400">No volatility data available. Try again later.</p>
           ) : (
             <>
               {/* VIX spotlight + zone */}
