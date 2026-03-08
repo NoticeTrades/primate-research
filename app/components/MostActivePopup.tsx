@@ -24,7 +24,15 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'value', label: 'Value' },
 ];
 
-const LIMIT_OPTIONS = [10, 20, 25, 50];
+const LIMIT_OPTIONS = [10, 20, 25, 50, 100];
+
+function getDefaultPosition() {
+  if (typeof window === 'undefined') return { x: 80, y: 60 };
+  return {
+    x: Math.max(16, (window.innerWidth - 900) / 2),
+    y: Math.max(16, (window.innerHeight - 520) / 2),
+  };
+}
 
 function formatVol(n: number): string {
   if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
@@ -36,6 +44,9 @@ function formatVol(n: number): string {
 
 export default function MostActivePopup() {
   const { isMostActiveOpen, closeMostActive } = useMostActive();
+  const [position, setPosition] = useState(getDefaultPosition);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const [tab, setTab] = useState<TabId>('active');
   const [limit, setLimit] = useState(20);
   const [sector, setSector] = useState('all');
@@ -91,17 +102,47 @@ export default function MostActivePopup() {
     return () => window.removeEventListener('mousedown', onClick);
   }, [isMostActiveOpen, closeMostActive]);
 
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e: MouseEvent) => {
+      setPosition({
+        x: dragStart.current.left + e.clientX - dragStart.current.x,
+        y: Math.max(0, dragStart.current.top + e.clientY - dragStart.current.y),
+      });
+    };
+    const onUp = () => setIsDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDragging]);
+
   if (!isMostActiveOpen) return null;
 
   const sectorOptions = sectors.length > 0 ? sectors : ['All'];
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] p-4 bg-black/50 backdrop-blur-sm">
       <div
         ref={panelRef}
         className="flex flex-col w-full max-w-5xl max-h-[90vh] rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl"
+        style={{
+          position: 'fixed',
+          left: position.x,
+          top: position.y,
+          cursor: isDragging ? 'grabbing' : 'default',
+        }}
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80 shrink-0 flex-wrap gap-2">
+        <div
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('select')) return;
+            setIsDragging(true);
+            dragStart.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y };
+          }}
+          className="flex items-center justify-between px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80 shrink-0 flex-wrap gap-2 cursor-grab active:cursor-grabbing select-none"
+        >
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400 bg-amber-500/20 border border-amber-500/50">
               MOST

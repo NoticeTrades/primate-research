@@ -51,8 +51,19 @@ const SERIES_COLORS = [
 
 type ChartPoint = Record<string, string | number>;
 
+function getDefaultPosition() {
+  if (typeof window === 'undefined') return { x: 80, y: 60 };
+  return {
+    x: Math.max(16, (window.innerWidth - 672) / 2),
+    y: Math.max(16, (window.innerHeight - 600) / 2),
+  };
+}
+
 export default function ComparePopup() {
   const { isCompareOpen, closeCompare } = useCompare();
+  const [position, setPosition] = useState(getDefaultPosition);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const [symbols, setSymbols] = useState<string[]>([]);
   const [range, setRange] = useState<RangeValue>('ytd');
   const [hiddenSymbols, setHiddenSymbols] = useState<Set<string>>(new Set());
@@ -205,6 +216,23 @@ export default function ComparePopup() {
     return () => window.removeEventListener('mousedown', onClick);
   }, [isCompareOpen, closeCompare]);
 
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e: MouseEvent) => {
+      setPosition({
+        x: dragStart.current.left + e.clientX - dragStart.current.x,
+        y: Math.max(0, dragStart.current.top + e.clientY - dragStart.current.y),
+      });
+    };
+    const onUp = () => setIsDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDragging]);
+
   const filteredTickers = inputValue.trim()
     ? COMP_TICKERS.filter(
         (t) =>
@@ -229,12 +257,25 @@ export default function ComparePopup() {
   const hasData = chartData.length > 0 && symbols.length > 0;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] p-4 bg-black/50 backdrop-blur-sm">
       <div
         ref={panelRef}
         className="flex flex-col w-full max-w-3xl max-h-[90vh] rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl"
+        style={{
+          position: 'fixed',
+          left: position.x,
+          top: position.y,
+          cursor: isDragging ? 'grabbing' : 'default',
+        }}
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80 shrink-0 flex-wrap gap-2">
+        <div
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('select')) return;
+            setIsDragging(true);
+            dragStart.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y };
+          }}
+          className="flex items-center justify-between px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80 shrink-0 flex-wrap gap-2 cursor-grab active:cursor-grabbing select-none"
+        >
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/20 border border-emerald-500/50">
               COMP

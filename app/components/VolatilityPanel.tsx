@@ -29,8 +29,19 @@ function getTermStructureLabel(vix: number | null, vix3m: number | null): string
   return 'Flat';
 }
 
+function getDefaultPosition() {
+  if (typeof window === 'undefined') return { x: 120, y: 100 };
+  return {
+    x: Math.max(16, (window.innerWidth - 420) / 2),
+    y: Math.max(16, (window.innerHeight - 480) / 2),
+  };
+}
+
 export default function VolatilityPanel() {
   const { isVolatilityOpen, closeVolatility } = useVolatility();
+  const [position, setPosition] = useState(getDefaultPosition);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const [data, setData] = useState<VolatilityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +89,23 @@ export default function VolatilityPanel() {
     return () => window.removeEventListener('mousedown', onClick);
   }, [isVolatilityOpen, closeVolatility]);
 
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e: MouseEvent) => {
+      setPosition({
+        x: dragStart.current.left + e.clientX - dragStart.current.x,
+        y: Math.max(0, dragStart.current.top + e.clientY - dragStart.current.y),
+      });
+    };
+    const onUp = () => setIsDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDragging]);
+
   if (!isVolatilityOpen) return null;
 
   const vixRow = data.find((r) => r.symbol === '^VIX');
@@ -88,12 +116,25 @@ export default function VolatilityPanel() {
   const termLabel = getTermStructureLabel(vixVal, vix3mVal);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] p-4 bg-black/50 backdrop-blur-sm">
       <div
         ref={panelRef}
         className="flex flex-col w-full max-w-lg rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl"
+        style={{
+          position: 'fixed',
+          left: position.x,
+          top: position.y,
+          cursor: isDragging ? 'grabbing' : 'default',
+        }}
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80">
+        <div
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).closest('button')) return;
+            setIsDragging(true);
+            dragStart.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y };
+          }}
+          className="flex items-center justify-between px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80 cursor-grab active:cursor-grabbing select-none"
+        >
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400 bg-amber-500/20 border border-amber-500/50">
               VOL

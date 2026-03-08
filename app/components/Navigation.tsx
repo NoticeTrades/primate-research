@@ -848,7 +848,8 @@ export default function Navigation() {
                           if (now - commandSelectRanRef.current < 200) return;
                           commandSelectRanRef.current = now;
                           setSelectedCommandIndex(idx);
-                          item.onSelect();
+                          // Defer so COMP/VOL/MOST open reliably when clicking (after any blur/focus)
+                          setTimeout(() => item.onSelect(), 0);
                         };
                         return (
                           <button
@@ -856,10 +857,12 @@ export default function Navigation() {
                             type="button"
                             onMouseDown={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               runSelect();
                             }}
                             onClick={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               runSelect();
                             }}
                             className={`w-full text-left px-2 py-1.5 transition-colors flex items-center gap-2 text-[11px] font-medium text-zinc-800 dark:text-zinc-200 cursor-pointer ${idx === selectedCommandIndex ? 'bg-blue-500/15 dark:bg-blue-500/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}

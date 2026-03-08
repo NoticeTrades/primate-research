@@ -55,7 +55,7 @@ export async function GET(request: Request) {
   }
   const { searchParams } = new URL(request.url);
   const type = (searchParams.get('type') || 'active').toLowerCase(); // active | gainers | losers | value
-  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20', 10) || 20));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10) || 20));
   const sector = searchParams.get('sector') || 'all'; // all or specific sector
 
   try {
@@ -126,7 +126,21 @@ export async function GET(request: Request) {
       filtered = rows.filter((row) => row.sector === sector);
     }
 
-    const sectors = [...new Set(rows.map((r) => r.sector).filter(Boolean))].sort();
+    const fromData = rows.map((r) => r.sector).filter((s): s is string => Boolean(s) && s !== '—');
+    const FALLBACK_SECTORS = [
+      'Technology',
+      'Healthcare',
+      'Financial Services',
+      'Consumer Cyclical',
+      'Consumer Defensive',
+      'Industrials',
+      'Basic Materials',
+      'Energy',
+      'Utilities',
+      'Real Estate',
+      'Communication Services',
+    ];
+    const sectors = [...new Set([...fromData, ...FALLBACK_SECTORS])].sort();
 
     return NextResponse.json({
       data: filtered,
