@@ -144,10 +144,10 @@ export default function ComparePopup() {
           logoImg = null;
         }
       }
-      const logoHeight = 28;
+      const logoHeight = 42;
       const logoPadding = 12;
       const hasLogo = logoImg != null && logoImg.width > 0 && logoImg.height > 0;
-      const pad = hasLogo ? logoHeight + logoPadding * 2 + 36 : 40;
+      const pad = hasLogo ? logoHeight + logoPadding * 2 + 40 : 40;
       const c = document.createElement('canvas');
       c.width = img.width;
       c.height = img.height + pad;
@@ -160,7 +160,7 @@ export default function ComparePopup() {
       ctx.textAlign = 'center';
       if (hasLogo && logoImg) {
         const scale = logoHeight / logoImg.height;
-        const logoWidth = Math.min(logoImg.width * scale, 120);
+        const logoWidth = Math.min(logoImg.width * scale, 180);
         const logoX = (c.width - logoWidth) / 2;
         const logoY = img.height + logoPadding;
         ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
