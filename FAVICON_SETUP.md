@@ -1,6 +1,6 @@
 # Setting Up Your Favicon
 
-I've updated the code to use your Primate Trading logo as the favicon. However, for best results, you should also replace the `app/favicon.ico` file.
+The site uses your Primate Trading logo from `public/primate-logo.png` for the favicon and Apple touch icon. Both are generated with a **white background** so they look correct in Google search results and browser tabs.
 
 ## Option 1: Quick Fix (Already Done)
 The code now points to `/primate-logo.png` as the favicon. This should work, but `.ico` files are preferred for better browser compatibility.
