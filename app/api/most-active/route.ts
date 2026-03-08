@@ -7,6 +7,25 @@ type OverviewCacheEntry = { name: string; sector: string; marketCap: number; ts:
 const OVERVIEW_CACHE = new Map<string, OverviewCacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+/** Normalize Alpha Vantage / GICS sector names to a single canonical form for filtering. */
+function normalizeSector(s: string): string {
+  const t = (s || '').trim();
+  if (!t || t === '—') return '—';
+  const lower = t.toLowerCase();
+  if (lower.includes('information technology') || lower === 'technology') return 'Technology';
+  if (lower.includes('health') || lower.includes('life science')) return 'Healthcare';
+  if (lower.includes('financial') || lower === 'finance') return 'Financial Services';
+  if (lower.includes('consumer cyclical') || lower.includes('consumer discretionary')) return 'Consumer Cyclical';
+  if (lower.includes('consumer defensive') || lower.includes('consumer staple')) return 'Consumer Defensive';
+  if (lower.includes('industrial')) return 'Industrials';
+  if (lower.includes('basic material')) return 'Basic Materials';
+  if (lower.includes('energy')) return 'Energy';
+  if (lower.includes('utilit')) return 'Utilities';
+  if (lower.includes('real estate')) return 'Real Estate';
+  if (lower.includes('communication')) return 'Communication Services';
+  return t;
+}
+
 async function fetchOverview(symbol: string): Promise<OverviewCacheEntry | null> {
   const cached = OVERVIEW_CACHE.get(symbol);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached;
@@ -108,6 +127,7 @@ export async function GET(request: Request) {
       const volume = parseFloat(String(r.volume || 0)) || 0;
       const volumeDollar = price * volume;
       const ov = overviewBySymbol.get(ticker);
+      const rawSector = ov?.sector ?? '—';
       return {
         ticker,
         name: ov?.name || ticker,
@@ -117,34 +137,22 @@ export async function GET(request: Request) {
         volume,
         volumeDollar,
         marketCap: ov?.marketCap ?? 0,
-        sector: ov?.sector ?? '—',
+        sector: normalizeSector(rawSector),
       };
     });
 
     let filtered = rows;
     if (sector !== 'all' && sector !== '') {
-      filtered = rows.filter((row) => row.sector === sector);
+      const normalizedFilter = normalizeSector(sector);
+      filtered = rows.filter((row) => row.sector === normalizedFilter);
     }
 
     const fromData = rows.map((r) => r.sector).filter((s): s is string => Boolean(s) && s !== '—');
-    const FALLBACK_SECTORS = [
-      'Technology',
-      'Healthcare',
-      'Financial Services',
-      'Consumer Cyclical',
-      'Consumer Defensive',
-      'Industrials',
-      'Basic Materials',
-      'Energy',
-      'Utilities',
-      'Real Estate',
-      'Communication Services',
-    ];
-    const sectors = [...new Set([...fromData, ...FALLBACK_SECTORS])].sort();
+    const sectors = ['All', ...[...new Set(fromData)].sort()];
 
     return NextResponse.json({
       data: filtered,
-      sectors: ['All', ...sectors],
+      sectors,
     });
   } catch (e) {
     console.error('[most-active]', e);

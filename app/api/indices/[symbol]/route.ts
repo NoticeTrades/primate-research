@@ -302,7 +302,6 @@ export async function GET(
       }
     }
     }
-    }
 
     // Fallback to chart API if quote API didn't work
     if (price === 0) {

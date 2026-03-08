@@ -173,12 +173,12 @@ export default function MostActivePopup() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <select
-              value={limit}
+              value={String(limit)}
               onChange={(e) => setLimit(Number(e.target.value))}
               className="px-2.5 py-1.5 rounded-lg bg-zinc-700 border border-zinc-600 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
             >
               {LIMIT_OPTIONS.map((n) => (
-                <option key={n} value={n}>
+                <option key={n} value={String(n)}>
                   Top {n}
                 </option>
               ))}
