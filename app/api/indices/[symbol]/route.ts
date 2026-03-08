@@ -194,9 +194,39 @@ export async function GET(
       console.log(`[Index API] Twelve Data failed for ${symbol}, falling back to Yahoo Finance`);
     }
 
-    // Fallback to Yahoo Finance if Twelve Data didn't work
+    // Fallback to Yahoo Finance if Twelve Data didn't work (Yahoo is often 10–15 min delayed; set TWELVE_DATA_API_KEY for real-time)
     if (price === 0) {
-      // Fetch current price and basic stats from Yahoo Finance
+      // Try 5m intraday chart first for slightly fresher price when market is open
+      try {
+        const intradayUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=5m&range=1d`;
+        const intradayRes = await fetch(intradayUrl, {
+          headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+          cache: 'no-store',
+        });
+        if (intradayRes.ok) {
+          const intraday = await intradayRes.json();
+          const meta = intraday?.chart?.result?.[0]?.meta;
+          const quote = intraday?.chart?.result?.[0]?.indicators?.quote?.[0];
+          const closes = quote?.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number') : []) : [];
+          const lastClose = closes.length > 0 ? closes[closes.length - 1] : 0;
+          if (lastClose > 0) {
+            const prevClose = meta?.previousClose ?? (closes.length >= 2 ? closes[closes.length - 2] : lastClose);
+            price = lastClose;
+            previousClose = prevClose;
+            change = prevClose > 0 ? price - prevClose : 0;
+            changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+            if (meta?.regularMarketOpen) open = meta.regularMarketOpen;
+            if (meta?.regularMarketDayHigh) high = meta.regularMarketDayHigh;
+            if (meta?.regularMarketDayLow) low = meta.regularMarketDayLow;
+            if (meta?.regularMarketVolume) volume = meta.regularMarketVolume;
+          }
+        }
+      } catch {
+        // ignore, fall through to quote API
+      }
+
+      // If 5m chart didn't give a price, use quote API
+      if (price === 0) {
       const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSymbol)}`;
       const quoteRes = await fetch(quoteUrl, {
         headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
@@ -269,6 +299,8 @@ export async function GET(
         if (low === 0 && price > 0) low = price;
         if (open === 0 && price > 0) open = price;
       }
+      }
+    }
     }
     }
 
@@ -401,7 +433,7 @@ export async function GET(
       { term: 'Q4 Rally', months: [9, 10, 11], description: 'October–December often stronger; earnings and year-end flows.', avgReturn: getAvgForMonths([9, 10, 11]) },
     ].filter((t) => t.avgReturn != null);
 
-    return NextResponse.json({
+    const body = {
       symbol,
       name: INDEX_NAMES[symbol] || symbol,
       price,
@@ -425,6 +457,12 @@ export async function GET(
       seasonality: seasonalityData,
       seasonalKeyTerms,
       seasonalityYears: 15,
+    };
+    return NextResponse.json(body, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+      },
     });
   } catch (error) {
     console.error('Index data error:', error);

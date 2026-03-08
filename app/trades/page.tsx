@@ -79,9 +79,10 @@ export default function TradesPage() {
   const fetchPrices = useCallback(async () => {
     const symbols = ['NQ', 'ES'];
     const next: Record<string, number> = {};
+    const t = Date.now();
     for (const sym of symbols) {
       try {
-        const res = await fetch(`/api/indices/${sym}`, { cache: 'no-store' });
+        const res = await fetch(`/api/indices/${sym}?t=${t}`, { cache: 'no-store' });
         const data = await res.json();
         if (res.ok && typeof data.price === 'number') next[sym] = data.price;
       } catch {

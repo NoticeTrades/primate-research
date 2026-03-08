@@ -16,6 +16,11 @@ const YAHOO_SYMBOLS: Record<string, string> = {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // No caching - always fetch fresh data
 
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate',
+  'Pragma': 'no-cache',
+} as const;
+
 /** Fetch today's session open from Yahoo chart when quote API doesn't provide it. */
 async function fetchSessionOpenFromChart(yahooSymbol: string): Promise<number> {
   try {
@@ -152,7 +157,7 @@ export async function GET(request: Request) {
   const yahooSymbol = YAHOO_SYMBOLS[symbol] || symbol;
 
   try {
-    // Index/commodity futures: try Twelve Data first (session open → current price is reliable)
+    // Index/commodity futures: try Twelve Data first (real-time; Yahoo is 10–15 min delayed)
     const indexFutures = ['ES', 'NQ', 'YM', 'RTY', 'CL'];
     if (indexFutures.includes(symbol)) {
       const twelve = await fetchTwelveDataFutures(symbol);
@@ -166,7 +171,37 @@ export async function GET(request: Request) {
           changePercent: twelve.changePercent,
           previousClose: twelve.previousClose,
           ytdPercent: ytdPercent ?? undefined,
+        }, { headers: NO_CACHE_HEADERS });
+      }
+      // Twelve Data failed: try Yahoo 5m intraday for slightly fresher price than quote API
+      try {
+        const intradayUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=5m&range=1d`;
+        const intradayRes = await fetch(intradayUrl, {
+          headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+          cache: 'no-store',
         });
+        if (intradayRes.ok) {
+          const intraday = await intradayRes.json();
+          const meta = intraday?.chart?.result?.[0]?.meta;
+          const quote = intraday?.chart?.result?.[0]?.indicators?.quote?.[0];
+          const closes = quote?.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number') : []) : [];
+          const lastClose = closes.length > 0 ? closes[closes.length - 1] : 0;
+          if (lastClose > 0) {
+            const prevClose = meta?.previousClose ?? (closes.length >= 2 ? closes[closes.length - 2] : lastClose);
+            const change = prevClose > 0 ? lastClose - prevClose : 0;
+            const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+            return NextResponse.json({
+              symbol,
+              price: lastClose,
+              change,
+              changePercent,
+              previousClose: prevClose,
+              ytdPercent: undefined,
+            }, { headers: NO_CACHE_HEADERS });
+          }
+        }
+      } catch {
+        // fall through to generic Yahoo quote
       }
     }
     // Use CoinMarketCap for BTC/ETH if API key is available
@@ -236,7 +271,7 @@ export async function GET(request: Request) {
                 changePercent,
                 previousClose: coinData.quote?.USD?.price || price, // CoinMarketCap doesn't provide previous close directly
                 ytdPercent: undefined, // CoinMarketCap doesn't provide YTD easily
-              });
+              }, { headers: NO_CACHE_HEADERS });
             }
           }
         } else {
@@ -384,7 +419,7 @@ export async function GET(request: Request) {
             changePercent,
             previousClose,
             ytdPercent: ytdPercent ?? undefined,
-          });
+          }, { headers: NO_CACHE_HEADERS });
         }
       }
     }
@@ -470,14 +505,14 @@ export async function GET(request: Request) {
           changePercent,
           previousClose: prev,
           ytdPercent: ytdPercent ?? undefined,
-        });
+        }, { headers: NO_CACHE_HEADERS });
       }
     }
 
-    return NextResponse.json({ error: 'Symbol not found' }, { status: 404 });
+    return NextResponse.json({ error: 'Symbol not found' }, { status: 404, headers: NO_CACHE_HEADERS });
   } catch (e) {
     console.error('Market data error:', e);
-    return NextResponse.json({ error: 'Failed to fetch market data' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch market data' }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }
 
