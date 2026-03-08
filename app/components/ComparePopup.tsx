@@ -29,6 +29,7 @@ const COMP_TICKERS = [
   { ticker: 'ES', name: 'S&P 500 E-Mini' },
   { ticker: 'YM', name: 'Dow E-Mini' },
   { ticker: 'RTY', name: 'Russell 2000 E-Mini' },
+  { ticker: 'DXY', name: 'US Dollar Index' },
   { ticker: 'CL', name: 'WTI Crude Oil' },
   { ticker: 'GC', name: 'Gold' },
   { ticker: 'SI', name: 'Silver' },

@@ -9,6 +9,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   SI: 'SI=F',
   CL: 'CL=F',
   N225: '^N225',
+  DXY: 'DX-Y.NYB',
   BTC: 'BTC-USD',
   ETH: 'ETH-USD',
 };

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment, ReactNode } from 'react';
 import Link from 'next/link';
 
-const CHAT_TICKER_SYMBOLS = ['NQ', 'ES', 'YM', 'RTY', 'CL', 'BTC', 'ETH'];
+const CHAT_TICKER_SYMBOLS = ['NQ', 'ES', 'YM', 'RTY', 'DXY', 'CL', 'BTC', 'ETH'];
 const CHAT_TICKER_REGEX = new RegExp(`\\b(${CHAT_TICKER_SYMBOLS.join('|')})\\b`, 'gi');
 
 const tickerDataCache: Record<string, { price: number; changePercent: number } | null> = {};

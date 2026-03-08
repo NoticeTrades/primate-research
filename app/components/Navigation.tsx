@@ -30,7 +30,7 @@ export default function Navigation() {
   const { openCompare } = useCompare();
 
   const TERMINAL_PLACEHOLDER = 'Search Terminal... (Press ` to open)';
-  const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'CL', 'BTC'];
+  const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'DXY', 'CL', 'BTC'];
 
   useEffect(() => {
     let i = 0;
@@ -350,12 +350,13 @@ export default function Navigation() {
     aptos: 'APT',
   };
 
-  // Index autocomplete options (futures indices)
+  // Index autocomplete options (futures indices + DXY)
   const indexAutocompleteOptions = [
     { name: 'E-mini S&P 500', ticker: 'ES' },
     { name: 'E-mini NASDAQ-100', ticker: 'NQ' },
     { name: 'E-mini Dow Jones', ticker: 'YM' },
     { name: 'E-mini Russell 2000', ticker: 'RTY' },
+    { name: 'US Dollar Index', ticker: 'DXY' },
     { name: 'WTI Crude Oil', ticker: 'CL' },
   ];
 
@@ -440,7 +441,7 @@ export default function Navigation() {
   // Check if search query is an index (ticker)
   const isIndexTicker = (query: string): boolean => {
     const trimmed = query.trim().toUpperCase();
-    return ['ES', 'NQ', 'YM', 'RTY', 'CL'].includes(trimmed);
+    return ['ES', 'NQ', 'YM', 'RTY', 'DXY', 'CL'].includes(trimmed);
   };
 
   // Check if search query is a crypto (ticker or name)
@@ -997,7 +998,7 @@ export default function Navigation() {
                     <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Live Price</span>
                   </div>
                   <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">Type a ticker: NQ, ES, YM, BTC</span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">Type a ticker: NQ, ES, YM, DXY, CL, BTC</span>
                   </div>
                   {priceTickers.length > 0 ? (
                     <div className="max-h-40 overflow-y-auto">
@@ -1023,7 +1024,7 @@ export default function Navigation() {
                       );})}
                     </div>
                   ) : (
-                    <div className="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">No matching ticker. Try NQ, ES, YM, BTC.</div>
+                    <div className="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">No matching ticker. Try NQ, ES, YM, DXY, CL, BTC.</div>
                   )}
                 </>
               )}

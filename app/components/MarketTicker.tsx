@@ -17,6 +17,7 @@ export default function MarketTicker() {
     { symbol: 'ES', name: 'S&P 500 E-mini', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'YM', name: 'Dow E-mini', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'RTY', name: 'Russell 2000', price: null, change: null, changePercent: null, isLoading: true },
+    { symbol: 'DXY', name: 'US Dollar Index', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'GC', name: 'Gold Futures', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'SI', name: 'Silver Futures', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'CL', name: 'WTI Crude Oil', price: null, change: null, changePercent: null, isLoading: true },
@@ -232,7 +233,7 @@ export default function MarketTicker() {
         }
       };
 
-        const futuresSymbols = ['N225', 'NQ', 'ES', 'YM', 'RTY', 'CL'];
+        const futuresSymbols = ['N225', 'NQ', 'ES', 'YM', 'RTY', 'DXY', 'CL'];
         const timestamp = Date.now();
         const futuresResponses = await Promise.all(
           futuresSymbols.map((symbol) => 
