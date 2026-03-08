@@ -127,8 +127,28 @@ export default function ComparePopup() {
         img.onerror = reject;
         img.src = dataUrl;
       });
+      // Try to load logo (PNG or JPG from public)
+      const logoPaths = ['/primate-logo.png', '/primate-logo.jpg', '/logo.png', '/logo.jpg'];
+      let logoImg: HTMLImageElement | null = null;
+      for (const src of logoPaths) {
+        try {
+          logoImg = await new Promise<HTMLImageElement | null>((resolveLogo) => {
+            const logo = new Image();
+            logo.crossOrigin = 'anonymous';
+            logo.onload = () => resolveLogo(logo);
+            logo.onerror = () => resolveLogo(null);
+            logo.src = src;
+          });
+          if (logoImg != null) break;
+        } catch {
+          logoImg = null;
+        }
+      }
+      const logoHeight = 28;
+      const logoPadding = 12;
+      const hasLogo = logoImg != null && logoImg.width > 0 && logoImg.height > 0;
+      const pad = hasLogo ? logoHeight + logoPadding * 2 + 36 : 40;
       const c = document.createElement('canvas');
-      const pad = 40;
       c.width = img.width;
       c.height = img.height + pad;
       const ctx = c.getContext('2d');
@@ -137,11 +157,23 @@ export default function ComparePopup() {
       ctx.fillRect(0, 0, c.width, c.height);
       ctx.drawImage(img, 0, 0);
       ctx.fillStyle = '#71717a';
-      ctx.font = '14px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Primate Trading', c.width / 2, img.height + 22);
-      ctx.font = '11px system-ui, sans-serif';
-      ctx.fillText('primatetrading.com', c.width / 2, img.height + 38);
+      if (hasLogo && logoImg) {
+        const scale = logoHeight / logoImg.height;
+        const logoWidth = Math.min(logoImg.width * scale, 120);
+        const logoX = (c.width - logoWidth) / 2;
+        const logoY = img.height + logoPadding;
+        ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+        ctx.font = '13px system-ui, sans-serif';
+        ctx.fillText('Primate Trading', c.width / 2, img.height + pad - 22);
+        ctx.font = '11px system-ui, sans-serif';
+        ctx.fillText('primatetrading.com', c.width / 2, img.height + pad - 8);
+      } else {
+        ctx.font = '14px system-ui, sans-serif';
+        ctx.fillText('Primate Trading', c.width / 2, img.height + 22);
+        ctx.font = '11px system-ui, sans-serif';
+        ctx.fillText('primatetrading.com', c.width / 2, img.height + 38);
+      }
       const finalUrl = c.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = finalUrl;
