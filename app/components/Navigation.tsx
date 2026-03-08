@@ -820,7 +820,7 @@ export default function Navigation() {
                         { cmd: 'R', label: 'Research', onSelect: () => { router.push('/research'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'V', label: 'The Vault / Videos', onSelect: () => { router.push('/videos'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'VOL', label: 'Volatility (VIX, VVIX, term structure)', onSelect: () => { openVolatility(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
-                        { cmd: 'COMP', label: 'Compare YTD % (relative strength)', onSelect: () => { openCompare(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'COMP', label: 'Compare indices historically (% change)', onSelect: () => { openCompare(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                       ].map((item, idx) => (
                         <button
                           key={item.cmd}
@@ -938,7 +938,7 @@ export default function Navigation() {
                   >
                     <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
                       <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-emerald-400 bg-emerald-500/15 dark:bg-emerald-500/20 border border-emerald-500/50">COMP</span>
-                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Compare YTD % (relative strength)</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Compare indices historically (% change)</span>
                     </div>
                     <button
                       type="button"
