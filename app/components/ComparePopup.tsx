@@ -256,9 +256,9 @@ export default function ComparePopup() {
                 <Tooltip
                   contentStyle={{ backgroundColor: '#27272a', border: '1px solid #52525b', borderRadius: '8px' }}
                   labelStyle={{ color: '#a1a1aa' }}
-                  formatter={(value: number | undefined, name: string) => [
+                  formatter={(value: number | undefined, name: string | undefined) => [
                     value != null ? `${Number(value).toFixed(2)}%` : '—',
-                    name,
+                    name ?? '',
                   ]}
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                 />
