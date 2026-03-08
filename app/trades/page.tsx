@@ -35,6 +35,25 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
+/** Format ISO date string as "Mon, Mar 3 at 9:35 AM ET" for live trades. */
+function formatTradeDateET(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const dayDate = d.toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  const time = d.toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+  return `${dayDate} at ${time} ET`;
+}
+
 export default function TradesPage() {
   const router = useRouter();
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -429,6 +448,9 @@ export default function TradesPage() {
                                 </div>
                               )}
                             </div>
+                            <p className="text-xs text-zinc-500 mb-2">
+                              Opened {formatTradeDateET(t.createdAt)}
+                            </p>
                             {(t.stopLoss != null || t.takeProfit != null) && (
                               <p className="text-xs text-zinc-500 mb-2">
                                 {t.stopLoss != null && <span>SL: {t.stopLoss.toFixed(2)}</span>}
@@ -523,6 +545,12 @@ export default function TradesPage() {
                                 {formatCurrency(realizedPnL)}
                               </p>
                             </div>
+                            <p className="text-xs text-zinc-500 mt-1">
+                              Opened {formatTradeDateET(t.createdAt)}
+                              {t.updatedAt && t.updatedAt !== t.createdAt && (
+                                <> · Closed {formatTradeDateET(t.updatedAt)}</>
+                              )}
+                            </p>
                             {t.notes && <p className="mt-2 text-sm text-zinc-500">{t.notes}</p>}
                             {t.chartUrl && (
                               <a href={t.chartUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-blue-400 hover:underline">
