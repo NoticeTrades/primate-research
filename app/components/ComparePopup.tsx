@@ -8,7 +8,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import { useCompare } from '../contexts/CompareContext';
@@ -42,12 +41,22 @@ type ChartPoint = Record<string, string | number>;
 export default function ComparePopup() {
   const { isCompareOpen, closeCompare } = useCompare();
   const [symbols, setSymbols] = useState<string[]>([]);
+  const [hiddenSymbols, setHiddenSymbols] = useState<Set<string>>(new Set());
   const [inputValue, setInputValue] = useState('');
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const toggleSymbolVisibility = (sym: string) => {
+    setHiddenSymbols((prev) => {
+      const next = new Set(prev);
+      if (next.has(sym)) next.delete(sym);
+      else next.add(sym);
+      return next;
+    });
+  };
 
   const fetchChart = useCallback(async (syms: string[]) => {
     if (syms.length === 0) {
@@ -247,25 +256,47 @@ export default function ComparePopup() {
                 <Tooltip
                   contentStyle={{ backgroundColor: '#27272a', border: '1px solid #52525b', borderRadius: '8px' }}
                   labelStyle={{ color: '#a1a1aa' }}
-                  formatter={(value: number, name: string) => [`${Number(value).toFixed(2)}%`, name]}
+                  formatter={(value: number | undefined, name: string) => [
+                    value != null ? `${Number(value).toFixed(2)}%` : '—',
+                    name,
+                  ]}
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                 />
-                <Legend
-                  wrapperStyle={{ fontSize: '11px' }}
-                  formatter={(value) => <span className="text-zinc-300">{value}</span>}
-                />
-                {symbols.map((sym, idx) => (
-                  <Line
-                    key={sym}
-                    type="monotone"
-                    dataKey={sym}
-                    name={sym}
-                    stroke={SERIES_COLORS[idx % SERIES_COLORS.length]}
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls
-                  />
-                ))}
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                  {symbols.map((sym, idx) => {
+                    const hidden = hiddenSymbols.has(sym);
+                    return (
+                      <button
+                        key={sym}
+                        type="button"
+                        onClick={() => toggleSymbolVisibility(sym)}
+                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-opacity ${
+                          hidden
+                            ? 'opacity-50 line-through text-zinc-500'
+                            : 'opacity-100 text-zinc-200 hover:bg-zinc-700/80'
+                        }`}
+                        style={hidden ? undefined : { borderLeft: `3px solid ${SERIES_COLORS[idx % SERIES_COLORS.length]}` }}
+                        title={hidden ? `Show ${sym}` : `Hide ${sym}`}
+                      >
+                        {sym}
+                      </button>
+                    );
+                  })}
+                </div>
+                {symbols.map((sym, idx) =>
+                  !hiddenSymbols.has(sym) ? (
+                    <Line
+                      key={sym}
+                      type="monotone"
+                      dataKey={sym}
+                      name={sym}
+                      stroke={SERIES_COLORS[idx % SERIES_COLORS.length]}
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls
+                    />
+                  ) : null
+                )}
               </LineChart>
             </ResponsiveContainer>
           )}
