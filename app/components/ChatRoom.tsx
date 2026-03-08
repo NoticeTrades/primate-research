@@ -1,6 +1,61 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment, ReactNode } from 'react';
+import Link from 'next/link';
+
+const CHAT_TICKER_SYMBOLS = ['NQ', 'ES', 'YM', 'RTY', 'CL', 'BTC', 'ETH'];
+const CHAT_TICKER_REGEX = new RegExp(`\\b(${CHAT_TICKER_SYMBOLS.join('|')})\\b`, 'gi');
+
+const tickerDataCache: Record<string, { price: number; changePercent: number } | null> = {};
+
+function TickerPill({ symbol }: { symbol: string }) {
+  const sym = symbol.toUpperCase();
+  const [data, setData] = useState<{ price: number; changePercent: number } | null | undefined>(tickerDataCache[sym] ?? undefined);
+  useEffect(() => {
+    if (tickerDataCache[sym] !== undefined) {
+      setData(tickerDataCache[sym]);
+      return;
+    }
+    fetch(`/api/market-data?symbol=${encodeURIComponent(sym)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.price != null && !d.error) {
+          const out = { price: Number(d.price), changePercent: Number(d.changePercent) || 0 };
+          tickerDataCache[sym] = out;
+          setData(out);
+        } else {
+          tickerDataCache[sym] = null;
+          setData(null);
+        }
+      })
+      .catch(() => {
+        tickerDataCache[sym] = null;
+        setData(null);
+      });
+  }, [sym]);
+  const isPositive = data != null && data.changePercent >= 0;
+  return (
+    <Link
+      href={`/indices/${sym}`}
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-sm font-medium bg-zinc-700/80 hover:bg-zinc-600/80 border border-zinc-600 text-zinc-200 no-underline"
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <span>{sym}</span>
+      {data != null ? (
+        <>
+          <span className="tabular-nums">{data.price.toFixed(2)}</span>
+          <span className={`tabular-nums ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+            {isPositive ? '+' : ''}{data.changePercent.toFixed(2)}%
+          </span>
+        </>
+      ) : (
+        <span className="text-zinc-500">…</span>
+      )}
+    </Link>
+  );
+}
 
 interface ChatFile {
   id: number;
@@ -500,6 +555,20 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     return parts.length > 0 ? <>{parts}</> : text;
   };
 
+  const parseMessageWithTickers = (text: string): ReactNode => {
+    const parts = text.split(CHAT_TICKER_REGEX);
+    return (
+      <>
+        {parts.map((part, i) => {
+          if (!part) return null;
+          const upper = part.toUpperCase();
+          if (CHAT_TICKER_SYMBOLS.includes(upper)) return <TickerPill key={i} symbol={upper} />;
+          return <Fragment key={i}>{linkifyText(part)}</Fragment>;
+        })}
+      </>
+    );
+  };
+
   // Format timestamp
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -526,6 +595,30 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       hour: 'numeric',
       minute: '2-digit',
     });
+
+  const formatTimeClock = (timestamp: string) =>
+    new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  // Group consecutive messages from same user within the same minute (Discord-style)
+  const messageGroups = useMemo(() => {
+    const groups: { messages: ChatMessage[] }[] = [];
+    const MINUTE_MS = 60 * 1000;
+    for (const msg of messages) {
+      const t = new Date(msg.created_at).getTime();
+      const minuteKey = Math.floor(t / MINUTE_MS) * MINUTE_MS;
+      const last = groups[groups.length - 1];
+      if (
+        last &&
+        last.messages[0].user_email === msg.user_email &&
+        Math.floor(new Date(last.messages[0].created_at).getTime() / MINUTE_MS) === Math.floor(t / MINUTE_MS)
+      ) {
+        last.messages.push(msg);
+      } else {
+        groups.push({ messages: [msg] });
+      }
+    }
+    return groups;
+  }, [messages]);
 
   // Get user badge
   const getUserBadge = (userRole?: string, username?: string) => {
@@ -571,54 +664,56 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
             </div>
           </div>
         ) : (
-          messages.map((message) => {
-            const isOwnMessage = message.user_email === currentUserEmail;
-            // Check if current user is mentioned in this message
-            const isMentioned = message.message_text && 
-              new RegExp(`@${currentUsername}\\b`, 'i').test(message.message_text);
-            // Username color: gold for noticetrades (Founder), blue for everyone else (Premium)
-            const isFounder = message.username === 'noticetrades' || message.user_role === 'owner';
-            const usernameColorClass = isFounder
-              ? 'text-yellow-400 font-semibold'
-              : 'text-blue-400 font-semibold';
+          messageGroups.map((group) => {
+            const first = group.messages[0];
+            const isOwnMessage = first.user_email === currentUserEmail;
+            const isFounder = first.username === 'noticetrades' || first.user_role === 'owner';
+            const usernameColorClass = isFounder ? 'text-yellow-400 font-semibold' : 'text-blue-400 font-semibold';
+            const anyMentioned = group.messages.some(
+              (m) => m.message_text && new RegExp(`@${currentUsername}\\b`, 'i').test(m.message_text)
+            );
             return (
               <div
-                key={message.id}
-                className={`flex gap-3 ${
-                  isMentioned && !isOwnMessage ? 'ring-2 ring-orange-500/50 rounded-lg p-2 -m-2 bg-orange-500/5' : ''
+                key={first.id}
+                className={`flex gap-3 mt-4 first:mt-0 ${
+                  anyMentioned && !isOwnMessage ? 'ring-2 ring-orange-500/50 rounded-lg p-2 -m-2 bg-orange-500/5' : ''
                 }`}
               >
-                {/* Avatar */}
-                <div className="flex-shrink-0">
-                  {message.profile_picture_url ? (
+                <div className="flex-shrink-0 w-10">
+                  {first.profile_picture_url ? (
                     <img
-                      src={message.profile_picture_url}
-                      alt={message.username}
+                      src={first.profile_picture_url}
+                      alt={first.username}
                       className="w-10 h-10 rounded-full object-cover border border-zinc-700"
                     />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center border border-zinc-600">
                       <span className="text-zinc-300 text-sm font-semibold">
-                        {message.username.charAt(0).toUpperCase()}
+                        {first.username.charAt(0).toUpperCase()}
                       </span>
                     </div>
                   )}
                 </div>
-
-                {/* Message Content - always left-aligned */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <div className="relative inline-block">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (message.user_email === currentUserEmail) return;
-                          setDmPopoverMessageId((prev) => (prev === message.id ? null : message.id));
-                        }}
-                        className={`text-sm ${usernameColorClass} ${message.user_email !== currentUserEmail ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
-                      >
-                        {message.username}
-                      </button>
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  {group.messages.map((message, idx) => {
+                    const isFirstInGroup = idx === 0;
+                    const isMentioned =
+                      message.message_text && new RegExp(`@${currentUsername}\\b`, 'i').test(message.message_text);
+                    return (
+                      <div key={message.id}>
+                        {isFirstInGroup && (
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <div className="relative inline-block">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (message.user_email === currentUserEmail) return;
+                                  setDmPopoverMessageId((prev) => (prev === message.id ? null : message.id));
+                                }}
+                                className={`text-sm ${usernameColorClass} ${message.user_email !== currentUserEmail ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
+                              >
+                                {message.username}
+                              </button>
                       {dmPopoverMessageId === message.id && message.user_email !== currentUserEmail && onRequestDM && (
                         <>
                           <div
@@ -657,34 +752,34 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                       className="text-xs text-zinc-500 cursor-default"
                       title={formatTimeFull(message.created_at)}
                     >
-                      {formatTime(message.created_at)}
+                      {formatTimeClock(message.created_at)}
                     </span>
-                    {(isOwnMessage || isModerator) && (
-                      <button
-                        onClick={() => handleDeleteMessage(message.id)}
-                        className="ml-auto text-xs text-red-500 hover:text-red-400 transition-colors"
-                        title={isModerator && !isOwnMessage ? 'Moderator: Delete message' : 'Delete your message'}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                  <div
-                    className={`inline-block px-4 py-2 rounded-lg max-w-[85%] ${
-                      isOwnMessage
-                        ? 'bg-blue-600/80 text-white'
-                        : 'bg-zinc-800 text-zinc-100 border border-zinc-700'
-                    }`}
-                  >
-                    {message.message_text && (
-                      <p className="text-sm whitespace-pre-wrap break-words mb-2">
-                        {linkifyText(message.message_text)}
-                      </p>
-                    )}
-                    {/* File Attachments */}
-                    {message.files && message.files.length > 0 && (
+                            {(isOwnMessage || isModerator) && (
+                              <button
+                                onClick={() => handleDeleteMessage(message.id)}
+                                className="ml-auto text-xs text-red-500 hover:text-red-400 transition-colors"
+                                title={isModerator && !isOwnMessage ? 'Moderator: Delete message' : 'Delete your message'}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <div
+                          className={`inline-block px-4 py-2 rounded-lg max-w-[85%] ${
+                            isOwnMessage
+                              ? 'bg-blue-600/80 text-white'
+                              : 'bg-zinc-800 text-zinc-100 border border-zinc-700'
+                          }`}
+                        >
+                          {message.message_text && (
+                            <p className="text-sm whitespace-pre-wrap break-words mb-2">
+                              {parseMessageWithTickers(message.message_text)}
+                            </p>
+                          )}
+                          {message.files && message.files.length > 0 && (
                       <div className="space-y-2 mt-2">
                         {message.files.map((file) => (
                           <div key={file.id} className="flex items-center gap-2 p-2 bg-black/20 rounded">
@@ -731,11 +826,10 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                             )}
                           </div>
                         ))}
-                      </div>
-                    )}
-                  </div>
-                  {/* Reactions: show existing reaction pills + one "add reaction" button that opens emoji picker */}
-                  <div className="flex flex-wrap items-center gap-1 mt-1.5 relative">
+                          </div>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1 mt-1.5 relative">
                     {(message.reactions || [])
                       .filter((r) => r.count > 0)
                       .map((r) => (
@@ -765,7 +859,12 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                         className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 border border-transparent hover:border-zinc-600 transition-colors"
                         title="Add reaction"
                       >
-                        <span className="opacity-80">😊</span>
+                        <svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                          <line x1="9" y1="9" x2="9.01" y2="9" />
+                          <line x1="15" y1="9" x2="15.01" y2="9" />
+                        </svg>
                         <span className="text-xs font-medium">+</span>
                       </button>
                       {openReactionPickerMessageId === message.id && (
@@ -794,7 +893,10 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                         </>
                       )}
                     </div>
-                  </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

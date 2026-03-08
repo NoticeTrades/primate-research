@@ -30,10 +30,10 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
-const POPUP_WIDTH = 440;
-const POPUP_HEIGHT = 520;
-const MIN_WIDTH = 320;
-const MIN_HEIGHT = 320;
+const POPUP_WIDTH = 560;
+const POPUP_HEIGHT = 640;
+const MIN_WIDTH = 360;
+const MIN_HEIGHT = 400;
 const MAX_WIDTH = 900;
 const MAX_HEIGHT = 800;
 
