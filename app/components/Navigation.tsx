@@ -8,6 +8,7 @@ import { useChat } from '../contexts/ChatContext';
 import { useTicker } from '../contexts/TickerContext';
 import { useEquityIndex } from '../contexts/EquityIndexContext';
 import { useVolatility } from '../contexts/VolatilityContext';
+import { useCompare } from '../contexts/CompareContext';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -26,6 +27,7 @@ export default function Navigation() {
   const { openTicker } = useTicker();
   const { openEquityIndex } = useEquityIndex();
   const { openVolatility } = useVolatility();
+  const { openCompare } = useCompare();
 
   const TERMINAL_PLACEHOLDER = 'Search Terminal... (Press ` to open)';
   const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'CL', 'BTC'];
@@ -514,6 +516,12 @@ export default function Navigation() {
       searchRef.current?.blur();
       return;
     }
+    if (q === 'COMP') {
+      openCompare();
+      setSearchQuery('');
+      searchRef.current?.blur();
+      return;
+    }
     const parts = raw.split(/\s+/);
     if (parts[0].toUpperCase() === 'P' && parts[1]) {
       const ticker = parts[1].toUpperCase();
@@ -613,12 +621,12 @@ export default function Navigation() {
               if (showCommands) {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
-                  setSelectedCommandIndex((i) => (i + 1) % 6);
+                  setSelectedCommandIndex((i) => (i + 1) % 7);
                   return;
                 }
                 if (e.key === 'ArrowUp') {
                   e.preventDefault();
-                  setSelectedCommandIndex((i) => (i - 1 + 6) % 6);
+                  setSelectedCommandIndex((i) => (i - 1 + 7) % 7);
                   return;
                 }
                 if (e.key === 'Enter') {
@@ -647,8 +655,13 @@ export default function Navigation() {
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
-                  } else {
+                  } else if (selectedCommandIndex === 5) {
                     openVolatility();
+                    setIsDropdownOpen(false);
+                    setSearchQuery('');
+                    searchRef.current?.blur();
+                  } else {
+                    openCompare();
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
@@ -807,6 +820,7 @@ export default function Navigation() {
                         { cmd: 'R', label: 'Research', onSelect: () => { router.push('/research'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'V', label: 'The Vault / Videos', onSelect: () => { router.push('/videos'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'VOL', label: 'Volatility (VIX, VVIX, term structure)', onSelect: () => { openVolatility(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'COMP', label: 'Compare YTD % (relative strength)', onSelect: () => { openCompare(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                       ].map((item, idx) => (
                         <button
                           key={item.cmd}
@@ -836,7 +850,8 @@ export default function Navigation() {
               const showRDropdown = raw.toUpperCase() === 'R';
               const showVDropdown = raw.toUpperCase() === 'V';
               const showVOLDropdown = raw.toUpperCase() === 'VOL';
-              const showOther = !showPriceDropdown && !showEIDropdown && !showRDropdown && !showVDropdown && !showVOLDropdown && (indexAutocomplete.length > 0 || isIndexTicker(searchQuery) || cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
+              const showCOMPDropdown = raw.toUpperCase() === 'COMP';
+              const showOther = !showPriceDropdown && !showEIDropdown && !showRDropdown && !showVDropdown && !showVOLDropdown && !showCOMPDropdown && (indexAutocomplete.length > 0 || isIndexTicker(searchQuery) || cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
               if (showRDropdown) {
                 return (
                   <div
@@ -911,6 +926,32 @@ export default function Navigation() {
                       className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
                     >
                       Open Volatility Dashboard
+                    </button>
+                  </div>
+                );
+              }
+              if (showCOMPDropdown) {
+                return (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full mt-1.5 right-0 w-64 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                  >
+                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-emerald-400 bg-emerald-500/15 dark:bg-emerald-500/20 border border-emerald-500/50">COMP</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Compare YTD % (relative strength)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        openCompare();
+                        setSearchQuery('');
+                        setIsDropdownOpen(false);
+                        searchRef.current?.blur();
+                      }}
+                      className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
+                    >
+                      Open Compare — add NQ, ES, CL, etc.
                     </button>
                   </div>
                 );
