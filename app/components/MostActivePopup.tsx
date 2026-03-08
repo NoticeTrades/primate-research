@@ -164,16 +164,16 @@ export default function MostActivePopup() {
             setIsDragging(true);
             dragStart.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y };
           }}
-          className="flex items-center justify-between px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80 shrink-0 flex-wrap gap-2 cursor-grab active:cursor-grabbing select-none"
+          className="flex items-center justify-between gap-2 px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80 shrink-0 flex-wrap cursor-grab active:cursor-grabbing select-none"
         >
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400 bg-amber-500/20 border border-amber-500/50">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400 bg-amber-500/20 border border-amber-500/50 shrink-0">
               MOST
             </span>
             <span className="text-sm font-semibold text-zinc-200">US stocks: most active, top gainers, losers & by dollar volume</span>
-            <span className="text-[10px] text-zinc-500">(source: up to 20 per category)</span>
+            <span className="text-[10px] text-zinc-500 shrink-0">(source: up to 20 per category)</span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <select
               value={String(limit)}
               onChange={(e) => setLimit(Number(e.target.value))}
@@ -196,17 +196,17 @@ export default function MostActivePopup() {
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              onClick={closeMostActive}
-              className="p-1.5 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
-              aria-label="Close"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
+          <button
+            type="button"
+            onClick={closeMostActive}
+            className="p-1.5 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors ml-auto flex-shrink-0"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <div className="flex border-b border-zinc-700/50 shrink-0">

@@ -48,7 +48,7 @@ export default function EquityIndexPopup() {
     const results = await Promise.all(
       EI_SYMBOLS.map(async ({ ticker, name }) => {
         try {
-          const res = await fetch(`/api/market-data?symbol=${ticker}`);
+          const res = await fetch(`/api/market-data?symbol=${ticker}&t=${Date.now()}`, { cache: 'no-store' });
           if (res.ok) {
             const j = await res.json();
             if (j.error) return { symbol: ticker, name, price: null, change: null, changePercent: null, previousClose: null, ytdPercent: null };

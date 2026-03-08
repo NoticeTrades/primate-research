@@ -190,13 +190,14 @@ export async function GET(request: Request) {
             const prevClose = meta?.previousClose ?? (closes.length >= 2 ? closes[closes.length - 2] : lastClose);
             const change = prevClose > 0 ? lastClose - prevClose : 0;
             const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+            const ytdPercent = await fetchYtdFromYahoo(yahooSymbol);
             return NextResponse.json({
               symbol,
               price: lastClose,
               change,
               changePercent,
               previousClose: prevClose,
-              ytdPercent: undefined,
+              ytdPercent: ytdPercent ?? undefined,
             }, { headers: NO_CACHE_HEADERS });
           }
         }
