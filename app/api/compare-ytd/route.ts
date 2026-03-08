@@ -8,7 +8,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   GC: 'GC=F',
   SI: 'SI=F',
   CL: 'CL=F',
-  N225: '^N225',
+  N225: 'NKD=F', // Nikkei USD Futures (CME)
   DXY: 'DX-Y.NYB',
   BTC: 'BTC-USD',
   ETH: 'ETH-USD',

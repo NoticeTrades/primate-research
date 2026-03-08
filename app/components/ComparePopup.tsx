@@ -35,7 +35,7 @@ const COMP_TICKERS = [
   { ticker: 'SI', name: 'Silver' },
   { ticker: 'BTC', name: 'Bitcoin' },
   { ticker: 'ETH', name: 'Ethereum' },
-  { ticker: 'N225', name: 'Nikkei 225' },
+  { ticker: 'N225', name: 'Nikkei USD Futures' },
 ];
 
 const SERIES_COLORS = [

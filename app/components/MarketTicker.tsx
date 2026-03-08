@@ -21,7 +21,7 @@ export default function MarketTicker() {
     { symbol: 'GC', name: 'Gold Futures', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'SI', name: 'Silver Futures', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'CL', name: 'WTI Crude Oil', price: null, change: null, changePercent: null, isLoading: true },
-    { symbol: 'N225', name: 'Nikkei 225', price: null, change: null, changePercent: null, isLoading: true },
+    { symbol: 'N225', name: 'Nikkei USD Futures', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'BTC', name: 'Bitcoin', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'ETH', name: 'Ethereum', price: null, change: null, changePercent: null, isLoading: true },
   ]);

@@ -8,7 +8,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   GC: 'GC=F',
   SI: 'SI=F',
   CL: 'CL=F',
-  N225: '^N225',
+  N225: 'NKD=F', // Nikkei USD Futures (CME)
   DXY: 'DX-Y.NYB',
   BTC: 'BTC-USD',
 };
@@ -44,7 +44,7 @@ async function fetchSessionOpenFromChart(yahooSymbol: string): Promise<number> {
   return 0;
 }
 
-/** Nikkei 225 (^N225) trades in Tokyo (JST). Yahoo quote "regularMarketOpen" can be wrong. Use chart to get first open of current trading day in Asia/Tokyo. */
+/** Legacy: Nikkei 225 index (^N225) traded in Tokyo (JST). N225 now uses NKD=F futures; this is kept for any future JST symbol. */
 async function fetchN225SessionOpen(yahooSymbol: string): Promise<number> {
   try {
     const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=5m&range=2d`;
