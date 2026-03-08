@@ -8,8 +8,10 @@ import { TickerProvider } from "./contexts/TickerContext";
 import { EquityIndexProvider } from "./contexts/EquityIndexContext";
 import { VolatilityProvider } from "./contexts/VolatilityContext";
 import { CompareProvider } from "./contexts/CompareContext";
+import { MostActiveProvider } from "./contexts/MostActiveContext";
 import FeedbackWidget from "./components/FeedbackWidget";
 import ComparePopup from "./components/ComparePopup";
+import MostActivePopup from "./components/MostActivePopup";
 import ChatPopup from "./components/ChatPopup";
 import PriceTerminalWrapper from "./components/PriceTerminalWrapper";
 import EquityIndexPopup from "./components/EquityIndexPopup";
@@ -103,12 +105,15 @@ export default function RootLayout({
               <EquityIndexProvider>
                 <VolatilityProvider>
                   <CompareProvider>
-                    {children}
-                    <ChatPopup />
-                    <PriceTerminalWrapper />
-                    <EquityIndexPopup />
-                    <VolatilityPanel />
-                    <ComparePopup />
+                    <MostActiveProvider>
+                      {children}
+                      <ChatPopup />
+                      <PriceTerminalWrapper />
+                      <EquityIndexPopup />
+                      <VolatilityPanel />
+                      <ComparePopup />
+                      <MostActivePopup />
+                    </MostActiveProvider>
                   </CompareProvider>
                 </VolatilityProvider>
               </EquityIndexProvider>
