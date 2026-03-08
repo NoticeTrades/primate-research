@@ -51,19 +51,29 @@ const SERIES_COLORS = [
 
 type ChartPoint = Record<string, string | number>;
 
+const COMP_MIN_W = 400;
+const COMP_MIN_H = 400;
+const COMP_DEFAULT_W = 672;
+const COMP_DEFAULT_H = 600;
+const COMP_MAX_W = 1200;
+const COMP_MAX_H = 900;
+
 function getDefaultPosition() {
   if (typeof window === 'undefined') return { x: 80, y: 60 };
   return {
-    x: Math.max(16, (window.innerWidth - 672) / 2),
-    y: Math.max(16, (window.innerHeight - 600) / 2),
+    x: Math.max(16, (window.innerWidth - COMP_DEFAULT_W) / 2),
+    y: Math.max(16, (window.innerHeight - COMP_DEFAULT_H) / 2),
   };
 }
 
 export default function ComparePopup() {
   const { isCompareOpen, closeCompare } = useCompare();
   const [position, setPosition] = useState(getDefaultPosition);
+  const [size, setSize] = useState({ width: COMP_DEFAULT_W, height: COMP_DEFAULT_H });
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, left: 0, top: 0 });
+  const resizeStart = useRef({ x: 0, y: 0, width: COMP_DEFAULT_W, height: COMP_DEFAULT_H });
   const [symbols, setSymbols] = useState<string[]>([]);
   const [range, setRange] = useState<RangeValue>('ytd');
   const [hiddenSymbols, setHiddenSymbols] = useState<Set<string>>(new Set());
@@ -208,15 +218,6 @@ export default function ComparePopup() {
   }, [isCompareOpen, closeCompare]);
 
   useEffect(() => {
-    if (!isCompareOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) closeCompare();
-    };
-    window.addEventListener('mousedown', onClick);
-    return () => window.removeEventListener('mousedown', onClick);
-  }, [isCompareOpen, closeCompare]);
-
-  useEffect(() => {
     if (!isDragging) return;
     const onMove = (e: MouseEvent) => {
       setPosition({
@@ -232,6 +233,27 @@ export default function ComparePopup() {
       window.removeEventListener('mouseup', onUp);
     };
   }, [isDragging]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const dx = e.clientX - resizeStart.current.x;
+      const dy = e.clientY - resizeStart.current.y;
+      const maxW = typeof window !== 'undefined' ? Math.min(COMP_MAX_W, window.innerWidth - position.x - 20) : COMP_MAX_W;
+      const maxH = typeof window !== 'undefined' ? Math.min(COMP_MAX_H, window.innerHeight - position.y - 20) : COMP_MAX_H;
+      setSize({
+        width: Math.max(COMP_MIN_W, Math.min(maxW, resizeStart.current.width + dx)),
+        height: Math.max(COMP_MIN_H, Math.min(maxH, resizeStart.current.height + dy)),
+      });
+    };
+    const onUp = () => setIsResizing(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isResizing, position.x, position.y]);
 
   const filteredTickers = inputValue.trim()
     ? COMP_TICKERS.filter(
@@ -257,17 +279,17 @@ export default function ComparePopup() {
   const hasData = chartData.length > 0 && symbols.length > 0;
 
   return (
-    <div className="fixed inset-0 z-[60] p-4 bg-black/50 backdrop-blur-sm">
-      <div
-        ref={panelRef}
-        className="flex flex-col w-full max-w-3xl max-h-[90vh] rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl"
-        style={{
-          position: 'fixed',
-          left: position.x,
-          top: position.y,
-          cursor: isDragging ? 'grabbing' : 'default',
-        }}
-      >
+    <div
+      ref={panelRef}
+      className="fixed z-[60] flex flex-col rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl backdrop-blur-sm"
+      style={{
+        left: position.x,
+        top: position.y,
+        width: size.width,
+        height: size.height,
+        cursor: isDragging ? 'grabbing' : isResizing ? 'nwse-resize' : 'default',
+      }}
+    >
         <div
           onMouseDown={(e) => {
             if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('select')) return;
@@ -382,7 +404,7 @@ export default function ComparePopup() {
           <p className="text-xs text-zinc-500 mt-1.5">Add symbols to compare relative strength. Use the dropdown to change period (YTD, 1M, 1Y, 5Y, etc.).</p>
         </div>
 
-        <div className="flex-1 min-h-[320px] p-4 overflow-auto">
+        <div className="flex-1 min-h-0 p-4 overflow-auto">
           {error && (
             <p className="text-sm text-red-400 mb-2">{error}</p>
           )}
@@ -462,7 +484,20 @@ export default function ComparePopup() {
             </div>
           )}
         </div>
-      </div>
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsResizing(true);
+            resizeStart.current = { x: e.clientX, y: e.clientY, width: size.width, height: size.height };
+          }}
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end opacity-60 hover:opacity-100 transition-opacity"
+          aria-label="Resize"
+        >
+          <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </div>
     </div>
   );
 }

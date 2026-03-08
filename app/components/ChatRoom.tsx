@@ -108,6 +108,8 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<number | null>(null);
   const [dmPopoverMessageId, setDmPopoverMessageId] = useState<number | null>(null);
+  const [userBio, setUserBio] = useState<string | null>(null);
+  const [userBioLoading, setUserBioLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -115,9 +117,16 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
 
-  // Scroll to bottom of messages
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Scroll to bottom of messages (instant for initial load, smooth for new messages)
+  const scrollToBottom = useCallback((instant = false) => {
+    const container = messagesContainerRef.current;
+    const end = messagesEndRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+    if (end) {
+      end.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' });
+    }
   }, []);
 
   // Check if user is moderator
@@ -214,10 +223,42 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     };
   }, [roomId, isLoading, scrollToBottom]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change; after initial load, delay once so DOM is painted
+  const prevMessagesLengthRef = useRef(0);
   useEffect(() => {
-    scrollToBottom();
+    const prevLen = prevMessagesLengthRef.current;
+    prevMessagesLengthRef.current = messages.length;
+    if (messages.length === 0) return;
+    if (prevLen === 0 && messages.length > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => scrollToBottom(true));
+      });
+    } else {
+      scrollToBottom(false);
+    }
   }, [messages, scrollToBottom]);
+
+  // Fetch user bio when popover opens (click on username)
+  useEffect(() => {
+    if (!dmPopoverMessageId) {
+      setUserBio(null);
+      return;
+    }
+    const msg = messages.find((m) => m.id === dmPopoverMessageId);
+    if (!msg || msg.user_email === currentUserEmail) {
+      setUserBio(null);
+      return;
+    }
+    setUserBioLoading(true);
+    setUserBio(null);
+    fetch(`/api/chat/users/bio?email=${encodeURIComponent(msg.user_email)}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        setUserBio(typeof data.bio === 'string' ? data.bio : null);
+      })
+      .catch(() => setUserBio(null))
+      .finally(() => setUserBioLoading(false));
+  }, [dmPopoverMessageId, messages, currentUserEmail]);
 
   // Handle paste event for images (charts)
   const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -714,27 +755,38 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                               >
                                 {message.username}
                               </button>
-                      {dmPopoverMessageId === message.id && message.user_email !== currentUserEmail && onRequestDM && (
+                      {dmPopoverMessageId === message.id && message.user_email !== currentUserEmail && (
                         <>
                           <div
                             className="fixed inset-0 z-10"
                             aria-hidden
                             onClick={() => setDmPopoverMessageId(null)}
                           />
-                          <div className="absolute left-0 top-full mt-1 py-1 bg-zinc-800 border border-zinc-600 rounded-lg shadow-xl z-20 min-w-[100px]">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onRequestDM(message.user_email, message.username);
-                                setDmPopoverMessageId(null);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2"
-                            >
-                              <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                              </svg>
-                              DM
-                            </button>
+                          <div className="absolute left-0 top-full mt-1 py-1 bg-zinc-800 border border-zinc-600 rounded-lg shadow-xl z-20 min-w-[180px] max-w-[280px]">
+                            <div className="px-3 py-2 border-b border-zinc-600">
+                              {userBioLoading ? (
+                                <p className="text-xs text-zinc-500">Loading…</p>
+                              ) : userBio !== null && userBio !== '' ? (
+                                <p className="text-xs text-zinc-300 whitespace-pre-wrap break-words">{userBio}</p>
+                              ) : (
+                                <p className="text-xs text-zinc-500 italic">User has no bio</p>
+                              )}
+                            </div>
+                            {onRequestDM && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onRequestDM(message.user_email, message.username);
+                                  setDmPopoverMessageId(null);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2"
+                              >
+                                <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                DM
+                              </button>
+                            )}
                           </div>
                         </>
                       )}

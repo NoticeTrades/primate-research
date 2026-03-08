@@ -26,11 +26,18 @@ const TABS: { id: TabId; label: string }[] = [
 
 const LIMIT_OPTIONS = [10, 20, 25, 50, 100];
 
+const MOST_MIN_W = 400;
+const MOST_MIN_H = 320;
+const MOST_DEFAULT_W = 900;
+const MOST_DEFAULT_H = 520;
+const MOST_MAX_W = 1400;
+const MOST_MAX_H = 900;
+
 function getDefaultPosition() {
   if (typeof window === 'undefined') return { x: 80, y: 60 };
   return {
-    x: Math.max(16, (window.innerWidth - 900) / 2),
-    y: Math.max(16, (window.innerHeight - 520) / 2),
+    x: Math.max(16, (window.innerWidth - MOST_DEFAULT_W) / 2),
+    y: Math.max(16, (window.innerHeight - MOST_DEFAULT_H) / 2),
   };
 }
 
@@ -45,8 +52,11 @@ function formatVol(n: number): string {
 export default function MostActivePopup() {
   const { isMostActiveOpen, closeMostActive } = useMostActive();
   const [position, setPosition] = useState(getDefaultPosition);
+  const [size, setSize] = useState({ width: MOST_DEFAULT_W, height: MOST_DEFAULT_H });
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, left: 0, top: 0 });
+  const resizeStart = useRef({ x: 0, y: 0, width: MOST_DEFAULT_W, height: MOST_DEFAULT_H });
   const [tab, setTab] = useState<TabId>('active');
   const [limit, setLimit] = useState(20);
   const [sector, setSector] = useState('all');
@@ -94,15 +104,6 @@ export default function MostActivePopup() {
   }, [isMostActiveOpen, closeMostActive]);
 
   useEffect(() => {
-    if (!isMostActiveOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) closeMostActive();
-    };
-    window.addEventListener('mousedown', onClick);
-    return () => window.removeEventListener('mousedown', onClick);
-  }, [isMostActiveOpen, closeMostActive]);
-
-  useEffect(() => {
     if (!isDragging) return;
     const onMove = (e: MouseEvent) => {
       setPosition({
@@ -119,22 +120,43 @@ export default function MostActivePopup() {
     };
   }, [isDragging]);
 
+  useEffect(() => {
+    if (!isResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const dx = e.clientX - resizeStart.current.x;
+      const dy = e.clientY - resizeStart.current.y;
+      const maxW = typeof window !== 'undefined' ? Math.min(MOST_MAX_W, window.innerWidth - position.x - 20) : MOST_MAX_W;
+      const maxH = typeof window !== 'undefined' ? Math.min(MOST_MAX_H, window.innerHeight - position.y - 20) : MOST_MAX_H;
+      setSize({
+        width: Math.max(MOST_MIN_W, Math.min(maxW, resizeStart.current.width + dx)),
+        height: Math.max(MOST_MIN_H, Math.min(maxH, resizeStart.current.height + dy)),
+      });
+    };
+    const onUp = () => setIsResizing(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isResizing, position.x, position.y]);
+
   if (!isMostActiveOpen) return null;
 
   const sectorOptions = sectors.length > 0 ? sectors : ['All'];
 
   return (
-    <div className="fixed inset-0 z-[60] p-4 bg-black/50 backdrop-blur-sm">
-      <div
-        ref={panelRef}
-        className="flex flex-col w-full max-w-5xl max-h-[90vh] rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl"
-        style={{
-          position: 'fixed',
-          left: position.x,
-          top: position.y,
-          cursor: isDragging ? 'grabbing' : 'default',
-        }}
-      >
+    <div
+      ref={panelRef}
+      className="fixed z-[60] flex flex-col rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl backdrop-blur-sm"
+      style={{
+        left: position.x,
+        top: position.y,
+        width: size.width,
+        height: size.height,
+        cursor: isDragging ? 'grabbing' : isResizing ? 'nwse-resize' : 'default',
+      }}
+    >
         <div
           onMouseDown={(e) => {
             if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('select')) return;
@@ -202,7 +224,7 @@ export default function MostActivePopup() {
           ))}
         </div>
 
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 min-h-0 overflow-auto p-4">
           {error && (
             <div className="mb-2">
               <p className="text-sm text-red-400">{error}</p>
@@ -252,7 +274,20 @@ export default function MostActivePopup() {
             </div>
           )}
         </div>
-      </div>
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsResizing(true);
+            resizeStart.current = { x: e.clientX, y: e.clientY, width: size.width, height: size.height };
+          }}
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end opacity-60 hover:opacity-100 transition-opacity"
+          aria-label="Resize"
+        >
+          <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </div>
     </div>
   );
 }

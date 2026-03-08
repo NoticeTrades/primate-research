@@ -29,19 +29,29 @@ function getTermStructureLabel(vix: number | null, vix3m: number | null): string
   return 'Flat';
 }
 
+const MIN_WIDTH = 320;
+const MIN_HEIGHT = 320;
+const DEFAULT_WIDTH = 420;
+const DEFAULT_HEIGHT = 480;
+const MAX_WIDTH = 800;
+const MAX_HEIGHT = 800;
+
 function getDefaultPosition() {
   if (typeof window === 'undefined') return { x: 120, y: 100 };
   return {
-    x: Math.max(16, (window.innerWidth - 420) / 2),
-    y: Math.max(16, (window.innerHeight - 480) / 2),
+    x: Math.max(16, (window.innerWidth - DEFAULT_WIDTH) / 2),
+    y: Math.max(16, (window.innerHeight - DEFAULT_HEIGHT) / 2),
   };
 }
 
 export default function VolatilityPanel() {
   const { isVolatilityOpen, closeVolatility } = useVolatility();
   const [position, setPosition] = useState(getDefaultPosition);
+  const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, left: 0, top: 0 });
+  const resizeStart = useRef({ x: 0, y: 0, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   const [data, setData] = useState<VolatilityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,15 +91,6 @@ export default function VolatilityPanel() {
   }, [isVolatilityOpen, closeVolatility]);
 
   useEffect(() => {
-    if (!isVolatilityOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) closeVolatility();
-    };
-    window.addEventListener('mousedown', onClick);
-    return () => window.removeEventListener('mousedown', onClick);
-  }, [isVolatilityOpen, closeVolatility]);
-
-  useEffect(() => {
     if (!isDragging) return;
     const onMove = (e: MouseEvent) => {
       setPosition({
@@ -106,6 +107,27 @@ export default function VolatilityPanel() {
     };
   }, [isDragging]);
 
+  useEffect(() => {
+    if (!isResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const dx = e.clientX - resizeStart.current.x;
+      const dy = e.clientY - resizeStart.current.y;
+      const maxW = typeof window !== 'undefined' ? Math.min(MAX_WIDTH, window.innerWidth - position.x - 20) : MAX_WIDTH;
+      const maxH = typeof window !== 'undefined' ? Math.min(MAX_HEIGHT, window.innerHeight - position.y - 20) : MAX_HEIGHT;
+      setSize({
+        width: Math.max(MIN_WIDTH, Math.min(maxW, resizeStart.current.width + dx)),
+        height: Math.max(MIN_HEIGHT, Math.min(maxH, resizeStart.current.height + dy)),
+      });
+    };
+    const onUp = () => setIsResizing(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isResizing, position.x, position.y]);
+
   if (!isVolatilityOpen) return null;
 
   const vixRow = data.find((r) => r.symbol === '^VIX');
@@ -116,17 +138,17 @@ export default function VolatilityPanel() {
   const termLabel = getTermStructureLabel(vixVal, vix3mVal);
 
   return (
-    <div className="fixed inset-0 z-[60] p-4 bg-black/50 backdrop-blur-sm">
-      <div
-        ref={panelRef}
-        className="flex flex-col w-full max-w-lg rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl"
-        style={{
-          position: 'fixed',
-          left: position.x,
-          top: position.y,
-          cursor: isDragging ? 'grabbing' : 'default',
-        }}
-      >
+    <div
+      ref={panelRef}
+      className="fixed z-[60] flex flex-col rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900/98 shadow-2xl backdrop-blur-sm"
+      style={{
+        left: position.x,
+        top: position.y,
+        width: size.width,
+        height: size.height,
+        cursor: isDragging ? 'grabbing' : isResizing ? 'nwse-resize' : 'default',
+      }}
+    >
         <div
           onMouseDown={(e) => {
             if ((e.target as HTMLElement).closest('button')) return;
@@ -153,7 +175,7 @@ export default function VolatilityPanel() {
           </button>
         </div>
 
-        <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
+        <div className="flex-1 min-h-0 p-4 space-y-4 overflow-y-auto">
           {loading && data.length === 0 && !error ? (
             <p className="text-sm text-zinc-400">Loading volatility data…</p>
           ) : error ? (
@@ -250,7 +272,20 @@ export default function VolatilityPanel() {
             </>
           )}
         </div>
-      </div>
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsResizing(true);
+            resizeStart.current = { x: e.clientX, y: e.clientY, width: size.width, height: size.height };
+          }}
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end opacity-60 hover:opacity-100 transition-opacity"
+          aria-label="Resize"
+        >
+          <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </div>
     </div>
   );
 }
