@@ -69,6 +69,8 @@ export default function Navigation() {
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [selectedPriceTickerIndex, setSelectedPriceTickerIndex] = useState(0);
   const [selectedSearchResultIndex, setSelectedSearchResultIndex] = useState(0);
+  const commandSelectRanRef = useRef<number>(0);
+  const priceSelectRanRef = useRef<number>(0);
 
   // Check auth state on mount and when pathname changes (login/signup redirect)
   // Note: session_token is httpOnly so JS can't read it — use user_email instead
@@ -836,21 +838,33 @@ export default function Navigation() {
                         { cmd: 'VOL', label: 'Volatility (VIX, VVIX, term structure)', onSelect: () => { openVolatility(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'COMP', label: 'Compare indices historically (% change)', onSelect: () => { openCompare(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'MOST', label: 'Most active / Gainers / Losers / Value', onSelect: () => { openMostActive(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
-                      ].map((item, idx) => (
-                        <button
-                          key={item.cmd}
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setSelectedCommandIndex(idx);
-                            item.onSelect();
-                          }}
-                          className={`w-full text-left px-2 py-1 transition-colors flex items-center gap-2 text-[11px] font-medium text-zinc-800 dark:text-zinc-200 ${idx === selectedCommandIndex ? 'bg-blue-500/15 dark:bg-blue-500/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
-                        >
-                          <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">{item.cmd}</span>
-                          <span>{item.label}</span>
-                        </button>
-                      ))}
+                      ].map((item, idx) => {
+                        const runSelect = () => {
+                          const now = Date.now();
+                          if (now - commandSelectRanRef.current < 200) return;
+                          commandSelectRanRef.current = now;
+                          setSelectedCommandIndex(idx);
+                          item.onSelect();
+                        };
+                        return (
+                          <button
+                            key={item.cmd}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              runSelect();
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              runSelect();
+                            }}
+                            className={`w-full text-left px-2 py-1.5 transition-colors flex items-center gap-2 text-[11px] font-medium text-zinc-800 dark:text-zinc-200 cursor-pointer ${idx === selectedCommandIndex ? 'bg-blue-500/15 dark:bg-blue-500/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+                          >
+                            <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">{item.cmd}</span>
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -1045,19 +1059,29 @@ export default function Navigation() {
                     <div className="max-h-40 overflow-y-auto">
                       {priceTickers.map((ticker, idx) => {
                         const effectiveIdx = Math.min(selectedPriceTickerIndex, Math.max(0, priceTickers.length - 1));
+                        const runPriceSelect = () => {
+                          const now = Date.now();
+                          if (now - priceSelectRanRef.current < 200) return;
+                          priceSelectRanRef.current = now;
+                          setSelectedPriceTickerIndex(idx);
+                          openTicker(ticker);
+                          setSearchQuery('');
+                          setIsDropdownOpen(false);
+                          searchRef.current?.blur();
+                        };
                         return (
                         <button
                           key={ticker}
                           type="button"
                           onMouseDown={(e) => {
                             e.preventDefault();
-                            setSelectedPriceTickerIndex(idx);
-                            openTicker(ticker);
-                            setSearchQuery('');
-                            setIsDropdownOpen(false);
-                            searchRef.current?.blur();
+                            runPriceSelect();
                           }}
-                          className={`w-full text-left px-4 py-2.5 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200 ${idx === effectiveIdx ? 'bg-blue-500/15 dark:bg-blue-500/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            runPriceSelect();
+                          }}
+                          className={`w-full text-left px-4 py-2.5 transition-colors flex items-center gap-3 text-sm font-medium text-zinc-800 dark:text-zinc-200 cursor-pointer ${idx === effectiveIdx ? 'bg-blue-500/15 dark:bg-blue-500/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
                         >
                           <span className="w-8 h-6 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold">{ticker}</span>
                           Open live price

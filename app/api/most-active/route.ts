@@ -86,7 +86,7 @@ export async function GET(request: Request) {
       ...new Set(
         slice
           .map((r: { ticker?: string }) => String(r.ticker || '').trim())
-          .filter((s): s is string => s.length > 0)
+          .filter((s: unknown): s is string => typeof s === 'string' && s.length > 0)
       ),
     ] as string[];
     const overviews = await Promise.all(symbols.map((s) => fetchOverview(s)));
