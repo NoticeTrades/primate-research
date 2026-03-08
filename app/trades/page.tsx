@@ -76,25 +76,38 @@ export default function TradesPage() {
     return () => clearInterval(t);
   }, [fetchTrades]);
 
-  useEffect(() => {
-    const fetchPrices = async () => {
-      const symbols = ['NQ', 'ES'];
-      const next: Record<string, number> = {};
-      for (const sym of symbols) {
-        try {
-          const res = await fetch(`/api/indices/${sym}`, { cache: 'no-store' });
-          const data = await res.json();
-          if (res.ok && typeof data.price === 'number') next[sym] = data.price;
-        } catch {
-          // keep previous
-        }
+  const fetchPrices = useCallback(async () => {
+    const symbols = ['NQ', 'ES'];
+    const next: Record<string, number> = {};
+    for (const sym of symbols) {
+      try {
+        const res = await fetch(`/api/indices/${sym}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (res.ok && typeof data.price === 'number') next[sym] = data.price;
+      } catch {
+        // keep previous
       }
-      setPrices((prev) => ({ ...prev, ...next }));
-    };
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 15000);
-    return () => clearInterval(interval);
+    }
+    setPrices((prev) => ({ ...prev, ...next }));
   }, []);
+
+  useEffect(() => {
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 10000);
+    return () => clearInterval(interval);
+  }, [fetchPrices]);
+
+  // Refetch trades and prices when tab becomes visible (e.g. after market open)
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTrades();
+        fetchPrices();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [fetchTrades, fetchPrices]);
 
   useEffect(() => {
     const email = getCookie('user_email');

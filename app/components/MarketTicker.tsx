@@ -315,14 +315,22 @@ export default function MarketTicker() {
     // Fetch data immediately (including crypto)
     fetchMarketData(true);
 
+    // Refetch when tab becomes visible (e.g. after market open or returning to tab)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchMarketData(true);
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     // Update every 2 seconds for real-time feel (crypto will only update every 8 seconds)
     const interval = setInterval(() => {
-      console.log(`[MarketTicker] Refreshing at ${new Date().toLocaleTimeString()}`);
-      fetchMarketData();
+      if (document.visibilityState === 'visible') {
+        fetchMarketData();
+      }
     }, 2000);
 
     return () => {
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
       // Restore original console methods
       console.error = originalError;
