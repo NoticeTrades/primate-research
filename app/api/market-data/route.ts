@@ -132,12 +132,11 @@ async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; 
       const quoteData = await quoteRes.json();
       if (priceData.code || quoteData.code || priceData.status === 'error' || quoteData.status === 'error') continue;
       const price = parseFloat(priceData.price);
-      const open = parseFloat(quoteData.open || '0');
       const previousClose = parseFloat(quoteData.previous_close || '0');
       if (!price || isNaN(price)) continue;
-      const sessionOpen = open > 0 ? open : previousClose;
-      const change = sessionOpen > 0 ? price - sessionOpen : 0;
-      const changePercent = sessionOpen > 0 ? (change / sessionOpen) * 100 : 0;
+      // Daily change = vs previous close (how much it "closed" up/down), not vs session open
+      const change = previousClose > 0 ? price - previousClose : 0;
+      const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
       return { price, change, changePercent, previousClose };
     } catch {
       continue;
@@ -275,7 +274,7 @@ export async function GET(request: Request) {
         
         console.log(`[Market Data API] ${symbol} raw data: price=${regularMarketPrice}, prevClose=${previousClose}, dayOpen=${dayOpen}, rawChange=${rawChange}, rawChangePercent=${rawChangePercent}, marketState=${marketState}, marketTime=${marketTime}`);
         
-        // For futures (ES, NQ, YM, RTY, GC, SI, N225): change = current price - SESSION OPEN (not previous close)
+        // For futures (ES, NQ, YM, RTY, GC, SI, CL, N225): daily change = vs previous close ("closed up/down X%")
         // For crypto (BTC/ETH): change from day's open
         const isFutures = ['ES', 'NQ', 'YM', 'RTY', 'GC', 'SI', 'CL', 'N225'].includes(symbol);
         const isCrypto = symbol === 'BTC' || symbol === 'ETH';
@@ -284,21 +283,12 @@ export async function GET(request: Request) {
         let changePercent = 0;
         
         if (isFutures) {
-          // Always use session/day open → current price for exact intraday change (futures open to now)
-          let sessionOpen = dayOpen && dayOpen > 0 ? dayOpen : 0;
-          if (symbol === 'N225') {
-            const n225Open = await fetchN225SessionOpen(yahooSymbol);
-            if (n225Open > 0) sessionOpen = n225Open;
-          }
-          if (sessionOpen === 0 && regularMarketPrice > 0) {
-            sessionOpen = await fetchSessionOpenFromChart(yahooSymbol);
-          }
-          if (sessionOpen > 0 && regularMarketPrice > 0) {
-            change = regularMarketPrice - sessionOpen;
-            changePercent = (change / sessionOpen) * 100;
-            console.log(`[Market Data API] ${symbol} (futures): session open→now: price=${regularMarketPrice}, sessionOpen=${sessionOpen}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%`);
+          // Use previous close for daily change (standard "closed up/down X%" meaning)
+          if (previousClose > 0 && regularMarketPrice > 0) {
+            change = regularMarketPrice - previousClose;
+            changePercent = (change / previousClose) * 100;
+            console.log(`[Market Data API] ${symbol} (futures): price=${regularMarketPrice}, previousClose=${previousClose}, change=${change.toFixed(2)}, changePercent=${changePercent.toFixed(2)}%`);
           } else {
-            console.warn(`[Market Data API] ${symbol} (futures): No session open - price=${regularMarketPrice}, dayOpen=${dayOpen}, sessionOpen=${sessionOpen}`);
             change = 0;
             changePercent = 0;
           }
@@ -425,18 +415,11 @@ export async function GET(request: Request) {
         let changePercent = 0;
         
         if (isFutures) {
-          // For futures (chart fallback): get today's session open; for N225 use Tokyo session
-          let sessionOpen = meta?.regularMarketOpen && meta.regularMarketOpen > 0 ? meta.regularMarketOpen : 0;
-          if (symbol === 'N225') {
-            const n225Open = await fetchN225SessionOpen(yahooSymbol);
-            if (n225Open > 0) sessionOpen = n225Open;
-          }
-          if (sessionOpen === 0) sessionOpen = await fetchSessionOpenFromChart(yahooSymbol);
-          if (sessionOpen === 0) sessionOpen = dayOpen > 0 ? dayOpen : prev;
-          if (sessionOpen > 0 && sessionOpen !== price) {
-            change = price - sessionOpen;
-            changePercent = (change / sessionOpen) * 100;
-            console.log(`[Market Data API] ${symbol} (futures, chart fallback): price=${price}, sessionOpen=${sessionOpen}, change=${changePercent.toFixed(2)}%`);
+          // For futures (chart fallback): daily change = vs previous close
+          if (prev > 0 && prev !== price) {
+            change = price - prev;
+            changePercent = (change / prev) * 100;
+            console.log(`[Market Data API] ${symbol} (futures, chart fallback): price=${price}, previousClose=${prev}, change=${changePercent.toFixed(2)}%`);
           }
         } else if (isCrypto && dayOpen > 0) {
           // For crypto, calculate from day's open

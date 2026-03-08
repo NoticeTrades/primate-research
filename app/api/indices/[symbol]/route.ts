@@ -113,18 +113,16 @@ async function fetchTwelveData(symbol: string) {
               const low = parseFloat(quote.low || '0');
               const prevClose = parseFloat(quote.previous_close || '0');
               const volume = parseFloat(quote.volume || '0');
-              
+              // Daily change = vs previous close ("closed up/down X%")
               const change = price - prevClose;
               const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
-              const intradayChange = open > 0 ? price - open : 0;
-              const intradayChangePercent = open > 0 ? (intradayChange / open) * 100 : 0;
               
-              console.log(`[Twelve Data] Successfully fetched data for ${symbol} (${twelveSymbol}): price=${price}, change=${intradayChangePercent.toFixed(2)}%`);
+              console.log(`[Twelve Data] Successfully fetched data for ${symbol} (${twelveSymbol}): price=${price}, change=${changePercent.toFixed(2)}%`);
               
               return {
                 price,
-                change: intradayChange,
-                changePercent: intradayChangePercent,
+                change,
+                changePercent,
                 previousClose: prevClose,
                 holc: { high, open, low, close: price },
                 volume,
@@ -213,31 +211,23 @@ export async function GET(
         const rawChange = q.regularMarketChange;
         const rawChangePercent = q.regularMarketChangePercent;
         
-        // For intraday change, calculate from day's open, not previous close
-        // This gives more accurate real-time intraday percentage
+        // Daily change = vs previous close ("closed up/down X%")
         let changeVal = 0;
         let changePct = 0;
-        
-        if (dayOpen > 0 && regularMarketPrice > 0) {
-          // Calculate change from day's open (intraday change)
-          changeVal = regularMarketPrice - dayOpen;
-          changePct = (changeVal / dayOpen) * 100;
+        if (prevClose > 0 && regularMarketPrice > 0) {
+          changeVal = regularMarketPrice - prevClose;
+          changePct = (changeVal / prevClose) * 100;
         } else if (typeof rawChange === 'number' && !Number.isNaN(rawChange)) {
-          // Fallback to Yahoo's change value if open is not available
           changeVal = rawChange;
           changePct = typeof rawChangePercent === 'number' && !Number.isNaN(rawChangePercent)
             ? rawChangePercent
-            : (prevClose && typeof changeVal === 'number' ? (changeVal / prevClose) * 100 : 0);
-        } else if (typeof regularMarketPrice === 'number' && typeof prevClose === 'number') {
-          // Last resort: calculate from previous close
-          changeVal = regularMarketPrice - prevClose;
-          changePct = prevClose ? (changeVal / prevClose) * 100 : 0;
+            : (prevClose ? (changeVal / prevClose) * 100 : 0);
         }
         
-        // Try to get better data from chart API if needed
-        if ((changeVal === 0 || dayOpen === 0) && typeof regularMarketPrice === 'number') {
+        // Try to get better price from chart API if needed (keep daily change = vs previous close)
+        if ((changeVal === 0 || prevClose === 0) && typeof regularMarketPrice === 'number') {
           try {
-            const chart5Url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1m&range=1d`;
+            const chart5Url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
             const chart5Res = await fetch(chart5Url, {
               headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
               cache: 'no-store',
@@ -247,14 +237,14 @@ export async function GET(
               const meta = chart5?.chart?.result?.[0]?.meta;
               const quote = chart5?.chart?.result?.[0]?.indicators?.quote?.[0];
               if (meta && quote) {
-                const opens = quote.open ? (Array.isArray(quote.open) ? quote.open.filter((n: number) => n != null && typeof n === 'number') : []) : [];
+                const closeArr = quote.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number') : []) : [];
                 const currentPrice = meta.regularMarketPrice ?? regularMarketPrice;
-                const dayOpenFromChart = meta.regularMarketOpen ?? opens[0] ?? dayOpen;
-                
-                if (dayOpenFromChart > 0 && currentPrice > 0) {
-                  changeVal = currentPrice - dayOpenFromChart;
-                  changePct = (changeVal / dayOpenFromChart) * 100;
+                const prevCloseFromChart = meta?.previousClose ?? (closeArr.length >= 2 ? closeArr[closeArr.length - 2] : null) ?? prevClose;
+                if (prevCloseFromChart > 0 && currentPrice > 0) {
+                  changeVal = currentPrice - prevCloseFromChart;
+                  changePct = (changeVal / prevCloseFromChart) * 100;
                   regularMarketPrice = currentPrice;
+                  if (prevClose === 0) prevClose = prevCloseFromChart;
                 }
               }
             }
