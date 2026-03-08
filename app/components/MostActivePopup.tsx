@@ -24,7 +24,8 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'value', label: 'Value' },
 ];
 
-const LIMIT_OPTIONS = [10, 20, 25, 50, 100];
+// Alpha Vantage TOP_GAINERS_LOSERS returns max 20 per category
+const LIMIT_OPTIONS = [10, 20];
 
 const MOST_MIN_W = 400;
 const MOST_MIN_H = 320;
@@ -170,6 +171,7 @@ export default function MostActivePopup() {
               MOST
             </span>
             <span className="text-sm font-semibold text-zinc-200">US stocks: most active, top gainers, losers & by dollar volume</span>
+            <span className="text-[10px] text-zinc-500">(source: up to 20 per category)</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <select

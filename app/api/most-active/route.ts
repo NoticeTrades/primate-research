@@ -7,10 +7,26 @@ type OverviewCacheEntry = { name: string; sector: string; marketCap: number; ts:
 const OVERVIEW_CACHE = new Map<string, OverviewCacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+const SECTOR_OPTIONS = [
+  'Technology',
+  'Healthcare',
+  'Financial Services',
+  'Consumer Cyclical',
+  'Consumer Defensive',
+  'Industrials',
+  'Basic Materials',
+  'Energy',
+  'Utilities',
+  'Real Estate',
+  'Communication Services',
+  'Unknown',
+] as const;
+
 /** Normalize Alpha Vantage / GICS sector names to a single canonical form for filtering. */
 function normalizeSector(s: string): string {
   const t = (s || '').trim();
   if (!t || t === '—') return '—';
+  if (t.toLowerCase() === 'unknown') return '—';
   const lower = t.toLowerCase();
   if (lower.includes('information technology') || lower === 'technology') return 'Technology';
   if (lower.includes('health') || lower.includes('life science')) return 'Healthcare';
@@ -148,7 +164,11 @@ export async function GET(request: Request) {
     }
 
     const fromData = rows.map((r) => r.sector).filter((s): s is string => Boolean(s) && s !== '—');
-    const sectors = ['All', ...[...new Set(fromData)].sort()];
+    const hasUnknown = rows.some((r) => r.sector === '—');
+    const fromSet = new Set(fromData);
+    if (hasUnknown) fromSet.add('Unknown');
+    SECTOR_OPTIONS.forEach((s) => fromSet.add(s));
+    const sectors = ['All', ...[...fromSet].sort()];
 
     return NextResponse.json({
       data: filtered,

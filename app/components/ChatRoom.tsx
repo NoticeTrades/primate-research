@@ -8,31 +8,40 @@ const CHAT_TICKER_REGEX = new RegExp(`\\b(${CHAT_TICKER_SYMBOLS.join('|')})\\b`,
 
 const tickerDataCache: Record<string, { price: number; changePercent: number } | null> = {};
 
+const CHAT_TICKER_POLL_MS = 5000; // refresh ticker price and % in chat every 5 seconds
+
 function TickerPill({ symbol }: { symbol: string }) {
   const sym = symbol.toUpperCase();
   const [data, setData] = useState<{ price: number; changePercent: number } | null | undefined>(tickerDataCache[sym] ?? undefined);
+
   useEffect(() => {
-    if (tickerDataCache[sym] !== undefined) {
-      setData(tickerDataCache[sym]);
-      return;
-    }
-    fetch(`/api/market-data?symbol=${encodeURIComponent(sym)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.price != null && !d.error) {
-          const out = { price: Number(d.price), changePercent: Number(d.changePercent) || 0 };
-          tickerDataCache[sym] = out;
-          setData(out);
-        } else {
+    const fetchTicker = () => {
+      fetch(`/api/market-data?symbol=${encodeURIComponent(sym)}&t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.price != null && !d.error) {
+            const out = { price: Number(d.price), changePercent: Number(d.changePercent) || 0 };
+            tickerDataCache[sym] = out;
+            setData(out);
+          } else {
+            tickerDataCache[sym] = null;
+            setData(null);
+          }
+        })
+        .catch(() => {
           tickerDataCache[sym] = null;
           setData(null);
-        }
-      })
-      .catch(() => {
-        tickerDataCache[sym] = null;
-        setData(null);
-      });
+        });
+    };
+
+    fetchTicker();
+    const interval = setInterval(fetchTicker, CHAT_TICKER_POLL_MS);
+    return () => clearInterval(interval);
   }, [sym]);
+
   const isPositive = data != null && data.changePercent >= 0;
   return (
     <Link
