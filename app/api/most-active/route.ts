@@ -82,13 +82,13 @@ export async function GET(request: Request) {
     } else rawList = rawActive;
 
     const slice = rawList.slice(0, limit);
-    const symbols: string[] = [
+    const symbols = [
       ...new Set(
         slice
           .map((r: { ticker?: string }) => String(r.ticker || '').trim())
           .filter((s): s is string => s.length > 0)
       ),
-    ];
+    ] as string[];
     const overviews = await Promise.all(symbols.map((s) => fetchOverview(s)));
 
     const overviewBySymbol = new Map<string, OverviewCacheEntry | null>();
