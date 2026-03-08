@@ -43,6 +43,7 @@ export default function MostActivePopup() {
   const [sectors, setSectors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorHint, setErrorHint] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,14 +56,18 @@ export default function MostActivePopup() {
       .then((json) => {
         if (json.error) {
           setError(json.error);
+          setErrorHint(json.hint ?? null);
           setData([]);
           return;
         }
+        setError(null);
+        setErrorHint(null);
         setData(Array.isArray(json.data) ? json.data : []);
         setSectors(Array.isArray(json.sectors) ? json.sectors : []);
       })
       .catch(() => {
         setError('Failed to load');
+        setErrorHint(null);
         setData([]);
       })
       .finally(() => setLoading(false));
@@ -101,7 +106,7 @@ export default function MostActivePopup() {
             <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400 bg-amber-500/20 border border-amber-500/50">
               MOST
             </span>
-            <span className="text-sm font-semibold text-zinc-200">Most Active Traded Securities</span>
+            <span className="text-sm font-semibold text-zinc-200">US stocks: most active, top gainers, losers & by dollar volume</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <select
@@ -157,7 +162,12 @@ export default function MostActivePopup() {
         </div>
 
         <div className="flex-1 overflow-auto p-4">
-          {error && <p className="text-sm text-red-400 mb-2">{error}</p>}
+          {error && (
+            <div className="mb-2">
+              <p className="text-sm text-red-400">{error}</p>
+              {errorHint && <p className="text-xs text-zinc-400 mt-1 max-w-md">{errorHint}</p>}
+            </div>
+          )}
           {loading && <div className="flex items-center justify-center py-12 text-zinc-500">Loading…</div>}
           {!loading && data.length === 0 && !error && (
             <div className="flex items-center justify-center py-12 text-zinc-500">No data for this selection.</div>

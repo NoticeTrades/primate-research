@@ -792,7 +792,11 @@ export default function Navigation() {
                 if (hasIndexMatch || hasCryptoMatch || hasArticleMatch) setIsDropdownOpen(true);
               }
             }}
-            onBlur={() => setIsSearchFocused(false)}
+            onBlur={(e) => {
+              const next = e.relatedTarget as Node | null;
+              if (dropdownRef.current && next && dropdownRef.current.contains(next)) return;
+              setIsSearchFocused(false);
+            }}
             placeholder={searchPlaceholder || 'Search Terminal... (Press ` to open)'}
             className={`w-56 lg:w-80 px-3 py-1.5 pl-9 bg-white/80 dark:bg-zinc-800/80 border rounded-lg text-sm text-black dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
               isSearchFocused
@@ -837,7 +841,7 @@ export default function Navigation() {
                         { cmd: 'V', label: 'The Vault / Videos', onSelect: () => { router.push('/videos'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'VOL', label: 'Volatility (VIX, VVIX, term structure)', onSelect: () => { openVolatility(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'COMP', label: 'Compare indices historically (% change)', onSelect: () => { openCompare(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
-                        { cmd: 'MOST', label: 'Most active / Gainers / Losers / Value', onSelect: () => { openMostActive(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'MOST', label: 'US stocks: most active, top gainers, losers & by dollar volume', onSelect: () => { openMostActive(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                       ].map((item, idx) => {
                         const runSelect = () => {
                           const now = Date.now();
@@ -994,7 +998,7 @@ export default function Navigation() {
                   >
                     <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
                       <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-amber-400 bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/50">MOST</span>
-                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Most active traded securities</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">US stocks: most active, gainers, losers & by value</span>
                     </div>
                     <button
                       type="button"
@@ -1007,7 +1011,7 @@ export default function Navigation() {
                       }}
                       className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
                     >
-                      Open — Active, Gainers, Losers, Value
+                      Open — view tables with sector & top-N filters
                     </button>
                   </div>
                 );

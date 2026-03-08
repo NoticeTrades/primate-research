@@ -45,7 +45,13 @@ export type MostActiveRow = {
 export async function GET(request: Request) {
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: 'API key not configured' }, { status: 503 });
+    return NextResponse.json(
+      {
+        error: 'Alpha Vantage API key not configured',
+        hint: 'Add ALPHA_VANTAGE_API_KEY to your environment variables (e.g. in Vercel: Project → Settings → Environment Variables). Get a free key at https://www.alphavantage.co/support/#api-key',
+      },
+      { status: 503 }
+    );
   }
   const { searchParams } = new URL(request.url);
   const type = (searchParams.get('type') || 'active').toLowerCase(); // active | gainers | losers | value
