@@ -491,6 +491,11 @@ export default function Navigation() {
     if (!raw) return;
     setIsDropdownOpen(false);
     const q = raw.toUpperCase();
+    if (q === 'PRICE') {
+      setSearchQuery('PRICE ');
+      searchRef.current?.focus();
+      return;
+    }
     if (q === 'CHAT') {
       openChat();
       setSearchQuery('');
@@ -503,13 +508,13 @@ export default function Navigation() {
       searchRef.current?.blur();
       return;
     }
-    if (q === 'R') {
+    if (q === 'RE') {
       router.push('/research');
       setSearchQuery('');
       searchRef.current?.blur();
       return;
     }
-    if (q === 'V') {
+    if (q === 'VI') {
       router.push('/videos');
       setSearchQuery('');
       searchRef.current?.blur();
@@ -534,7 +539,7 @@ export default function Navigation() {
       return;
     }
     const parts = raw.split(/\s+/);
-    if (parts[0].toUpperCase() === 'P' && parts[1]) {
+    if (parts[0].toUpperCase() === 'PRICE' && parts[1]) {
       const ticker = parts[1].toUpperCase();
       if (SEARCH_TERMINAL_TICKERS.includes(ticker)) {
         openTicker(ticker);
@@ -605,7 +610,7 @@ export default function Navigation() {
             onChange={(e) => {
               handleSearchChange(e.target.value);
               const raw = e.target.value.trim();
-              if (raw === 'P' || raw.toUpperCase().startsWith('P ')) {
+              if (raw === 'PRICE' || raw.toUpperCase().startsWith('PRICE ')) {
                 setSelectedPriceTickerIndex(0);
               } else {
                 setSelectedSearchResultIndex(0); // Reset selection when query changes
@@ -630,8 +635,8 @@ export default function Navigation() {
 
               const raw = searchQuery.trim();
               const showCommands = isDropdownOpen && isSearchFocused && !raw;
-              const isPrice = raw === 'P' || raw.toUpperCase().startsWith('P ');
-              const priceTickerPart = isPrice && raw.toUpperCase().startsWith('P ') ? raw.slice(1).trim().toUpperCase() : '';
+              const isPrice = raw === 'PRICE' || raw.toUpperCase().startsWith('PRICE ');
+              const priceTickerPart = isPrice && raw.toUpperCase().startsWith('PRICE ') ? raw.slice(6).trim().toUpperCase() : '';
               const priceTickers = isPrice
                 ? (priceTickerPart ? SEARCH_TERMINAL_TICKERS.filter((t: string) => t.startsWith(priceTickerPart) || priceTickerPart.startsWith(t)) : SEARCH_TERMINAL_TICKERS)
                 : [];
@@ -649,7 +654,7 @@ export default function Navigation() {
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   if (selectedCommandIndex === 0) {
-                    setSearchQuery('P ');
+                    setSearchQuery('PRICE ');
                     setSelectedPriceTickerIndex(0);
                     setTimeout(() => searchRef.current?.focus(), 0);
                   } else if (selectedCommandIndex === 1) {
@@ -740,7 +745,7 @@ export default function Navigation() {
                   // If the query is an exact command like MOST / VOL / COMP etc,
                   // let the form submit handler run the command instead of opening a research article.
                   const upper = raw.toUpperCase();
-                  if (upper === 'MOST' || upper === 'VOL' || upper === 'COMP' || upper === 'R' || upper === 'V' || upper === 'EI') {
+                  if (upper === 'MOST' || upper === 'VOL' || upper === 'COMP' || upper === 'RE' || upper === 'VI' || upper === 'EI' || upper === 'PRICE') {
                     return;
                   }
                   e.preventDefault();
@@ -785,10 +790,10 @@ export default function Navigation() {
               setIsDropdownOpen(true);
               const q = searchQuery.trim();
               if (!q) setSelectedCommandIndex(0);
-              if (q === 'P' || q.toUpperCase().startsWith('P ')) {
+              if (q === 'PRICE' || q.toUpperCase().startsWith('PRICE ')) {
                 setSelectedPriceTickerIndex(0);
               }
-              if (q === 'P' || q.toUpperCase().startsWith('P ')) setIsDropdownOpen(true);
+              if (q === 'PRICE' || q.toUpperCase().startsWith('PRICE ')) setIsDropdownOpen(true);
               else if (q) {
                 const qLower = q.toLowerCase();
                 const hasIndexMatch = indexAutocompleteOptions.some(i =>
@@ -846,11 +851,11 @@ export default function Navigation() {
                     </div>
                     <div className="py-0.5">
                       {[
-                        { cmd: 'P', label: 'Live Price', onSelect: () => { setSearchQuery('P '); setSelectedPriceTickerIndex(0); searchRef.current?.focus(); } },
+                        { cmd: 'PRICE', label: 'Live Price', onSelect: () => { setSearchQuery('PRICE '); setSelectedPriceTickerIndex(0); searchRef.current?.focus(); } },
                         { cmd: 'CHAT', label: 'Live Chat', onSelect: () => { openChat(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'EI', label: 'US Equity Index Futures (ES, YM, NQ)', onSelect: () => { openEquityIndex(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
-                        { cmd: 'R', label: 'Research', onSelect: () => { router.push('/research'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
-                        { cmd: 'V', label: 'The Vault / Videos', onSelect: () => { router.push('/videos'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'RE', label: 'Research', onSelect: () => { router.push('/research'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'VI', label: 'The Vault / Videos', onSelect: () => { router.push('/videos'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'VOL', label: 'Volatility (VIX, VVIX, term structure)', onSelect: () => { openVolatility(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'COMP', label: 'Compare indices historically (% change)', onSelect: () => { openCompare(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'MOST', label: 'US stocks: most active, top gainers, losers & by dollar volume', onSelect: () => { openMostActive(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
@@ -888,15 +893,15 @@ export default function Navigation() {
                   </div>
                 );
               }
-              const isPriceCommand = raw === 'P' || raw.toUpperCase().startsWith('P ');
-              const priceTickerPart = isPriceCommand && raw.toUpperCase().startsWith('P ') ? raw.slice(1).trim().toUpperCase() : '';
+              const isPriceCommand = raw === 'PRICE' || raw.toUpperCase().startsWith('PRICE ');
+              const priceTickerPart = isPriceCommand && raw.toUpperCase().startsWith('PRICE ') ? raw.slice(6).trim().toUpperCase() : '';
               const priceTickers = priceTickerPart
                 ? SEARCH_TERMINAL_TICKERS.filter(t => t.startsWith(priceTickerPart) || priceTickerPart.startsWith(t))
                 : SEARCH_TERMINAL_TICKERS;
               const showPriceDropdown = isPriceCommand;
               const showEIDropdown = raw.toUpperCase() === 'EI';
-              const showRDropdown = raw.toUpperCase() === 'R';
-              const showVDropdown = raw.toUpperCase() === 'V';
+              const showRDropdown = raw.toUpperCase() === 'RE';
+              const showVDropdown = raw.toUpperCase() === 'VI';
               const showVOLDropdown = raw.toUpperCase() === 'VOL';
               const showCOMPDropdown = raw.toUpperCase() === 'COMP';
               const showMOSTDropdown = raw.toUpperCase() === 'MOST';
@@ -908,7 +913,7 @@ export default function Navigation() {
                     className="absolute top-full mt-1.5 right-0 w-64 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
                     <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
-                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">R</span>
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">RE</span>
                       <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Research</span>
                     </div>
                     <button
@@ -934,7 +939,7 @@ export default function Navigation() {
                     className="absolute top-full mt-1.5 right-0 w-64 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
                   >
                     <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
-                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">V</span>
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">VI</span>
                       <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">The Vault / Videos</span>
                     </div>
                     <button
@@ -1064,11 +1069,11 @@ export default function Navigation() {
               ref={dropdownRef}
               className="absolute top-full mt-2 right-0 w-80 lg:w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden"
             >
-              {/* P = Price Quote / Live Price */}
+              {/* PRICE = Live Price / ticker quote */}
               {showPriceDropdown && (
                 <>
                   <div className="px-2.5 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">P</span>
+                    <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-blue-400 bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/50">PRICE</span>
                     <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Live Price</span>
                   </div>
                   <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
