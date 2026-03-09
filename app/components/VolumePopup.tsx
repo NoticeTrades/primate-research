@@ -226,7 +226,7 @@ export default function VolumePopup() {
     >
       <div
         onMouseDown={(e) => {
-          if ((e.target as HTMLElement).closest('button') return;
+          if ((e.target as HTMLElement).closest('button')) return;
           setIsDragging(true);
           dragStart.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y };
         }}
