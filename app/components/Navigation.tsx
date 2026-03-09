@@ -649,53 +649,68 @@ export default function Navigation() {
                 ? (priceTickerPart ? SEARCH_TERMINAL_TICKERS.filter((t: string) => t.startsWith(priceTickerPart) || priceTickerPart.startsWith(t)) : SEARCH_TERMINAL_TICKERS)
                 : [];
               if (showCommands) {
+                const totalCommands = 9; // PRICE, CHAT, EI, RE, VI, VOL, VOLU, COMP, MOST
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
-                  setSelectedCommandIndex((i) => (i + 1) % 8);
+                  setSelectedCommandIndex((i) => (i + 1) % totalCommands);
                   return;
                 }
                 if (e.key === 'ArrowUp') {
                   e.preventDefault();
-                  setSelectedCommandIndex((i) => (i - 1 + 8) % 8);
+                  setSelectedCommandIndex((i) => (i - 1 + totalCommands) % totalCommands);
                   return;
                 }
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   if (selectedCommandIndex === 0) {
+                    // PRICE – switch into PRICE mode
                     setSearchQuery('PRICE ');
                     setSelectedPriceTickerIndex(0);
                     setTimeout(() => searchRef.current?.focus(), 0);
                   } else if (selectedCommandIndex === 1) {
+                    // CHAT
                     openChat();
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
                   } else if (selectedCommandIndex === 2) {
+                    // EI
                     openEquityIndex();
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
                   } else if (selectedCommandIndex === 3) {
+                    // RE
                     router.push('/research');
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
                   } else if (selectedCommandIndex === 4) {
+                    // VI
                     router.push('/videos');
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
                   } else if (selectedCommandIndex === 5) {
+                    // VOL
                     openVolatility();
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
                   } else if (selectedCommandIndex === 6) {
+                    // VOLU
+                    openVolume();
+                    setIsDropdownOpen(false);
+                    setSearchQuery('');
+                    searchRef.current?.blur();
+                  } else if (selectedCommandIndex === 7) {
+                    // COMP
                     openCompare();
                     setIsDropdownOpen(false);
                     setSearchQuery('');
                     searchRef.current?.blur();
                   } else {
+                    // MOST
                     openMostActive();
                     setIsDropdownOpen(false);
                     setSearchQuery('');
