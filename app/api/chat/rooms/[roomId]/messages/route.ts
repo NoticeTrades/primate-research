@@ -101,58 +101,53 @@ export async function GET(
       `;
     }
 
-    // Get files for all messages
+    // Get files and reactions for all messages (wrap in try so main messages still return if these fail)
     const messageIds = messages.map((m: any) => m.id);
     let filesMap: Record<number, any[]> = {};
-    
-    if (messageIds.length > 0) {
-      const files = await sql`
-        SELECT 
-          message_id,
-          id,
-          file_url,
-          file_name,
-          file_type,
-          file_size
-        FROM chat_message_files
-        WHERE message_id = ANY(${messageIds})
-        ORDER BY created_at ASC
-      `;
-      
-      files.forEach((file: any) => {
-        if (!filesMap[file.message_id]) {
-          filesMap[file.message_id] = [];
-        }
-        filesMap[file.message_id].push({
-          id: file.id,
-          file_url: file.file_url,
-          file_name: file.file_name,
-          file_type: file.file_type,
-          file_size: file.file_size,
-        });
-      });
-    }
-
-    // Get reactions for all messages (count per emoji, and whether current user reacted)
     let reactionsMap: Record<number, { emoji: string; count: number; reacted: boolean }[]> = {};
+
     if (messageIds.length > 0) {
-      const reactions = await sql`
-        SELECT message_id, emoji, user_email
-        FROM chat_message_reactions
-        WHERE message_id = ANY(${messageIds})
-      `;
-      const countByMessageEmoji: Record<string, { count: number; reacted: boolean }> = {};
-      (reactions as { message_id: number; emoji: string; user_email: string }[]).forEach((r) => {
-        const key = `${r.message_id}:${r.emoji}`;
-        if (!countByMessageEmoji[key]) countByMessageEmoji[key] = { count: 0, reacted: false };
-        countByMessageEmoji[key].count += 1;
-        if (r.user_email === userEmail) countByMessageEmoji[key].reacted = true;
-      });
-      messageIds.forEach((mid: number) => {
-        reactionsMap[mid] = Object.entries(countByMessageEmoji)
-          .filter(([k]) => k.startsWith(String(mid) + ':'))
-          .map(([k, v]) => ({ emoji: k.split(':')[1], count: v.count, reacted: v.reacted }));
-      });
+      try {
+        const files = await sql`
+          SELECT message_id, id, file_url, file_name, file_type, file_size
+          FROM chat_message_files
+          WHERE message_id = ANY(${messageIds})
+          ORDER BY created_at ASC
+        `;
+        (files as { message_id: number; id: number; file_url: string; file_name: string; file_type: string; file_size?: number }[]).forEach((file) => {
+          if (!filesMap[file.message_id]) filesMap[file.message_id] = [];
+          filesMap[file.message_id].push({
+            id: file.id,
+            file_url: file.file_url,
+            file_name: file.file_name,
+            file_type: file.file_type,
+            file_size: file.file_size,
+          });
+        });
+      } catch (e) {
+        console.error('Error fetching chat message files:', e);
+      }
+      try {
+        const reactions = await sql`
+          SELECT message_id, emoji, user_email
+          FROM chat_message_reactions
+          WHERE message_id = ANY(${messageIds})
+        `;
+        const countByMessageEmoji: Record<string, { count: number; reacted: boolean }> = {};
+        (reactions as { message_id: number; emoji: string; user_email: string }[]).forEach((r) => {
+          const key = `${r.message_id}:${r.emoji}`;
+          if (!countByMessageEmoji[key]) countByMessageEmoji[key] = { count: 0, reacted: false };
+          countByMessageEmoji[key].count += 1;
+          if (r.user_email === userEmail) countByMessageEmoji[key].reacted = true;
+        });
+        messageIds.forEach((mid: number) => {
+          reactionsMap[mid] = Object.entries(countByMessageEmoji)
+            .filter(([k]) => k.split(':')[0] === String(mid))
+            .map(([k, v]) => ({ emoji: k.split(':')[1] ?? '', count: v.count, reacted: v.reacted }));
+        });
+      } catch (e) {
+        console.error('Error fetching chat message reactions:', e);
+      }
     }
 
     // Attach files and reactions to messages
