@@ -83,76 +83,154 @@ async function fetchSpectatorIndexTweet(bearerToken: string): Promise<SpectatorR
   }
 }
 
-/** True if headline looks like market/finance news (stocks, Fed, rates, earnings, etc.). */
-function isMarketRelated(title: string): boolean {
+/** True if headline is about futures/macro moves: indices, commodities, rates, Fed, etc. */
+function isFuturesRelated(title: string): boolean {
   const t = title.toLowerCase();
-  const marketTerms = /\b(stock|market|fed|rate|rates|earnings|trading|dollar|oil|inflation|treasury|bond|sec|recession|gdp|jobs report|employment|crude|gold|nasdaq|s&p|dow|yield|interest|housing|retail sales)\b/;
-  const notMarket = /\b(macbook|iphone|ipad|airpods|galaxy|playstation|xbox|netflix series|movie|celebrity)\b/;
-  return marketTerms.test(t) && !notMarket.test(t);
+  const futuresTerms = /\b(futures?|cme|es\b|nq\b|ym\b|rty\b|crude|oil|gold|silver|natural gas|bonds?|treasury|fed|fomc|rate|rates|yield|yields|nasdaq|s&p|dow|index|commodit|inflation|gdp|jobs report|employment|housing starts|retail sales|ppi|cpi|dxy|dollar index)\b/;
+  const notRelevant = /\b(macbook|iphone|ipad|airpods|celebrity|netflix series|movie)\b/;
+  return futuresTerms.test(t) && !notRelevant.test(t);
 }
 
-/** Parse RSS XML and return first few items (title, link), preferring market-moving headlines. */
-async function fetchRssFallback(): Promise<BreakingItem[]> {
-  const allCandidates: BreakingItem[] = [];
-  const urls = [
-    'https://finance.yahoo.com/news/rssindex',
-    'https://feeds.content.dailyfx.com/xml/dailyfx_news',
-  ];
-  const opts = { cache: 'no-store' as RequestCache, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' } };
+/** Parse a single RSS feed URL; returns items (title, link). */
+async function parseRssFeed(feedUrl: string, sourceLabel: string, opts: RequestInit): Promise<BreakingItem[]> {
+  const res = await fetch(feedUrl, opts);
+  const xml = await res.text();
+  const feedItems: BreakingItem[] = [];
+  let m: RegExpExecArray | null;
+  const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>/gi;
+  while ((m = itemRegex.exec(xml)) !== null) {
+    const title = m[1].replace(/<[^>]+>/g, '').trim();
+    const url = m[2].trim();
+    if (title && url && url.startsWith('http')) {
+      feedItems.push({ title, url, time: '', source: sourceLabel, sentiment: '' });
+    }
+  }
+  if (feedItems.length === 0) {
+    const altRegex = /<item>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/gi;
+    while ((m = altRegex.exec(xml)) !== null) {
+      const url = m[1].trim();
+      const title = m[2].replace(/<[^>]+>/g, '').trim();
+      if (title && url && url.startsWith('http')) {
+        feedItems.push({ title, url, time: '', source: sourceLabel, sentiment: '' });
+      }
+    }
+  }
+  return feedItems;
+}
 
-  for (const feedUrl of urls) {
+/** Fetch futures/macro news from CME Group RSS (no API key). */
+async function fetchCmeRss(): Promise<BreakingItem[]> {
+  const opts = { cache: 'no-store' as RequestCache, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' } };
+  const urls: [string, string][] = [
+    ['https://www.cmegroup.com/rss/commentary-home-insights-analysis.rss', 'CME Research'],
+    ['http://feeds.feedburner.com/EconomicEventsInterestRates', 'CME Rates'],
+    ['http://feeds.feedburner.com/EconomicEventsEnergy', 'CME Energy'],
+  ];
+  const allCandidates: BreakingItem[] = [];
+  for (const [url, label] of urls) {
     try {
-      const res = await fetch(feedUrl, opts);
-      const xml = await res.text();
-      const source = feedUrl.includes('dailyfx') ? 'DailyFX' : 'Yahoo Finance';
-      const feedItems: BreakingItem[] = [];
-      let m: RegExpExecArray | null;
-      const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>/gi;
-      while ((m = itemRegex.exec(xml)) !== null) {
-        const title = m[1].replace(/<[^>]+>/g, '').trim();
-        const url = m[2].trim();
-        if (title && url && url.startsWith('http')) {
-          feedItems.push({ title, url, time: '', source, sentiment: '' });
-        }
-      }
-      if (feedItems.length === 0) {
-        const altRegex = /<item>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/gi;
-        while ((m = altRegex.exec(xml)) !== null) {
-          const url = m[1].trim();
-          const title = m[2].replace(/<[^>]+>/g, '').trim();
-          if (title && url && url.startsWith('http')) {
-            feedItems.push({ title, url, time: '', source, sentiment: '' });
-          }
-        }
-      }
-      allCandidates.push(...feedItems);
+      const items = await parseRssFeed(url, label, opts);
+      allCandidates.push(...items);
     } catch {
       continue;
     }
   }
-  // Dedupe by title, then prefer market-related, take up to 3
   const byTitle = new Map<string, BreakingItem>();
   for (const c of allCandidates) {
     if (!byTitle.has(c.title)) byTitle.set(c.title, c);
   }
   const unique = [...byTitle.values()];
-  const marketFirst = [
-    ...unique.filter((c) => isMarketRelated(c.title)),
-    ...unique.filter((c) => !isMarketRelated(c.title)),
+  const futuresFirst = [
+    ...unique.filter((c) => isFuturesRelated(c.title)),
+    ...unique.filter((c) => !isFuturesRelated(c.title)),
   ];
-  return marketFirst.slice(0, 3);
+  return futuresFirst.slice(0, 5);
 }
 
-/** Fetch latest market/financial news: optional Spectator Index tweet, then Alpha Vantage, with RSS fallback. */
+/** Optional: Finnhub market news (free API key at finnhub.io). */
+async function fetchFinnhubNews(apiKey: string): Promise<BreakingItem[]> {
+  try {
+    const res = await fetch(
+      `https://finnhub.io/api/v1/news?category=general&minId=0&token=${encodeURIComponent(apiKey)}`,
+      { cache: 'no-store' }
+    );
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : [];
+    const items: BreakingItem[] = list.slice(0, 5).map((item: { headline?: string; url?: string; datetime?: number; source?: string }) => ({
+      title: typeof item.headline === 'string' ? item.headline : '',
+      url: typeof item.url === 'string' ? item.url : '',
+      time: typeof item.datetime === 'number' ? new Date(item.datetime * 1000).toISOString() : '',
+      source: typeof item.source === 'string' ? item.source : 'Finnhub',
+      sentiment: '',
+    }));
+    return items.filter((i: BreakingItem) => i.title && i.url);
+  } catch (e) {
+    console.error('[breaking-news] Finnhub', e);
+    return [];
+  }
+}
+
+/** General RSS fallback (Yahoo, DailyFX); prefer futures-related. */
+async function fetchRssFallback(): Promise<BreakingItem[]> {
+  const allCandidates: BreakingItem[] = [];
+  const urls: [string, string][] = [
+    ['https://finance.yahoo.com/news/rssindex', 'Yahoo Finance'],
+    ['https://feeds.content.dailyfx.com/xml/dailyfx_news', 'DailyFX'],
+  ];
+  const opts = { cache: 'no-store' as RequestCache, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' } };
+
+  for (const [feedUrl, sourceLabel] of urls) {
+    try {
+      const feedItems = await parseRssFeed(feedUrl, sourceLabel, opts);
+      allCandidates.push(...feedItems);
+    } catch {
+      continue;
+    }
+  }
+  const byTitle = new Map<string, BreakingItem>();
+  for (const c of allCandidates) {
+    if (!byTitle.has(c.title)) byTitle.set(c.title, c);
+  }
+  const unique = [...byTitle.values()];
+  const futuresFirst = [
+    ...unique.filter((c) => isFuturesRelated(c.title)),
+    ...unique.filter((c) => !isFuturesRelated(c.title)),
+  ];
+  return futuresFirst.slice(0, 3);
+}
+
+/** Fetch Alpha Vantage NEWS_SENTIMENT for one topic. */
+async function fetchAlphaVantageTopic(apiKey: string, topic: string): Promise<BreakingItem[]> {
+  const url = new URL('https://www.alphavantage.co/query');
+  url.searchParams.set('function', 'NEWS_SENTIMENT');
+  url.searchParams.set('topic', topic);
+  url.searchParams.set('limit', '5');
+  url.searchParams.set('apikey', apiKey);
+  url.searchParams.set('sort', 'LATEST');
+  const res = await fetch(url.toString(), { cache: 'no-store' });
+  const data = await res.json();
+  if (data['Note'] || data['Information']) return [];
+  const feed = Array.isArray(data.feed) ? data.feed : Array.isArray((data as { news?: unknown[] }).news) ? (data as { news: unknown[] }).news : [];
+  return feed.slice(0, 5).map((item: { title?: string; url?: string; time_published?: string; source?: string; overall_sentiment_label?: string }) => ({
+    title: typeof item.title === 'string' ? item.title : '',
+    url: typeof item.url === 'string' ? item.url : '',
+    time: typeof item.time_published === 'string' ? item.time_published : '',
+    source: typeof item.source === 'string' ? item.source : 'Alpha Vantage',
+    sentiment: typeof item.overall_sentiment_label === 'string' ? item.overall_sentiment_label : '',
+  }));
+}
+
+/** Fetch latest futures/macro breaking news: Spectator (optional), then API + CME RSS, then fallback. */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const debug = searchParams.get('debug') === '1';
   const xBearerToken = process.env.X_BEARER_TOKEN ?? process.env.TWITTER_BEARER_TOKEN;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+  const finnhubKey = process.env.FINNHUB_API_KEY;
   let items: BreakingItem[] = [];
   let spectatorDebug: { status: 'ok' | 'skipped' | 'error'; message?: string } | undefined;
 
-  // Optional: latest tweet from @spectatorindex (shown first in breaking banner)
+  // Optional: latest tweet from @spectatorindex (shown first)
   if (xBearerToken) {
     const result = await fetchSpectatorIndexTweet(xBearerToken);
     if (result && 'item' in result) {
@@ -170,31 +248,56 @@ export async function GET(request: Request) {
     spectatorDebug = { status: 'skipped', message: 'X_BEARER_TOKEN not set' };
   }
 
+  // Alpha Vantage: economy_macro (Fed, rates, GDP) + financial_markets — drives futures
   if (apiKey) {
     try {
-      const url = new URL('https://www.alphavantage.co/query');
-      url.searchParams.set('function', 'NEWS_SENTIMENT');
-      url.searchParams.set('topic', 'financial_markets');
-      url.searchParams.set('limit', '5');
-      url.searchParams.set('apikey', apiKey);
-      url.searchParams.set('sort', 'LATEST');
-
-      const res = await fetch(url.toString(), { cache: 'no-store' });
-      const data = await res.json();
-
-      if (!data['Note'] && !data['Information']) {
-        const feed = Array.isArray(data.feed) ? data.feed : Array.isArray((data as { news?: unknown[] }).news) ? (data as { news: unknown[] }).news : [];
-        const avItems = feed.slice(0, 3).map((item: { title?: string; url?: string; time_published?: string; source?: string; overall_sentiment_label?: string }) => ({
-          title: typeof item.title === 'string' ? item.title : '',
-          url: typeof item.url === 'string' ? item.url : '',
-          time: typeof item.time_published === 'string' ? item.time_published : '',
-          source: typeof item.source === 'string' ? item.source : '',
-          sentiment: typeof item.overall_sentiment_label === 'string' ? item.overall_sentiment_label : '',
-        }));
-        items.push(...avItems.filter((i: BreakingItem) => i.title && i.url));
+      const [macro, financial] = await Promise.all([
+        fetchAlphaVantageTopic(apiKey, 'economy_macro'),
+        fetchAlphaVantageTopic(apiKey, 'financial_markets'),
+      ]);
+      const combined = [...macro, ...financial].filter((i: BreakingItem) => i.title && i.url);
+      const byTitle = new Map<string, BreakingItem>();
+      for (const c of combined) {
+        if (!byTitle.has(c.title)) byTitle.set(c.title, c);
       }
+      const unique = [...byTitle.values()];
+      const futuresFirst = [
+        ...unique.filter((c) => isFuturesRelated(c.title)),
+        ...unique.filter((c) => !isFuturesRelated(c.title)),
+      ];
+      items.push(...futuresFirst.slice(0, 5));
     } catch (e) {
       console.error('[breaking-news] Alpha Vantage', e);
+    }
+  }
+
+  // CME Group RSS (futures/rates/energy) — no API key
+  if (items.length < 5) {
+    const cmeItems = await fetchCmeRss();
+    const existingTitles = new Set(items.map((i) => i.title));
+    for (const c of cmeItems) {
+      if (items.length >= 5) break;
+      if (!existingTitles.has(c.title)) {
+        existingTitles.add(c.title);
+        items.push(c);
+      }
+    }
+  }
+
+  // Optional: Finnhub market news
+  if (finnhubKey && items.length < 5) {
+    const fhItems = await fetchFinnhubNews(finnhubKey);
+    const existingTitles = new Set(items.map((i) => i.title));
+    const futuresFirst = [
+      ...fhItems.filter((c) => isFuturesRelated(c.title)),
+      ...fhItems.filter((c) => !isFuturesRelated(c.title)),
+    ];
+    for (const c of futuresFirst) {
+      if (items.length >= 5) break;
+      if (!existingTitles.has(c.title)) {
+        existingTitles.add(c.title);
+        items.push(c);
+      }
     }
   }
 
@@ -202,14 +305,22 @@ export async function GET(request: Request) {
     items = await fetchRssFallback();
   }
 
-  // Ensure we always have at least one item so the banner can show
+  // Prefer futures-related order; keep Spectator first if present
+  const head = items[0]?.source === 'Spectator Index' ? [items[0]] : [];
+  const rest = items[0]?.source === 'Spectator Index' ? items.slice(1) : items;
+  const futuresFirst = [
+    ...rest.filter((c) => isFuturesRelated(c.title)),
+    ...rest.filter((c) => !isFuturesRelated(c.title)),
+  ];
+  items = [...head, ...futuresFirst.slice(0, 5 - head.length)];
+
   if (items.length === 0) {
     items = [
       {
-        title: 'Latest market news and moves',
-        url: 'https://finance.yahoo.com/news/',
+        title: 'Latest futures and market moves',
+        url: 'https://www.cmegroup.com/news.html',
         time: new Date().toISOString(),
-        source: 'Markets',
+        source: 'CME Group',
         sentiment: '',
       },
     ];
