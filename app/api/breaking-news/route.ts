@@ -173,7 +173,7 @@ export async function GET(request: Request) {
           source: typeof item.source === 'string' ? item.source : '',
           sentiment: typeof item.overall_sentiment_label === 'string' ? item.overall_sentiment_label : '',
         }));
-        items.push(...avItems.filter((i) => i.title && i.url));
+        items.push(...avItems.filter((i: BreakingItem) => i.title && i.url));
       }
     } catch (e) {
       console.error('[breaking-news] Alpha Vantage', e);
