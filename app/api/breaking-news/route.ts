@@ -3,7 +3,55 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const SPECTATOR_INDEX_USERNAME = 'spectatorindex';
+
 type BreakingItem = { title: string; url: string; time: string; source: string; sentiment: string };
+
+/** Fetch latest tweet from @spectatorindex via X API v2. Returns one item or empty array. */
+async function fetchSpectatorIndexTweet(bearerToken: string): Promise<BreakingItem | null> {
+  try {
+    const userRes = await fetch(
+      `https://api.twitter.com/2/users/by/username/${SPECTATOR_INDEX_USERNAME}`,
+      {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${bearerToken}` },
+      }
+    );
+    if (!userRes.ok) return null;
+    const userData = await userRes.json();
+    const userId = userData?.data?.id;
+    if (!userId) return null;
+
+    const tweetsRes = await fetch(
+      `https://api.twitter.com/2/users/${userId}/tweets?max_results=1&tweet.fields=created_at,text`,
+      {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${bearerToken}` },
+      }
+    );
+    if (!tweetsRes.ok) return null;
+    const tweetsData = await tweetsRes.json();
+    const tweet = Array.isArray(tweetsData?.data) ? tweetsData.data[0] : null;
+    if (!tweet?.id || typeof tweet.text !== 'string') return null;
+
+    const text = tweet.text.trim();
+    if (!text) return null;
+
+    const time = typeof tweet.created_at === 'string' ? tweet.created_at : '';
+    const url = `https://x.com/${SPECTATOR_INDEX_USERNAME}/status/${tweet.id}`;
+
+    return {
+      title: text,
+      url,
+      time,
+      source: 'Spectator Index',
+      sentiment: '',
+    };
+  } catch (e) {
+    console.error('[breaking-news] X/Spectator Index', e);
+    return null;
+  }
+}
 
 /** Parse RSS XML and return first few items (title, link). */
 async function fetchRssFallback(): Promise<BreakingItem[]> {
@@ -29,10 +77,17 @@ async function fetchRssFallback(): Promise<BreakingItem[]> {
   }
 }
 
-/** Fetch latest market/financial news from Alpha Vantage, with RSS fallback. */
+/** Fetch latest market/financial news: optional Spectator Index tweet, then Alpha Vantage, with RSS fallback. */
 export async function GET() {
+  const xBearerToken = process.env.X_BEARER_TOKEN ?? process.env.TWITTER_BEARER_TOKEN;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
   let items: BreakingItem[] = [];
+
+  // Optional: latest tweet from @spectatorindex (shown first in breaking banner)
+  if (xBearerToken) {
+    const tweet = await fetchSpectatorIndexTweet(xBearerToken);
+    if (tweet) items.push(tweet);
+  }
 
   if (apiKey) {
     try {
