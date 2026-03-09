@@ -811,7 +811,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       );
     }
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-zinc-500/15 text-zinc-300 border border-zinc-500/30 verified-badge">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/40 verified-badge">
         PREMIUM
       </span>
     );
@@ -1000,7 +1000,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                           className={`inline-block px-3 py-1.5 rounded-md max-w-[92%] text-sm ${
                             isOwnMessage
                               ? 'bg-zinc-800/90 text-zinc-50'
-                              : 'bg-transparent text-zinc-100 hover:bg-zinc-900/40'
+                              : 'bg-zinc-900/80 text-zinc-100 border border-zinc-800'
                           }`}
                         >
                           {message.reply_to_id != null && (
