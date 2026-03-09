@@ -11,6 +11,9 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   RTY: 'RTY=F',
   CL: 'CL=F',
   DXY: 'DX-Y.NYB',
+  FTSE: '^FTSE',   // FTSE 100 Index
+  GER40: '^GDAXI', // Germany 40 / DAX
+  DAX: '^GDAXI',
 };
 
 const ALPHA_VANTAGE_SYMBOLS: Record<string, string> = {
@@ -28,6 +31,9 @@ const INDEX_NAMES: Record<string, string> = {
   RTY: 'E-mini Russell 2000',
   CL: 'WTI Crude Oil',
   DXY: 'US Dollar Index',
+  FTSE: 'FTSE 100 Index',
+  GER40: 'DAX / Germany 40',
+  DAX: 'DAX Index',
 };
 
 // Fetch data from Alpha Vantage (more reliable for futures)

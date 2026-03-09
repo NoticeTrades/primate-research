@@ -10,6 +10,7 @@ import { useEquityIndex } from '../contexts/EquityIndexContext';
 import { useVolatility } from '../contexts/VolatilityContext';
 import { useCompare } from '../contexts/CompareContext';
 import { useMostActive } from '../contexts/MostActiveContext';
+import { useVolume } from '../contexts/VolumeContext';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -30,6 +31,7 @@ export default function Navigation() {
   const { openVolatility } = useVolatility();
   const { openCompare } = useCompare();
   const { openMostActive } = useMostActive();
+  const { openVolume } = useVolume();
 
   const TERMINAL_PLACEHOLDER = 'Search Terminal... (Press ` to open)';
   const SEARCH_TERMINAL_TICKERS = ['NQ', 'ES', 'YM', 'DXY', 'CL', 'BTC'];
@@ -538,6 +540,12 @@ export default function Navigation() {
       searchRef.current?.blur();
       return;
     }
+    if (q === 'VOLU') {
+      openVolume();
+      setSearchQuery('');
+      searchRef.current?.blur();
+      return;
+    }
     const parts = raw.split(/\s+/);
     if (parts[0].toUpperCase() === 'PRICE' && parts[1]) {
       const ticker = parts[1].toUpperCase();
@@ -745,7 +753,7 @@ export default function Navigation() {
                   // If the query is an exact command like MOST / VOL / COMP etc,
                   // let the form submit handler run the command instead of opening a research article.
                   const upper = raw.toUpperCase();
-                  if (upper === 'MOST' || upper === 'VOL' || upper === 'COMP' || upper === 'RE' || upper === 'VI' || upper === 'EI' || upper === 'PRICE') {
+                  if (upper === 'MOST' || upper === 'VOL' || upper === 'VOLU' || upper === 'COMP' || upper === 'RE' || upper === 'VI' || upper === 'EI' || upper === 'PRICE') {
                     return;
                   }
                   e.preventDefault();
@@ -857,6 +865,7 @@ export default function Navigation() {
                         { cmd: 'RE', label: 'Research', onSelect: () => { router.push('/research'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'VI', label: 'The Vault / Videos', onSelect: () => { router.push('/videos'); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'VOL', label: 'Volatility (VIX, VVIX, term structure)', onSelect: () => { openVolatility(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
+                        { cmd: 'VOLU', label: 'Index volume (ES, NQ, FTSE, GER40, etc.)', onSelect: () => { openVolume(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'COMP', label: 'Compare indices historically (% change)', onSelect: () => { openCompare(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                         { cmd: 'MOST', label: 'US stocks: most active, top gainers, losers & by dollar volume', onSelect: () => { openMostActive(); setIsDropdownOpen(false); setSearchQuery(''); searchRef.current?.blur(); } },
                       ].map((item, idx) => {
@@ -903,9 +912,10 @@ export default function Navigation() {
               const showRDropdown = raw.toUpperCase() === 'RE';
               const showVDropdown = raw.toUpperCase() === 'VI';
               const showVOLDropdown = raw.toUpperCase() === 'VOL';
+              const showVOLUDropdown = raw.toUpperCase() === 'VOLU';
               const showCOMPDropdown = raw.toUpperCase() === 'COMP';
               const showMOSTDropdown = raw.toUpperCase() === 'MOST';
-              const showOther = !showPriceDropdown && !showEIDropdown && !showRDropdown && !showVDropdown && !showVOLDropdown && !showCOMPDropdown && !showMOSTDropdown && (indexAutocomplete.length > 0 || isIndexTicker(searchQuery) || cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
+              const showOther = !showPriceDropdown && !showEIDropdown && !showRDropdown && !showVDropdown && !showVOLDropdown && !showVOLUDropdown && !showCOMPDropdown && !showMOSTDropdown && (indexAutocomplete.length > 0 || isIndexTicker(searchQuery) || cryptoAutocomplete.length > 0 || isCryptoTicker(searchQuery) || searchResults.length > 0);
               if (showRDropdown) {
                 return (
                   <div
@@ -980,6 +990,32 @@ export default function Navigation() {
                       className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
                     >
                       Open Volatility Dashboard
+                    </button>
+                  </div>
+                );
+              }
+              if (showVOLUDropdown) {
+                return (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute top-full mt-1.5 right-0 w-64 lg:w-[420px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden"
+                  >
+                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-bold text-sky-400 bg-sky-500/15 dark:bg-sky-500/20 border border-sky-500/50">VOLU</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Index volume lookup</span>
+                    </div>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        openVolume();
+                        setSearchQuery('');
+                        setIsDropdownOpen(false);
+                        searchRef.current?.blur();
+                      }}
+                      className="w-full text-left px-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
+                    >
+                      Open volume panel — type ES, NQ, FTSE, GER40, etc.
                     </button>
                   </div>
                 );

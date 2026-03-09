@@ -7,6 +7,7 @@ import { ChatProvider } from "./contexts/ChatContext";
 import { TickerProvider } from "./contexts/TickerContext";
 import { EquityIndexProvider } from "./contexts/EquityIndexContext";
 import { VolatilityProvider } from "./contexts/VolatilityContext";
+import { VolumeProvider } from "./contexts/VolumeContext";
 import { CompareProvider } from "./contexts/CompareContext";
 import { MostActiveProvider } from "./contexts/MostActiveContext";
 import FeedbackWidget from "./components/FeedbackWidget";
@@ -16,6 +17,7 @@ import ChatPopup from "./components/ChatPopup";
 import PriceTerminalWrapper from "./components/PriceTerminalWrapper";
 import EquityIndexPopup from "./components/EquityIndexPopup";
 import VolatilityPanel from "./components/VolatilityPanel";
+import VolumePopup from "./components/VolumePopup";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -104,17 +106,20 @@ export default function RootLayout({
             <TickerProvider>
               <EquityIndexProvider>
                 <VolatilityProvider>
-                  <CompareProvider>
-                    <MostActiveProvider>
-                      {children}
-                      <ChatPopup />
-                      <PriceTerminalWrapper />
-                      <EquityIndexPopup />
-                      <VolatilityPanel />
-                      <ComparePopup />
-                      <MostActivePopup />
-                    </MostActiveProvider>
-                  </CompareProvider>
+                  <VolumeProvider>
+                    <CompareProvider>
+                      <MostActiveProvider>
+                        {children}
+                        <ChatPopup />
+                        <PriceTerminalWrapper />
+                        <EquityIndexPopup />
+                        <VolatilityPanel />
+                        <VolumePopup />
+                        <ComparePopup />
+                        <MostActivePopup />
+                      </MostActiveProvider>
+                    </CompareProvider>
+                  </VolumeProvider>
                 </VolatilityProvider>
               </EquityIndexProvider>
             </TickerProvider>
