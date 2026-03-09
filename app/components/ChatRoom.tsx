@@ -2,16 +2,22 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment, ReactNode } from 'react';
 import Link from 'next/link';
-
-const CHAT_TICKER_SYMBOLS = ['NQ', 'ES', 'YM', 'RTY', 'DXY', 'CL', 'BTC', 'ETH'];
-const CHAT_TICKER_REGEX = new RegExp(`\\b(${CHAT_TICKER_SYMBOLS.join('|')})\\b`, 'gi');
+import { CHAT_TICKER_SET, getTickerHref } from '@/lib/chatTickers';
 
 const tickerDataCache: Record<string, { price: number; changePercent: number } | null> = {};
 
 const CHAT_TICKER_POLL_MS = 5000; // refresh ticker price and % in chat every 5 seconds
 
+/** Match words that could be tickers (2–6 letters, or $TICKER). */
+const TICKER_WORD_REGEX = /\$[A-Za-z]{1,6}\b|\b[A-Za-z]{2,6}\b/g;
+
+function formatTickerPrice(price: number): string {
+  if (price >= 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return price.toFixed(2);
+}
+
 function TickerPill({ symbol }: { symbol: string }) {
-  const sym = symbol.toUpperCase();
+  const sym = symbol.toUpperCase().replace(/^\$/, '');
   const [data, setData] = useState<{ price: number; changePercent: number } | null | undefined>(tickerDataCache[sym] ?? undefined);
   const [flash, setFlash] = useState(false);
   const prevDataRef = useRef<{ price: number; changePercent: number } | null>(null);
@@ -64,7 +70,7 @@ function TickerPill({ symbol }: { symbol: string }) {
         : 'bg-red-900/70 hover:bg-red-800/80 border border-red-800 text-red-200';
   return (
     <Link
-      href={`/indices/${sym}`}
+      href={getTickerHref(sym)}
       className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-sm font-medium no-underline transition-all duration-200 ${pillClass} ${flash ? 'ring-2 ring-white/60 shadow-lg shadow-white/20' : ''}`}
       target="_blank"
       rel="noopener noreferrer"
@@ -73,7 +79,7 @@ function TickerPill({ symbol }: { symbol: string }) {
       <span>{sym}</span>
       {data != null ? (
         <>
-          <span className="tabular-nums">{data.price.toFixed(2)}</span>
+          <span className="tabular-nums">{formatTickerPrice(data.price)}</span>
           <span className="tabular-nums font-semibold">
             {isPositive ? '+' : ''}{data.changePercent.toFixed(2)}%
           </span>
@@ -648,14 +654,31 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   };
 
   const parseMessageWithTickers = (text: string): ReactNode => {
-    const parts = text.split(CHAT_TICKER_REGEX);
+    type Segment = { type: 'text'; value: string } | { type: 'ticker'; value: string };
+    const segments: Segment[] = [];
+    let lastEnd = 0;
+    let m: RegExpExecArray | null;
+    const re = new RegExp(TICKER_WORD_REGEX.source, 'g');
+    while ((m = re.exec(text)) !== null) {
+      const raw = m[0];
+      const ticker = raw.replace(/^\$/, '').toUpperCase();
+      if (CHAT_TICKER_SET.has(ticker)) {
+        if (m.index > lastEnd) {
+          segments.push({ type: 'text', value: text.slice(lastEnd, m.index) });
+        }
+        segments.push({ type: 'ticker', value: ticker });
+        lastEnd = m.index + raw.length;
+      }
+    }
+    if (lastEnd < text.length) {
+      segments.push({ type: 'text', value: text.slice(lastEnd) });
+    }
+    if (segments.length === 0) return linkifyText(text);
     return (
       <>
-        {parts.map((part, i) => {
-          if (!part) return null;
-          const upper = part.toUpperCase();
-          if (CHAT_TICKER_SYMBOLS.includes(upper)) return <TickerPill key={i} symbol={upper} />;
-          return <Fragment key={i}>{linkifyText(part)}</Fragment>;
+        {segments.map((seg, i) => {
+          if (seg.type === 'text') return <Fragment key={i}>{linkifyText(seg.value)}</Fragment>;
+          return <TickerPill key={i} symbol={seg.value} />;
         })}
       </>
     );

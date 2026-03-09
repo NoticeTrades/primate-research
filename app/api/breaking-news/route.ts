@@ -83,12 +83,15 @@ async function fetchSpectatorIndexTweet(bearerToken: string): Promise<SpectatorR
   }
 }
 
-/** True if headline is about futures/macro moves: indices, commodities, rates, Fed, etc. */
-function isFuturesRelated(title: string): boolean {
+/** True if headline is about: stocks down a lot / big movers, indices, forex, or crypto only. */
+function isRelevant(title: string): boolean {
   const t = title.toLowerCase();
-  const futuresTerms = /\b(futures?|cme|es\b|nq\b|ym\b|rty\b|crude|oil|gold|silver|natural gas|bonds?|treasury|fed|fomc|rate|rates|yield|yields|nasdaq|s&p|dow|index|commodit|inflation|gdp|jobs report|employment|housing starts|retail sales|ppi|cpi|dxy|dollar index)\b/;
+  const stockMovers = /\b(plunge|plunges|plunged|drop\s|drops|selloff|sell-off|crash|tumbles|tumbling|tumbled|dives|diving|slump|rout|correction|bear\s|down\s+\d+%|worst\s+day|sinking|sank|plummet|tank|tanking|loss|losers|meltdown)\b/;
+  const indices = /\b(nasdaq|s&p|s\s*&\s*p|dow|spx|ndx|russell|index|indices|es\b|nq\b)\b/;
+  const forex = /\b(forex|fx\b|dollar|euro|yen|pound|sterling|currency|currencies|dxy|eur\/usd|gbp|fed\s|interest\s+rate)\b/;
+  const crypto = /\b(bitcoin|crypto|ethereum|btc\b|eth\b|solana|binance|coinbase)\b/;
   const notRelevant = /\b(macbook|iphone|ipad|airpods|celebrity|netflix series|movie)\b/;
-  return futuresTerms.test(t) && !notRelevant.test(t);
+  return !notRelevant.test(t) && (stockMovers.test(t) || indices.test(t) || forex.test(t) || crypto.test(t));
 }
 
 /** Parse a single RSS feed URL; returns items (title, link). */
@@ -141,8 +144,8 @@ async function fetchCmeRss(): Promise<BreakingItem[]> {
   }
   const unique = [...byTitle.values()];
   const futuresFirst = [
-    ...unique.filter((c) => isFuturesRelated(c.title)),
-    ...unique.filter((c) => !isFuturesRelated(c.title)),
+    ...unique.filter((c) => isRelevant(c.title)),
+    ...unique.filter((c) => !isRelevant(c.title)),
   ];
   return futuresFirst.slice(0, 5);
 }
@@ -193,8 +196,8 @@ async function fetchRssFallback(): Promise<BreakingItem[]> {
   }
   const unique = [...byTitle.values()];
   const futuresFirst = [
-    ...unique.filter((c) => isFuturesRelated(c.title)),
-    ...unique.filter((c) => !isFuturesRelated(c.title)),
+    ...unique.filter((c) => isRelevant(c.title)),
+    ...unique.filter((c) => !isRelevant(c.title)),
   ];
   return futuresFirst.slice(0, 3);
 }
@@ -248,22 +251,23 @@ export async function GET(request: Request) {
     spectatorDebug = { status: 'skipped', message: 'X_BEARER_TOKEN not set' };
   }
 
-  // Alpha Vantage: economy_macro (Fed, rates, GDP) + financial_markets — drives futures
+  // Alpha Vantage: indices/forex (economy_macro, financial_markets) + crypto (blockchain)
   if (apiKey) {
     try {
-      const [macro, financial] = await Promise.all([
+      const [macro, financial, crypto] = await Promise.all([
         fetchAlphaVantageTopic(apiKey, 'economy_macro'),
         fetchAlphaVantageTopic(apiKey, 'financial_markets'),
+        fetchAlphaVantageTopic(apiKey, 'blockchain'),
       ]);
-      const combined = [...macro, ...financial].filter((i: BreakingItem) => i.title && i.url);
+      const combined = [...macro, ...financial, ...crypto].filter((i: BreakingItem) => i.title && i.url);
       const byTitle = new Map<string, BreakingItem>();
       for (const c of combined) {
         if (!byTitle.has(c.title)) byTitle.set(c.title, c);
       }
       const unique = [...byTitle.values()];
       const futuresFirst = [
-        ...unique.filter((c) => isFuturesRelated(c.title)),
-        ...unique.filter((c) => !isFuturesRelated(c.title)),
+        ...unique.filter((c) => isRelevant(c.title)),
+        ...unique.filter((c) => !isRelevant(c.title)),
       ];
       items.push(...futuresFirst.slice(0, 5));
     } catch (e) {
@@ -289,8 +293,8 @@ export async function GET(request: Request) {
     const fhItems = await fetchFinnhubNews(finnhubKey);
     const existingTitles = new Set(items.map((i) => i.title));
     const futuresFirst = [
-      ...fhItems.filter((c) => isFuturesRelated(c.title)),
-      ...fhItems.filter((c) => !isFuturesRelated(c.title)),
+      ...fhItems.filter((c) => isRelevant(c.title)),
+      ...fhItems.filter((c) => !isRelevant(c.title)),
     ];
     for (const c of futuresFirst) {
       if (items.length >= 5) break;
@@ -309,18 +313,18 @@ export async function GET(request: Request) {
   const head = items[0]?.source === 'Spectator Index' ? [items[0]] : [];
   const rest = items[0]?.source === 'Spectator Index' ? items.slice(1) : items;
   const futuresFirst = [
-    ...rest.filter((c) => isFuturesRelated(c.title)),
-    ...rest.filter((c) => !isFuturesRelated(c.title)),
+    ...rest.filter((c) => isRelevant(c.title)),
+    ...rest.filter((c) => !isRelevant(c.title)),
   ];
   items = [...head, ...futuresFirst.slice(0, 5 - head.length)];
 
   if (items.length === 0) {
     items = [
       {
-        title: 'Latest futures and market moves',
-        url: 'https://www.cmegroup.com/news.html',
+        title: 'Stocks, indices, forex & crypto — latest moves',
+        url: 'https://finance.yahoo.com/',
         time: new Date().toISOString(),
-        source: 'CME Group',
+        source: 'Markets',
         sentiment: '',
       },
     ];
