@@ -208,17 +208,17 @@ function ChatPageContent() {
 
   return (
     <div className="min-h-screen bg-black">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">Trading Chat</h1>
-          <p className="text-zinc-400">
+      <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6 py-6">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-white">Trading Chat</h1>
+          <p className="text-sm text-zinc-500">
             Connect with traders and discuss market insights
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-180px)] min-h-0">
           {/* Sidebar with Channels / DMs tabs */}
-          <div className="lg:col-span-1 bg-zinc-900 rounded-lg overflow-hidden flex flex-col">
+          <div className="lg:col-span-1 bg-zinc-900/80 rounded-xl overflow-hidden flex flex-col border border-zinc-800/80">
             <div className="flex border-b border-zinc-700">
               <button
                 type="button"
@@ -307,11 +307,11 @@ function ChatPageContent() {
             </div>
           </div>
 
-          {/* Chat Area */}
-          <div className="lg:col-span-3">
+          {/* Chat Area - wider for images and readability */}
+          <div className="lg:col-span-4 min-w-0 flex flex-col">
             {viewMode === 'channels' ? (
               selectedRoom ? (
-                <div className="h-full">
+                <div className="h-full min-h-0 flex flex-col bg-zinc-900/60 rounded-xl border border-zinc-800/80 overflow-hidden">
                   <ChatRoomComponent
                     roomId={selectedRoom.id}
                     roomName={selectedRoom.name}
@@ -321,15 +321,15 @@ function ChatPageContent() {
                   />
                 </div>
               ) : (
-                <div className="h-full bg-zinc-900 rounded-lg flex items-center justify-center">
-                  <div className="text-center text-zinc-400">
-                    <p className="text-lg mb-2">Select a room to start chatting</p>
+                <div className="h-full min-h-0 flex flex-col bg-zinc-900/60 rounded-xl border border-zinc-800/80 flex items-center justify-center">
+                  <div className="text-center text-zinc-500">
+                    <p className="text-base font-medium mb-1">Select a room to start chatting</p>
                     <p className="text-sm">Choose a room from the sidebar</p>
                   </div>
                 </div>
               )
             ) : selectedDmId && selectedDmOtherUser ? (
-              <div className="h-full">
+              <div className="h-full min-h-0 flex flex-col bg-zinc-900/60 rounded-xl border border-zinc-800/80 overflow-hidden">
                 <DMRoomComponent
                   dmId={selectedDmId}
                   otherUser={selectedDmOtherUser}
@@ -338,9 +338,9 @@ function ChatPageContent() {
                 />
               </div>
             ) : (
-              <div className="h-full bg-zinc-900 rounded-lg flex items-center justify-center">
-                <div className="text-center text-zinc-400">
-                  <p className="text-lg mb-2">Select a DM or start one from a channel</p>
+              <div className="h-full min-h-0 flex flex-col bg-zinc-900/60 rounded-xl border border-zinc-800/80 flex items-center justify-center">
+                <div className="text-center text-zinc-500">
+                  <p className="text-base font-medium mb-1">Select a DM or start one from a channel</p>
                   <p className="text-sm">Click a username in a channel and choose DM</p>
                 </div>
               </div>

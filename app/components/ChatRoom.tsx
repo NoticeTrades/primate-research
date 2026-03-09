@@ -148,6 +148,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const [userBio, setUserBio] = useState<string | null>(null);
   const [userBioLoading, setUserBioLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: number; username: string; text: string } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
   const messageRefsMap = useRef<Record<number, HTMLDivElement | null>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -767,7 +768,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
       {/* Room Header */}
-      <div className="shrink-0 bg-zinc-800/90 border-b border-zinc-700/80 px-3 py-2 flex items-center gap-2">
+      <div className="shrink-0 bg-zinc-900/95 border-b border-zinc-800 px-4 py-2.5 flex items-center gap-2">
         <h2 className="text-sm font-semibold text-white truncate">#{roomName}</h2>
         {messages.length > 0 && (
           <span className="text-xs text-zinc-500">{messages.length}</span>
@@ -777,7 +778,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       {/* Messages Container */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-3 py-2 space-y-3 min-h-0"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0"
         style={{ scrollBehavior: 'smooth' }}
       >
         {isLoading ? (
@@ -929,10 +930,10 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                           </div>
                         )}
                         <div
-                          className={`inline-block px-4 py-2 rounded-lg max-w-[85%] ${
+                          className={`inline-block px-4 py-2.5 rounded-xl max-w-[95%] ${
                             isOwnMessage
-                              ? 'bg-zinc-600 text-white'
-                              : 'bg-zinc-800 text-zinc-100 border border-zinc-700'
+                              ? 'bg-zinc-600/90 text-white'
+                              : 'bg-zinc-800/90 text-zinc-100 border border-zinc-700/80'
                           }`}
                         >
                           {message.reply_to_id != null && (
@@ -964,20 +965,19 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                           {message.files && message.files.length > 0 && (
                       <div className="space-y-2 mt-2">
                         {message.files.map((file) => (
-                          <div key={file.id} className="flex items-center gap-2 p-2 bg-black/20 rounded">
+                          <div key={file.id} className="flex items-center gap-2 p-1.5 bg-black/15 rounded-lg">
                             {file.file_type.startsWith('image/') ? (
-                              <a
-                                href={file.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block"
+                              <button
+                                type="button"
+                                onClick={() => setLightboxImage({ url: file.file_url, name: file.file_name })}
+                                className="block text-left outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-transparent rounded-lg"
                               >
                                 <img
                                   src={file.file_url}
                                   alt={file.file_name}
-                                  className="max-w-md max-h-80 rounded-lg cursor-pointer hover:opacity-90 transition-opacity object-contain"
+                                  className="max-w-2xl max-h-96 rounded-lg cursor-pointer hover:opacity-95 transition-opacity object-contain"
                                 />
-                              </a>
+                              </button>
                             ) : (
                               <a
                                 href={file.file_url}
@@ -1104,7 +1104,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       )}
 
       {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="shrink-0 border-t border-zinc-700/80 p-3 bg-zinc-800/50">
+      <form onSubmit={handleSendMessage} className="shrink-0 border-t border-zinc-800 p-4 bg-zinc-900/60">
         {/* Replying to preview */}
         {replyingTo && (
           <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-zinc-700/80 rounded-lg border border-zinc-600 text-sm">
@@ -1165,7 +1165,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors flex items-center gap-2"
+            className="p-2.5 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 hover:text-white transition-colors"
             title="Attach file"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1182,7 +1182,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
               placeholder="Type a message, @mention someone, or paste an image..."
               maxLength={2000}
               disabled={isSending}
-              className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:opacity-50"
+              className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent disabled:opacity-50"
               onKeyDown={(e) => {
                 if (showMentionSuggestions && mentionSuggestions.length > 0) {
                   // Handle arrow keys for mention selection
@@ -1235,16 +1235,45 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
           <button
             type="submit"
             disabled={(!newMessage.trim() && uploadedFiles.length === 0) || isSending || uploadingFiles.length > 0}
-            className="px-6 py-2 bg-zinc-600 text-white rounded-lg font-semibold hover:bg-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-5 py-2.5 bg-zinc-600 text-white rounded-lg font-medium hover:bg-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSending ? 'Sending...' : 'Send'}
           </button>
         </div>
-        <p className="text-xs text-zinc-500 mt-2">
+        <p className="text-xs text-zinc-500 mt-1.5">
           {newMessage.length}/2000 characters
           {uploadedFiles.length > 0 && ` • ${uploadedFiles.length} file(s) attached`}
         </p>
       </form>
+
+      {/* Image lightbox - click image to open, click backdrop to close */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+          onClick={() => setLightboxImage(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image preview"
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-zinc-800/90 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors"
+            aria-label="Close"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={lightboxImage.url}
+            alt={lightboxImage.name}
+            className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            draggable={false}
+          />
+        </div>
+      )}
     </div>
   );
 }
