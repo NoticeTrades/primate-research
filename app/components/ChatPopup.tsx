@@ -288,7 +288,7 @@ export default function ChatPopup() {
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-zinc-950/50 pointer-events-none"
+        className="fixed inset-0 z-40 pointer-events-none"
         aria-hidden
       />
       <div
