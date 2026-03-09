@@ -30,7 +30,14 @@ export function VolumeProvider({ children }: { children: ReactNode }) {
 
 export function useVolume() {
   const ctx = useContext(VolumeContext);
-  if (!ctx) throw new Error('useVolume must be used within VolumeProvider');
+  // Be defensive: if provider is missing for some reason, return no-op handlers
+  if (!ctx) {
+    return {
+      isVolumeOpen: false,
+      openVolume: () => {},
+      closeVolume: () => {},
+    };
+  }
   return ctx;
 }
 
