@@ -47,8 +47,8 @@ function TickerPill({ symbol }: { symbol: string }) {
     data == null
       ? 'bg-zinc-700/80 hover:bg-zinc-600/80 border border-zinc-600 text-zinc-200'
       : isPositive
-        ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 text-white'
-        : 'bg-red-600 hover:bg-red-500 border border-red-500 text-white';
+        ? 'bg-emerald-900/70 hover:bg-emerald-800/80 border border-emerald-800 text-emerald-200'
+        : 'bg-red-900/70 hover:bg-red-800/80 border border-red-800 text-red-200';
   return (
     <Link
       href={`/indices/${sym}`}

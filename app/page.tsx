@@ -14,6 +14,7 @@ import CursorHover from './components/CursorHover';
 import DiscordSign from './components/DiscordSign';
 import YouTubeLiveIndicator from './components/YouTubeLiveIndicator';
 import StructuredData from './components/StructuredData';
+import BreakingNewsAlert from './components/BreakingNewsAlert';
 
 type LatestContent = {
   type: 'report' | 'video' | null;
@@ -190,6 +191,7 @@ export default function Home() {
       <CursorHover />
       <DiscordSign />
       <ScrollFade />
+      <BreakingNewsAlert />
       <Navigation />
       <div className="fixed top-[72px] left-0 right-0 z-40">
         <MarketTicker />
