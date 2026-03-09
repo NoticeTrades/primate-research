@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
+const DISMISS_KEY = 'breaking-news-dismissed';
+
 type BreakingItem = {
   title: string;
   url: string;
@@ -12,9 +14,24 @@ type BreakingItem = {
 
 const POLL_MS = 5 * 60 * 1000; // 5 minutes
 
+function getDismissed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(DISMISS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setDismissedStorage() {
+  try {
+    sessionStorage.setItem(DISMISS_KEY, '1');
+  } catch {}
+}
+
 export default function BreakingNewsAlert() {
   const [items, setItems] = useState<BreakingItem[]>([]);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => getDismissed());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,6 +50,13 @@ export default function BreakingNewsAlert() {
     return () => clearInterval(t);
   }, []);
 
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDismissedStorage();
+    setDismissed(true);
+  };
+
   const latest = items[0];
   if (loading || !latest?.title || dismissed) return null;
 
@@ -40,7 +64,7 @@ export default function BreakingNewsAlert() {
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-40 max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300"
+      className="fixed bottom-6 right-6 z-[100] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300"
       aria-live="polite"
     >
       <div
@@ -63,12 +87,12 @@ export default function BreakingNewsAlert() {
           </span>
           <button
             type="button"
-            onClick={() => setDismissed(true)}
-            className="p-1 rounded text-zinc-500 hover:text-zinc-300 transition-colors"
+            onClick={handleDismiss}
+            className="p-2 -m-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700/80 active:bg-zinc-600 transition-colors cursor-pointer touch-manipulation select-none"
             aria-label="Dismiss"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>

@@ -13,6 +13,8 @@ const CHAT_TICKER_POLL_MS = 5000; // refresh ticker price and % in chat every 5 
 function TickerPill({ symbol }: { symbol: string }) {
   const sym = symbol.toUpperCase();
   const [data, setData] = useState<{ price: number; changePercent: number } | null | undefined>(tickerDataCache[sym] ?? undefined);
+  const [flash, setFlash] = useState(false);
+  const prevDataRef = useRef<{ price: number; changePercent: number } | null>(null);
 
   useEffect(() => {
     const fetchTicker = () => {
@@ -24,9 +26,14 @@ function TickerPill({ symbol }: { symbol: string }) {
         .then((d) => {
           if (d.price != null && !d.error) {
             const out = { price: Number(d.price), changePercent: Number(d.changePercent) || 0 };
+            const prev = prevDataRef.current;
+            const changed = prev != null && (prev.price !== out.price || prev.changePercent !== out.changePercent);
+            prevDataRef.current = out;
             tickerDataCache[sym] = out;
             setData(out);
+            if (changed) setFlash(true);
           } else {
+            prevDataRef.current = null;
             tickerDataCache[sym] = null;
             setData(null);
           }
@@ -42,6 +49,12 @@ function TickerPill({ symbol }: { symbol: string }) {
     return () => clearInterval(interval);
   }, [sym]);
 
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(false), 500);
+    return () => clearTimeout(t);
+  }, [flash]);
+
   const isPositive = data != null && data.changePercent >= 0;
   const pillClass =
     data == null
@@ -52,7 +65,7 @@ function TickerPill({ symbol }: { symbol: string }) {
   return (
     <Link
       href={`/indices/${sym}`}
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-sm font-medium no-underline ${pillClass}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-sm font-medium no-underline transition-all duration-200 ${pillClass} ${flash ? 'ring-2 ring-white/60 shadow-lg shadow-white/20' : ''}`}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
