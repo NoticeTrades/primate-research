@@ -73,32 +73,18 @@ export default function VolumePopup() {
   const [isResizing, setIsResizing] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const resizeStart = useRef({ x: 0, y: 0, width: DEFAULT_W, height: DEFAULT_H });
-  const [query, setQuery] = useState('');
   const [rows, setRows] = useState<VolumeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState<'symbol' | 'volume' | 'volumeVsAvg' | 'dayRangePoints' | 'dayRangePercent'>('volumeVsAvg');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  useEffect(() => {
-    if (!isVolumeOpen) return;
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, [isVolumeOpen]);
-
-  const handleSearch = async (symbolRaw?: string) => {
-    const raw = (symbolRaw ?? query).trim();
-    if (!raw) return;
-    const sym = raw.toUpperCase();
-    setLoading(true);
-    setError(null);
+  async function fetchRow(sym: string): Promise<VolumeRow | null> {
     try {
       const res = await fetch(`/api/indices/${encodeURIComponent(sym)}`, { cache: 'no-store' });
       const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Failed to fetch index volume');
-      }
+      if (!res.ok || json.error) return null;
       const body = json as {
         price: number;
         changePercent: number;
@@ -110,7 +96,7 @@ export default function VolumePopup() {
         dayRangePoints?: number;
         dayRangePercent?: number;
       };
-      const row: VolumeRow = {
+      return {
         symbol: sym,
         name: NAME_OVERRIDES[sym] || sym,
         price: Number(body.price) || 0,
@@ -123,31 +109,32 @@ export default function VolumePopup() {
         dayRangePoints: typeof body.dayRangePoints === 'number' ? body.dayRangePoints : undefined,
         dayRangePercent: typeof body.dayRangePercent === 'number' ? body.dayRangePercent : undefined,
       };
-      setRows((prev) => {
-        const without = prev.filter((r) => r.symbol !== sym);
-        return [row, ...without].slice(0, 20);
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to fetch index volume');
-    } finally {
-      setLoading(false);
+    } catch {
+      return null;
     }
-  };
+  }
 
-  // When panel opens, pre-load a basket of key indices/futures so trader sees the landscape immediately.
+  // When panel opens, load all indices in parallel and show table once ready.
   useEffect(() => {
     if (!isVolumeOpen) return;
     setRows([]);
     setError(null);
-    const symbols = [...DEFAULT_SYMBOLS];
+    setLoading(true);
     let cancelled = false;
-    const loadAll = async () => {
-      for (const sym of symbols) {
-        if (cancelled) break;
-        await handleSearch(sym);
-      }
-    };
-    loadAll();
+    const symbols = [...DEFAULT_SYMBOLS];
+    Promise.all(symbols.map((sym) => fetchRow(sym)))
+      .then((results) => {
+        if (cancelled) return;
+        const rows = results.filter((r): r is VolumeRow => r != null);
+        setRows(rows);
+        setError(rows.length === 0 ? 'Failed to load indices' : null);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Failed to load indices');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -239,19 +226,22 @@ export default function VolumePopup() {
     >
       <div
         onMouseDown={(e) => {
-          if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
+          if ((e.target as HTMLElement).closest('button') return;
           setIsDragging(true);
           dragStart.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y };
         }}
         className="flex items-center justify-between gap-3 px-4 py-3 bg-zinc-800/90 border-b border-zinc-700/80 cursor-grab active:cursor-grabbing select-none"
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold text-sky-400 bg-sky-500/20 border border-sky-500/50">
-            VOLU
-          </span>
-          <span className="text-sm font-semibold text-zinc-50 truncate">
-            Index Volume Lookup
-          </span>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold text-sky-400 bg-sky-500/20 border border-sky-500/50">
+              VOLU
+            </span>
+            <span className="text-sm font-semibold text-zinc-50 truncate">
+              Index Volume
+            </span>
+          </div>
+          <span className="text-[10px] text-zinc-500">Futures = contracts · Indices = constituent shares</span>
         </div>
         <button
           type="button"
@@ -265,48 +255,20 @@ export default function VolumePopup() {
         </button>
       </div>
 
-      <div className="shrink-0 border-b border-zinc-800 px-4 py-2.5 flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSearch();
-              }
-            }}
-            placeholder="Type an index or futures symbol and hit Enter — e.g. ES, NQ, YM, DXY, FTSE, GER40"
-            className="flex-1 min-w-[220px] px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-          />
-          <button
-            type="button"
-            onClick={() => handleSearch()}
-            disabled={loading || !query.trim()}
-            className="px-3 py-1.5 rounded-lg bg-sky-600 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? 'Loading…' : 'Lookup'}
-          </button>
-        </div>
-        <p className="text-[11px] text-zinc-500">
-          Supports CME futures (ES, NQ, YM, RTY, CL, DXY) and cash indices like FTSE 100 (FTSE) and Germany 40 (GER40 / DAX).
-        </p>
-        <p className="text-[11px] text-zinc-500">
-          Volume: futures show <strong className="text-zinc-400">contracts</strong>; cash indices show <strong className="text-zinc-400">constituent shares</strong> (sum of index members)—not directly comparable.
-        </p>
-      </div>
-
       <div className="flex-1 min-h-0 overflow-auto px-4 py-3">
         {error && (
           <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
             {error}
           </div>
         )}
-        {rows.length === 0 && !error && !loading && (
+        {loading && rows.length === 0 && (
           <div className="h-full flex items-center justify-center">
-            <p className="text-sm text-zinc-500">Search for an index or futures symbol to see current volume.</p>
+            <p className="text-sm text-zinc-500">Loading indices…</p>
+          </div>
+        )}
+        {!loading && rows.length === 0 && !error && (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-sm text-zinc-500">No data available.</p>
           </div>
         )}
         {rows.length > 0 && (
