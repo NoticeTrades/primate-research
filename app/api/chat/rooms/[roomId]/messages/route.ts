@@ -101,20 +101,22 @@ export async function GET(
       `;
     }
 
-    // Get files and reactions for all messages (wrap in try so main messages still return if these fail)
+    // Get files and reactions by joining on room (avoids ANY(array) which can fail with Neon)
     const messageIds = messages.map((m: any) => m.id);
+    const messageIdSet = new Set(messageIds);
     let filesMap: Record<number, any[]> = {};
     let reactionsMap: Record<number, { emoji: string; count: number; reacted: boolean }[]> = {};
 
     if (messageIds.length > 0) {
       try {
         const files = await sql`
-          SELECT message_id, id, file_url, file_name, file_type, file_size
-          FROM chat_message_files
-          WHERE message_id = ANY(${messageIds})
-          ORDER BY created_at ASC
+          SELECT cmf.message_id, cmf.id, cmf.file_url, cmf.file_name, cmf.file_type, cmf.file_size
+          FROM chat_message_files cmf
+          INNER JOIN chat_messages cm ON cm.id = cmf.message_id AND cm.room_id = ${roomIdNum}
+          ORDER BY cmf.created_at ASC
         `;
         (files as { message_id: number; id: number; file_url: string; file_name: string; file_type: string; file_size?: number }[]).forEach((file) => {
+          if (!messageIdSet.has(file.message_id)) return;
           if (!filesMap[file.message_id]) filesMap[file.message_id] = [];
           filesMap[file.message_id].push({
             id: file.id,
@@ -129,12 +131,13 @@ export async function GET(
       }
       try {
         const reactions = await sql`
-          SELECT message_id, emoji, user_email
-          FROM chat_message_reactions
-          WHERE message_id = ANY(${messageIds})
+          SELECT cmr.message_id, cmr.emoji, cmr.user_email
+          FROM chat_message_reactions cmr
+          INNER JOIN chat_messages cm ON cm.id = cmr.message_id AND cm.room_id = ${roomIdNum}
         `;
         const countByMessageEmoji: Record<string, { count: number; reacted: boolean }> = {};
         (reactions as { message_id: number; emoji: string; user_email: string }[]).forEach((r) => {
+          if (!messageIdSet.has(r.message_id)) return;
           const key = `${r.message_id}:${r.emoji}`;
           if (!countByMessageEmoji[key]) countByMessageEmoji[key] = { count: 0, reacted: false };
           countByMessageEmoji[key].count += 1;
