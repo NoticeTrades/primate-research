@@ -197,8 +197,7 @@ export default function VolumePopup() {
     };
   }, [isResizing, position.x, position.y]);
 
-  if (!isVolumeOpen) return null;
-
+  // useMemo must run on every render (before any early return) to satisfy React hooks rules
   const sortedRows = useMemo(() => {
     const list = [...rows];
     list.sort((a, b) => {
@@ -219,6 +218,8 @@ export default function VolumePopup() {
     });
     return list;
   }, [rows, sortBy, sortDir]);
+
+  if (!isVolumeOpen) return null;
 
   return (
     <div
