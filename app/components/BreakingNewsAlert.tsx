@@ -100,7 +100,7 @@ export default function BreakingNewsAlert() {
 
   return (
     <div
-      className="fixed bottom-0 right-0 z-[100] flex items-center bg-red-600 text-white shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-full"
+      className="fixed bottom-0 left-0 z-[100] flex items-center bg-red-600 text-white shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-full"
       aria-live="polite"
       style={{ minHeight: '44px' }}
     >

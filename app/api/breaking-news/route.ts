@@ -83,9 +83,17 @@ async function fetchSpectatorIndexTweet(bearerToken: string): Promise<SpectatorR
   }
 }
 
-/** Parse RSS XML and return first few items (title, link). */
+/** True if headline looks like market/finance news (stocks, Fed, rates, earnings, etc.). */
+function isMarketRelated(title: string): boolean {
+  const t = title.toLowerCase();
+  const marketTerms = /\b(stock|market|fed|rate|rates|earnings|trading|dollar|oil|inflation|treasury|bond|sec|recession|gdp|jobs report|employment|crude|gold|nasdaq|s&p|dow|yield|interest|housing|retail sales)\b/;
+  const notMarket = /\b(macbook|iphone|ipad|airpods|galaxy|playstation|xbox|netflix series|movie|celebrity)\b/;
+  return marketTerms.test(t) && !notMarket.test(t);
+}
+
+/** Parse RSS XML and return first few items (title, link), preferring market-moving headlines. */
 async function fetchRssFallback(): Promise<BreakingItem[]> {
-  const items: BreakingItem[] = [];
+  const allCandidates: BreakingItem[] = [];
   const urls = [
     'https://finance.yahoo.com/news/rssindex',
     'https://feeds.content.dailyfx.com/xml/dailyfx_news',
@@ -93,36 +101,46 @@ async function fetchRssFallback(): Promise<BreakingItem[]> {
   const opts = { cache: 'no-store' as RequestCache, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' } };
 
   for (const feedUrl of urls) {
-    if (items.length >= 3) break;
     try {
       const res = await fetch(feedUrl, opts);
       const xml = await res.text();
-      // Match <item>...</item> with <title> and <link> (order and CDATA tolerant)
+      const source = feedUrl.includes('dailyfx') ? 'DailyFX' : 'Yahoo Finance';
+      const feedItems: BreakingItem[] = [];
+      let m: RegExpExecArray | null;
       const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>/gi;
-      let m;
-      while ((m = itemRegex.exec(xml)) !== null && items.length < 3) {
+      while ((m = itemRegex.exec(xml)) !== null) {
         const title = m[1].replace(/<[^>]+>/g, '').trim();
         const url = m[2].trim();
         if (title && url && url.startsWith('http')) {
-          items.push({ title, url, time: '', source: 'Yahoo Finance', sentiment: '' });
+          feedItems.push({ title, url, time: '', source, sentiment: '' });
         }
       }
-      // Also try link before title (some feeds)
-      if (items.length === 0) {
+      if (feedItems.length === 0) {
         const altRegex = /<item>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/gi;
-        while ((m = altRegex.exec(xml)) !== null && items.length < 3) {
+        while ((m = altRegex.exec(xml)) !== null) {
           const url = m[1].trim();
           const title = m[2].replace(/<[^>]+>/g, '').trim();
           if (title && url && url.startsWith('http')) {
-            items.push({ title, url, time: '', source: 'RSS', sentiment: '' });
+            feedItems.push({ title, url, time: '', source, sentiment: '' });
           }
         }
       }
+      allCandidates.push(...feedItems);
     } catch {
       continue;
     }
   }
-  return items;
+  // Dedupe by title, then prefer market-related, take up to 3
+  const byTitle = new Map<string, BreakingItem>();
+  for (const c of allCandidates) {
+    if (!byTitle.has(c.title)) byTitle.set(c.title, c);
+  }
+  const unique = [...byTitle.values()];
+  const marketFirst = [
+    ...unique.filter((c) => isMarketRelated(c.title)),
+    ...unique.filter((c) => !isMarketRelated(c.title)),
+  ];
+  return marketFirst.slice(0, 3);
 }
 
 /** Fetch latest market/financial news: optional Spectator Index tweet, then Alpha Vantage, with RSS fallback. */
@@ -188,10 +206,10 @@ export async function GET(request: Request) {
   if (items.length === 0) {
     items = [
       {
-        title: 'Latest market and world news',
+        title: 'Latest market news and moves',
         url: 'https://finance.yahoo.com/news/',
         time: new Date().toISOString(),
-        source: 'Headlines',
+        source: 'Markets',
         sentiment: '',
       },
     ];
