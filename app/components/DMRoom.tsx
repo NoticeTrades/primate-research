@@ -38,7 +38,7 @@ function linkifyText(text: string): ReactNode {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-blue-400 hover:text-blue-300 underline break-all"
+        className="text-zinc-300 hover:text-white underline break-all"
         onClick={(e) => e.stopPropagation()}
       >
         {displayUrl}
@@ -180,7 +180,7 @@ export default function DMRoom({ dmId, otherUser, currentUserEmail, currentUsern
                   </div>
                   <div
                     className={`inline-block px-3 py-1.5 rounded-md max-w-[90%] text-sm ${
-                      isOwn ? 'bg-blue-600/80 text-white' : 'bg-zinc-800/90 text-zinc-100 border border-zinc-700/50'
+                      isOwn ? 'bg-zinc-600 text-white' : 'bg-zinc-800/90 text-zinc-100 border border-zinc-700/50'
                     }`}
                   >
                     <p className="whitespace-pre-wrap break-words text-[13px]">{linkifyText(msg.message_text)}</p>
@@ -201,12 +201,12 @@ export default function DMRoom({ dmId, otherUser, currentUserEmail, currentUsern
             placeholder="Message..."
             maxLength={2000}
             disabled={isSending}
-            className="flex-1 px-3 py-1.5 text-sm bg-zinc-900/80 border border-zinc-700/80 rounded-md text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:opacity-50"
+            className="flex-1 px-3 py-1.5 text-sm bg-zinc-900/80 border border-zinc-700/80 rounded-md text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500/50 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!newMessage.trim() || isSending}
-            className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-md font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-1.5 text-sm bg-zinc-600 text-white rounded-md font-medium hover:bg-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSending ? '…' : 'Send'}
           </button>

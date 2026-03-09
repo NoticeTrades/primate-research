@@ -125,6 +125,9 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const lastMessageIdRef = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
+  const isAtBottomRef = useRef(true);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const scrollThreshold = 80;
 
   // Scroll to bottom of messages (instant for initial load, smooth for new messages)
   const scrollToBottom = useCallback((instant = false) => {
@@ -136,6 +139,24 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     if (end) {
       end.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' });
     }
+    isAtBottomRef.current = true;
+    setIsAtBottom(true);
+  }, []);
+
+  // Track whether user is scrolled to bottom (for "Jump to latest" and auto-scroll on new messages)
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const checkAtBottom = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const nearBottom = scrollHeight - scrollTop - clientHeight < scrollThreshold;
+      if (nearBottom !== isAtBottomRef.current) {
+        isAtBottomRef.current = nearBottom;
+        setIsAtBottom(nearBottom);
+      }
+    };
+    container.addEventListener('scroll', checkAtBottom, { passive: true });
+    return () => container.removeEventListener('scroll', checkAtBottom);
   }, []);
 
   // Check if user is moderator
@@ -148,6 +169,8 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     setIsLoading(true);
     setMessages([]);
     lastMessageIdRef.current = 0;
+    isAtBottomRef.current = true;
+    setIsAtBottom(true);
 
     const loadMessages = async () => {
       try {
@@ -203,7 +226,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
               return [...prev, newMessage];
             });
             lastMessageIdRef.current = Math.max(lastMessageIdRef.current, newMessage.id);
-            scrollToBottom();
+            if (isAtBottomRef.current) scrollToBottom();
           }
         } else if (data.type === 'error') {
           console.error('SSE error:', data.error);
@@ -232,7 +255,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     };
   }, [roomId, isLoading, scrollToBottom]);
 
-  // Scroll to bottom when messages change; after initial load, delay once so DOM is painted
+  // Scroll to bottom on initial load only; when new messages arrive, only scroll if user was already at bottom
   const prevMessagesLengthRef = useRef(0);
   useEffect(() => {
     const prevLen = prevMessagesLengthRef.current;
@@ -242,7 +265,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       requestAnimationFrame(() => {
         requestAnimationFrame(() => scrollToBottom(true));
       });
-    } else {
+    } else if (prevLen > 0 && isAtBottomRef.current) {
       scrollToBottom(false);
     }
   }, [messages, scrollToBottom]);
@@ -559,7 +582,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         parts.push(
           <span
             key={`mention-${keyCounter++}`}
-            className="text-blue-400 font-semibold"
+            className="text-zinc-200 font-semibold"
           >
             {match[1]}
           </span>
@@ -585,7 +608,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 underline break-all"
+            className="text-zinc-300 hover:text-white underline break-all"
             onClick={(e) => e.stopPropagation()}
           >
             {displayUrl}
@@ -680,7 +703,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       );
     }
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 verified-badge">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-zinc-500/15 text-zinc-300 border border-zinc-500/30 verified-badge">
         PREMIUM
       </span>
     );
@@ -718,7 +741,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
             const first = group.messages[0];
             const isOwnMessage = first.user_email === currentUserEmail;
             const isFounder = first.username === 'noticetrades' || first.user_role === 'owner';
-            const usernameColorClass = isFounder ? 'text-yellow-400 font-semibold' : 'text-blue-400 font-semibold';
+            const usernameColorClass = isFounder ? 'text-yellow-400 font-semibold' : 'text-zinc-200 font-semibold';
             const anyMentioned = group.messages.some(
               (m) => m.message_text && new RegExp(`@${currentUsername}\\b`, 'i').test(m.message_text)
             );
@@ -831,7 +854,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                         <div
                           className={`inline-block px-4 py-2 rounded-lg max-w-[85%] ${
                             isOwnMessage
-                              ? 'bg-blue-600/80 text-white'
+                              ? 'bg-zinc-600 text-white'
                               : 'bg-zinc-800 text-zinc-100 border border-zinc-700'
                           }`}
                         >
@@ -854,7 +877,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                                 <img
                                   src={file.file_url}
                                   alt={file.file_name}
-                                  className="max-w-xs max-h-64 rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                  className="max-w-md max-h-80 rounded-lg cursor-pointer hover:opacity-90 transition-opacity object-contain"
                                 />
                               </a>
                             ) : (
@@ -900,7 +923,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                           onClick={() => handleToggleReaction(message.id, r.emoji)}
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-sm transition-colors ${
                             r.reacted
-                              ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
+                              ? 'bg-zinc-600/30 text-zinc-200 border border-zinc-500/40'
                               : 'bg-zinc-800 text-zinc-400 border border-zinc-600 hover:bg-zinc-700 hover:text-zinc-300'
                           }`}
                           title={`${r.emoji} ${r.count}`}
@@ -966,6 +989,22 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Jump to latest - show when user has scrolled up */}
+      {!isAtBottom && messages.length > 0 && (
+        <div className="shrink-0 flex justify-center py-2 bg-zinc-800/80 border-t border-zinc-700/50">
+          <button
+            type="button"
+            onClick={() => scrollToBottom(false)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-zinc-200 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 hover:border-zinc-500 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+            Jump to latest
+          </button>
+        </div>
+      )}
+
       {/* Message Input */}
       <form onSubmit={handleSendMessage} className="shrink-0 border-t border-zinc-700/80 p-3 bg-zinc-800/50">
         {/* Uploaded Files Preview */}
@@ -1027,7 +1066,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
               placeholder="Type a message, @mention someone, or paste an image..."
               maxLength={2000}
               disabled={isSending}
-              className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:opacity-50"
               onKeyDown={(e) => {
                 if (showMentionSuggestions && mentionSuggestions.length > 0) {
                   // Handle arrow keys for mention selection
@@ -1080,7 +1119,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
           <button
             type="submit"
             disabled={(!newMessage.trim() && uploadedFiles.length === 0) || isSending || uploadingFiles.length > 0}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-2 bg-zinc-600 text-white rounded-lg font-semibold hover:bg-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSending ? 'Sending...' : 'Send'}
           </button>

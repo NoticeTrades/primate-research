@@ -30,12 +30,12 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
-const POPUP_WIDTH = 560;
-const POPUP_HEIGHT = 640;
+const POPUP_WIDTH = 720;
+const POPUP_HEIGHT = 700;
 const MIN_WIDTH = 360;
 const MIN_HEIGHT = 400;
-const MAX_WIDTH = 900;
-const MAX_HEIGHT = 800;
+const MAX_WIDTH = 960;
+const MAX_HEIGHT = 900;
 
 function getDefaultPosition() {
   if (typeof window === 'undefined') return { x: 100, y: 80 };
@@ -288,11 +288,11 @@ export default function ChatPopup() {
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/20 pointer-events-none"
+        className="fixed inset-0 z-40 bg-zinc-950/50 pointer-events-none"
         aria-hidden
       />
       <div
-        className="fixed z-50 flex flex-col rounded-lg overflow-hidden border border-zinc-700/80 bg-zinc-900/95 shadow-xl backdrop-blur-sm"
+        className="fixed z-50 flex flex-col rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-900 shadow-2xl"
         style={{
           width: size.width,
           height: size.height,
@@ -338,7 +338,7 @@ export default function ChatPopup() {
                     type="button"
                     onClick={() => setViewMode('channels')}
                     className={`flex-1 px-1.5 py-2 text-[11px] font-medium transition-colors ${
-                      viewMode === 'channels' ? 'text-white border-b-2 border-blue-500 bg-zinc-800/80' : 'text-zinc-400 hover:text-zinc-200'
+                      viewMode === 'channels' ? 'text-white border-b-2 border-zinc-400 bg-zinc-800/80' : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
                     Channels
@@ -373,7 +373,7 @@ export default function ChatPopup() {
                                 onClick={() => setSelectedRoomId(room.id)}
                                 className={`w-full text-left px-1.5 py-1.5 rounded-md text-[12px] flex items-center justify-between gap-1 transition-colors ${
                                   isSelected
-                                    ? 'bg-blue-600/90 text-white'
+                                    ? 'bg-zinc-600 text-white'
                                     : hasUnread
                                     ? 'text-white font-semibold bg-zinc-800/90 hover:bg-zinc-700/90'
                                     : 'text-zinc-500 hover:bg-zinc-800/60'
