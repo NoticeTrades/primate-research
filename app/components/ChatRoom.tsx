@@ -7,6 +7,7 @@ import { isChatTicker, getTickerHref } from '@/lib/chatTickers';
 const tickerDataCache: Record<string, { price: number; changePercent: number } | null> = {};
 
 const CHAT_TICKER_POLL_MS = 5000; // refresh ticker price and % in chat every 5 seconds
+const SCROLL_STORAGE_PREFIX = 'chatScroll:';
 
 /** Match words that could be tickers (2–6 letters, or $TICKER). */
 const TICKER_WORD_REGEX = /\$[A-Za-z]{1,6}\b|\b[A-Za-z]{2,6}\b/g;
@@ -159,6 +160,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const isAtBottomRef = useRef(true);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const scrollThreshold = 80;
+  const initialScrollFromStorageRef = useRef(false);
 
   // Scroll to bottom of messages (instant for initial load, smooth for new messages)
   const scrollToBottom = useCallback((instant = false) => {
@@ -174,21 +176,32 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     setIsAtBottom(true);
   }, []);
 
-  // Track whether user is scrolled to bottom (for "Jump to latest" and auto-scroll on new messages)
+  // Track whether user is scrolled to bottom and persist scroll position per room
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
-    const checkAtBottom = () => {
+
+    const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
       const nearBottom = scrollHeight - scrollTop - clientHeight < scrollThreshold;
       if (nearBottom !== isAtBottomRef.current) {
         isAtBottomRef.current = nearBottom;
         setIsAtBottom(nearBottom);
       }
+
+      if (typeof window !== 'undefined') {
+        try {
+          const key = `${SCROLL_STORAGE_PREFIX}${roomId}`;
+          window.localStorage.setItem(key, JSON.stringify({ scrollTop }));
+        } catch {
+          // ignore storage errors
+        }
+      }
     };
-    container.addEventListener('scroll', checkAtBottom, { passive: true });
-    return () => container.removeEventListener('scroll', checkAtBottom);
-  }, []);
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [roomId, scrollThreshold]);
 
   // Check if user is moderator
   useEffect(() => {
@@ -204,6 +217,22 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     setIsAtBottom(true);
 
     const loadMessages = async () => {
+      let savedScrollTop: number | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const key = `${SCROLL_STORAGE_PREFIX}${roomId}`;
+          const raw = window.localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed.scrollTop === 'number') {
+              savedScrollTop = parsed.scrollTop;
+            }
+          }
+        } catch {
+          // ignore storage errors
+        }
+      }
+
       try {
         const response = await fetch(`/api/chat/rooms/${roomId}/messages`, {
           cache: 'no-store',
@@ -217,6 +246,23 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
           if (list.length > 0) {
             lastMessageIdRef.current = Math.max(...list.map((m: ChatMessage) => m.id));
           }
+
+          // After messages render, restore previous scroll position if we have one, otherwise go to bottom.
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const container = messagesContainerRef.current;
+              if (!container) return;
+
+              if (savedScrollTop != null && savedScrollTop > 0 && savedScrollTop < container.scrollHeight) {
+                container.scrollTop = savedScrollTop;
+                initialScrollFromStorageRef.current = true;
+                isAtBottomRef.current = false;
+                setIsAtBottom(false);
+              } else {
+                scrollToBottom(true);
+              }
+            });
+          });
         } else {
           const err = await response.json().catch(() => ({}));
           console.error('Chat load failed', response.status, err);
@@ -229,7 +275,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     };
 
     loadMessages();
-  }, [roomId]);
+  }, [roomId, scrollToBottom]);
 
   // Set up Server-Sent Events for instant real-time updates (like RocketChat)
   useEffect(() => {
@@ -297,6 +343,12 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     prevMessagesLengthRef.current = messages.length;
     if (messages.length === 0) return;
     if (prevLen === 0 && messages.length > 0) {
+      // Initial load is handled in loadMessages (which may restore previous scroll).
+      if (initialScrollFromStorageRef.current) {
+        // Clear the flag so subsequent room loads can use it again.
+        initialScrollFromStorageRef.current = false;
+        return;
+      }
       requestAnimationFrame(() => {
         requestAnimationFrame(() => scrollToBottom(true));
       });
@@ -766,12 +818,12 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   };
 
   return (
-    <div className="flex flex-col h-full bg-transparent overflow-hidden">
+    <div className="flex flex-col h-full bg-black/75 overflow-hidden">
       {/* Room Header */}
-      <div className="shrink-0 bg-zinc-900/95 border-b border-zinc-800 px-4 py-2.5 flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-white truncate">#{roomName}</h2>
+      <div className="shrink-0 bg-zinc-900/95 border-b border-zinc-900/80 px-4 py-2 flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-zinc-50 truncate">#{roomName}</h2>
         {messages.length > 0 && (
-          <span className="text-xs text-zinc-500">{messages.length}</span>
+          <span className="text-xs text-zinc-600">{messages.length}</span>
         )}
       </div>
 
@@ -781,6 +833,21 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0"
         style={{ scrollBehavior: 'smooth' }}
       >
+        {/* Jump to latest – slim bar at top when user is scrolled up */}
+        {!isAtBottom && messages.length > 0 && (
+          <div className="sticky top-0 z-10 flex justify-center pb-2 bg-gradient-to-b from-black/95 via-black/60 to-transparent">
+            <button
+              type="button"
+              onClick={() => scrollToBottom(false)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-100 bg-zinc-800/90 hover:bg-zinc-700 border border-zinc-700 shadow-sm transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+              Jump to latest
+            </button>
+          </div>
+        )}
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-zinc-500 text-sm">Loading…</div>
@@ -804,19 +871,19 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
             return (
               <div
                 key={first.id}
-                className={`flex gap-3 mt-4 first:mt-0 ${
-                  anyMentioned && !isOwnMessage ? 'ring-2 ring-orange-500/50 rounded-lg p-2 -m-2 bg-orange-500/5' : ''
+                className={`flex gap-3 mt-3 first:mt-0 ${
+                  anyMentioned && !isOwnMessage ? 'rounded-lg bg-orange-500/5 ring-1 ring-orange-500/40 px-2 py-1.5 -mx-2' : ''
                 }`}
               >
-                <div className="flex-shrink-0 w-10">
+                <div className="flex-shrink-0 w-9">
                   {first.profile_picture_url ? (
                     <img
                       src={first.profile_picture_url}
                       alt={first.username}
-                      className="w-10 h-10 rounded-full object-cover border border-zinc-700"
+                      className="w-9 h-9 rounded-full object-cover border border-zinc-700"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center border border-zinc-600">
+                    <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
                       <span className="text-zinc-300 text-sm font-semibold">
                         {first.username.charAt(0).toUpperCase()}
                       </span>
@@ -930,10 +997,10 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                           </div>
                         )}
                         <div
-                          className={`inline-block px-4 py-2.5 rounded-xl max-w-[95%] ${
+                          className={`inline-block px-3 py-2 rounded-lg max-w-[92%] text-sm ${
                             isOwnMessage
-                              ? 'bg-zinc-600/90 text-white'
-                              : 'bg-zinc-800/90 text-zinc-100 border border-zinc-700/80'
+                              ? 'bg-zinc-700/90 text-zinc-50'
+                              : 'bg-zinc-900/80 text-zinc-100 border border-zinc-800'
                           }`}
                         >
                           {message.reply_to_id != null && (
@@ -1087,24 +1154,8 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Jump to latest - show when user has scrolled up */}
-      {!isAtBottom && messages.length > 0 && (
-        <div className="shrink-0 flex justify-center py-2 bg-zinc-800/80 border-t border-zinc-700/50">
-          <button
-            type="button"
-            onClick={() => scrollToBottom(false)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-zinc-200 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 hover:border-zinc-500 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-            Jump to latest
-          </button>
-        </div>
-      )}
-
       {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="shrink-0 border-t border-zinc-800 p-4 bg-zinc-900/60">
+      <form onSubmit={handleSendMessage} className="shrink-0 border-t border-zinc-900/80 px-4 py-3 bg-zinc-900/85">
         {/* Replying to preview */}
         {replyingTo && (
           <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-zinc-700/80 rounded-lg border border-zinc-600 text-sm">
