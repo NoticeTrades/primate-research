@@ -69,6 +69,7 @@ export async function GET(
     const beforeIdNum = beforeId ? parseInt(beforeId, 10) : NaN;
     const usePagination = beforeId != null && beforeId !== '' && !Number.isNaN(beforeIdNum) && beforeIdNum > 0;
     let rawMessages: unknown;
+    // SELECT without reply_to_id so DBs that don't have that column yet still work
     if (usePagination) {
       rawMessages = await sql`
         SELECT 
@@ -78,14 +79,10 @@ export async function GET(
           cm.username,
           cm.message_text,
           cm.created_at,
-          cm.reply_to_id,
           u.profile_picture_url,
-          u.user_role,
-          reply_to.username AS reply_to_username,
-          LEFT(reply_to.message_text, 150) AS reply_to_text
+          u.user_role
         FROM chat_messages cm
         LEFT JOIN users u ON u.email = cm.user_email
-        LEFT JOIN chat_messages reply_to ON reply_to.id = cm.reply_to_id
         WHERE cm.room_id = ${roomIdNum} AND cm.id < ${beforeIdNum}
         ORDER BY cm.created_at DESC
         LIMIT ${limit}
@@ -99,14 +96,10 @@ export async function GET(
           cm.username,
           cm.message_text,
           cm.created_at,
-          cm.reply_to_id,
           u.profile_picture_url,
-          u.user_role,
-          reply_to.username AS reply_to_username,
-          LEFT(reply_to.message_text, 150) AS reply_to_text
+          u.user_role
         FROM chat_messages cm
         LEFT JOIN users u ON u.email = cm.user_email
-        LEFT JOIN chat_messages reply_to ON reply_to.id = cm.reply_to_id
         WHERE cm.room_id = ${roomIdNum}
         ORDER BY cm.created_at DESC
         LIMIT ${limit}
@@ -166,9 +159,12 @@ export async function GET(
       }
     }
 
-    // Attach files and reactions to messages
+    // Attach files and reactions; ensure reply_to_id/reply_to_* exist for client (optional columns)
     const messagesWithFiles = messages.map((m: any) => ({
       ...m,
+      reply_to_id: m.reply_to_id ?? null,
+      reply_to_username: m.reply_to_username ?? null,
+      reply_to_text: m.reply_to_text ?? null,
       files: filesMap[m.id] || [],
       reactions: reactionsMap[m.id] || [],
     }));
@@ -287,27 +283,14 @@ export async function POST(
       );
     }
 
-    // Validate reply_to_id if provided (must exist and be in same room)
-    let replyToIdNum: number | null = null;
-    if (replyToId != null && replyToId !== '') {
-      const id = parseInt(String(replyToId), 10);
-      if (!Number.isNaN(id) && id > 0) {
-        const existingRaw = await sql`
-          SELECT id FROM chat_messages WHERE id = ${id} AND room_id = ${roomIdNum}
-        `;
-        const existingList = Array.isArray(existingRaw) ? existingRaw : (existingRaw as { rows?: unknown[] })?.rows ?? [];
-        if (existingList.length > 0) replyToIdNum = id;
-      }
-    }
-
-    // Insert message (use empty string if no text but files exist)
+    // Insert message (use empty string if no text but files exist). Omit reply_to_id so DBs without that column work.
     const messageText = sanitizedMessage || (files && files.length > 0 ? '' : '');
     const result = await sql`
-      INSERT INTO chat_messages (room_id, user_email, username, message_text, reply_to_id)
-      VALUES (${roomIdNum}, ${userEmail}, ${username}, ${messageText}, ${replyToIdNum})
-      RETURNING id, room_id, user_email, username, message_text, created_at, reply_to_id
+      INSERT INTO chat_messages (room_id, user_email, username, message_text)
+      VALUES (${roomIdNum}, ${userEmail}, ${username}, ${messageText})
+      RETURNING id, room_id, user_email, username, message_text, created_at
     `;
-    type InsertRow = { id: number; room_id: number; user_email: string; username: string; message_text: string; created_at: string; reply_to_id: number | null };
+    type InsertRow = { id: number; room_id: number; user_email: string; username: string; message_text: string; created_at: string };
     const row = (Array.isArray(result) ? result[0] : (result as unknown as { rows?: InsertRow[] })?.rows?.[0]) as InsertRow | undefined;
     if (!row || row.id == null) {
       console.error('Chat POST: INSERT RETURNING did not return a row', result);
@@ -378,27 +361,16 @@ export async function POST(
         }))
       : [];
 
-    const msgRow = row as { id: number; room_id: number; user_email: string; username: string; message_text: string; created_at: string; reply_to_id: number | null };
-    let reply_to_username: string | null = null;
-    let reply_to_text: string | null = null;
-    if (msgRow.reply_to_id) {
-      const replyRow = await sql`
-        SELECT username, LEFT(message_text, 150) AS reply_to_text
-        FROM chat_messages WHERE id = ${msgRow.reply_to_id}
-      `;
-      if (replyRow.length > 0) {
-        const r = replyRow[0] as { username: string; reply_to_text: string };
-        reply_to_username = r.username;
-        reply_to_text = r.reply_to_text;
-      }
-    }
+    const msgRow = row as { id: number; room_id: number; user_email: string; username: string; message_text: string; created_at: string };
+    const usersList = Array.isArray(users) ? users : (users as { rows?: { profile_picture_url?: string; user_role?: string }[] })?.rows ?? [];
     const message = {
       ...msgRow,
-      profile_picture_url: users[0]?.profile_picture_url || null,
-      user_role: users[0]?.user_role || 'premium',
+      reply_to_id: null,
+      profile_picture_url: usersList[0]?.profile_picture_url ?? null,
+      user_role: usersList[0]?.user_role ?? 'premium',
       files: messageFiles,
-      reply_to_username: reply_to_username ?? undefined,
-      reply_to_text: reply_to_text ?? undefined,
+      reply_to_username: undefined,
+      reply_to_text: undefined,
     };
 
     return NextResponse.json({ message }, { status: 201 });
