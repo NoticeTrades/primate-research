@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment, ReactNode } from 'react';
 import Link from 'next/link';
-import { CHAT_TICKER_SET, getTickerHref } from '@/lib/chatTickers';
+import { isChatTicker, getTickerHref } from '@/lib/chatTickers';
 
 const tickerDataCache: Record<string, { price: number; changePercent: number } | null> = {};
 
@@ -118,6 +118,9 @@ interface ChatMessage {
   user_role?: string;
   files?: ChatFile[];
   reactions?: MessageReaction[];
+  reply_to_id?: number | null;
+  reply_to_username?: string | null;
+  reply_to_text?: string | null;
 }
 
 interface ChatRoomProps {
@@ -144,6 +147,8 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const [dmPopoverMessageId, setDmPopoverMessageId] = useState<number | null>(null);
   const [userBio, setUserBio] = useState<string | null>(null);
   const [userBioLoading, setUserBioLoading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: number; username: string; text: string } | null>(null);
+  const messageRefsMap = useRef<Record<number, HTMLDivElement | null>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -444,11 +449,13 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         body: JSON.stringify({
           message_text: messageToSend,
           files: filesToSend.length > 0 ? filesToSend : undefined,
+          reply_to_id: replyingTo?.id,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
+        setReplyingTo(null);
         // Message will appear via SSE, but add immediately for instant feedback
         setMessages((prev) => {
           const exists = prev.some((m) => m.id === data.message.id);
@@ -662,7 +669,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     while ((m = re.exec(text)) !== null) {
       const raw = m[0];
       const ticker = raw.replace(/^\$/, '').toUpperCase();
-      if (CHAT_TICKER_SET.has(ticker)) {
+      if (isChatTicker(ticker)) {
         if (m.index > lastEnd) {
           segments.push({ type: 'text', value: text.slice(lastEnd, m.index) });
         }
@@ -815,7 +822,12 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                     const isMentioned =
                       message.message_text && new RegExp(`@${currentUsername}\\b`, 'i').test(message.message_text);
                     return (
-                      <div key={message.id}>
+                      <div
+                        key={message.id}
+                        ref={(el) => {
+                          messageRefsMap.current[message.id] = el;
+                        }}
+                      >
                         {isFirstInGroup && (
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <div className="relative inline-block">
@@ -880,6 +892,23 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                     >
                       {formatTimeClock(message.created_at)}
                     </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReplyingTo({
+                                  id: message.id,
+                                  username: message.username,
+                                  text: (message.message_text ?? '').slice(0, 100),
+                                });
+                                messageInputRef.current?.focus();
+                              }}
+                              className="ml-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                              title="Reply"
+                            >
+                              <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                            </button>
                             {(isOwnMessage || isModerator) && (
                               <button
                                 onClick={() => handleDeleteMessage(message.id)}
@@ -900,6 +929,25 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                               : 'bg-zinc-800 text-zinc-100 border border-zinc-700'
                           }`}
                         >
+                          {message.reply_to_id != null && (message.reply_to_username != null || message.reply_to_text != null) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const el = messageRefsMap.current[message.reply_to_id!];
+                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }}
+                              className="flex flex-col items-start w-full text-left mb-2 pl-2 py-1.5 rounded border-l-2 border-zinc-500/60 bg-black/20 hover:bg-black/30 transition-colors"
+                            >
+                              <span className="text-xs font-medium text-zinc-400">
+                                Replying to <span className="text-zinc-300">@{message.reply_to_username ?? 'unknown'}</span>
+                              </span>
+                              {(message.reply_to_text ?? '').trim() && (
+                                <span className="text-xs text-zinc-500 truncate max-w-full block">
+                                  {message.reply_to_text!.length > 80 ? message.reply_to_text!.slice(0, 80) + '…' : message.reply_to_text}
+                                </span>
+                              )}
+                            </button>
+                          )}
                           {message.message_text && (
                             <p className="text-sm whitespace-pre-wrap break-words mb-2">
                               {parseMessageWithTickers(message.message_text)}
@@ -1049,6 +1097,24 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
 
       {/* Message Input */}
       <form onSubmit={handleSendMessage} className="shrink-0 border-t border-zinc-700/80 p-3 bg-zinc-800/50">
+        {/* Replying to preview */}
+        {replyingTo && (
+          <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-zinc-700/80 rounded-lg border border-zinc-600 text-sm">
+            <span className="text-zinc-400 shrink-0">Replying to</span>
+            <span className="font-medium text-zinc-200">@{replyingTo.username}</span>
+            <span className="text-zinc-500 truncate flex-1 min-w-0">— {replyingTo.text}{replyingTo.text.length >= 100 ? '…' : ''}</span>
+            <button
+              type="button"
+              onClick={() => setReplyingTo(null)}
+              className="shrink-0 p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-600 transition-colors"
+              aria-label="Cancel reply"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
         {/* Uploaded Files Preview */}
         {uploadedFiles.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">

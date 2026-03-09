@@ -41,6 +41,21 @@ export const CHAT_TICKER_SET = new Set<string>([
   ...STOCK_SET,
 ]);
 
+/**
+ * Common English words that are also ticker symbols. Never show a pill for these
+ * so typing "low" or "it was a big day" doesn't turn into stock tickers.
+ */
+const CHAT_TICKER_BLOCKLIST = new Set<string>([
+  'a', 'an', 'all', 'am', 'app', 'are', 'as', 'at', 'be', 'big', 'by', 'c', 'can', 'day', 'do', 'e', 'el', 'f', 'go', 'he', 'high', 'i', 'it', 'j', 'l', 'low', 'm', 'man', 'may', 'me', 'men', 'new', 'now', 'of', 'old', 'on', 'one', 'or', 'pr', 'r', 'run', 'see', 'so', 't', 'the', 'to', 'u', 'us', 'w', 'way', 'we',
+]);
+
+/** True if we should show a price pill for this symbol (in set and not a common word). */
+export function isChatTicker(symbol: string): boolean {
+  const upper = symbol.toUpperCase();
+  if (!CHAT_TICKER_SET.has(upper)) return false;
+  return !CHAT_TICKER_BLOCKLIST.has(upper.toLowerCase());
+}
+
 /** Whether symbol is an index/future we have a page for (/indices/...). */
 export function isIndexTicker(symbol: string): boolean {
   const s = symbol.toUpperCase();
