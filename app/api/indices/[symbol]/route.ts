@@ -392,6 +392,15 @@ export async function GET(
             // attach to outer scope via mutable reference
             (globalThis as any)._indexVolumeAvg20 = avg20;
           }
+
+          // If we still don't have an intraday volume (common for some cash indices),
+          // fall back to the latest daily volume so VOLU at least has something useful.
+          if (volume === 0) {
+            const lastNonZero = nonZero[nonZero.length - 1];
+            if (typeof lastNonZero === 'number' && lastNonZero > 0) {
+              volume = lastNonZero;
+            }
+          }
         }
       }
     } catch {

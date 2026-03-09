@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useVolume } from '../contexts/VolumeContext';
 
 type VolumeRow = {
@@ -52,6 +52,18 @@ const NAME_OVERRIDES: Record<string, string> = {
   DAX: 'DAX Index',
 };
 
+const DEFAULT_SYMBOLS = [
+  'ES',
+  'NQ',
+  'YM',
+  'RTY',
+  'CL',
+  'DXY',
+  'FTSE',
+  'GER40',
+  'DAX',
+] as const;
+
 export default function VolumePopup() {
   const { isVolumeOpen, closeVolume } = useVolume();
   const [position, setPosition] = useState(getDefaultPosition);
@@ -66,6 +78,8 @@ export default function VolumePopup() {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [sortBy, setSortBy] = useState<'symbol' | 'volume' | 'volumeVsAvg' | 'dayRangePercent'>('volumeVsAvg');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     if (!isVolumeOpen) return;
@@ -117,6 +131,25 @@ export default function VolumePopup() {
     }
   };
 
+  // When panel opens, pre-load a basket of key indices/futures so trader sees the landscape immediately.
+  useEffect(() => {
+    if (!isVolumeOpen) return;
+    setRows([]);
+    setError(null);
+    const symbols = [...DEFAULT_SYMBOLS];
+    let cancelled = false;
+    const loadAll = async () => {
+      for (const sym of symbols) {
+        if (cancelled) break;
+        await handleSearch(sym);
+      }
+    };
+    loadAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [isVolumeOpen]);
+
   useEffect(() => {
     if (!isVolumeOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -165,6 +198,27 @@ export default function VolumePopup() {
   }, [isResizing, position.x, position.y]);
 
   if (!isVolumeOpen) return null;
+
+  const sortedRows = useMemo(() => {
+    const list = [...rows];
+    list.sort((a, b) => {
+      if (sortBy === 'symbol') {
+        const res = a.symbol.localeCompare(b.symbol);
+        return sortDir === 'asc' ? res : -res;
+      }
+      const getVal = (r: VolumeRow) => {
+        if (sortBy === 'volume') return r.volume ?? 0;
+        if (sortBy === 'volumeVsAvg') return r.volumeVsAvg ?? 0;
+        if (sortBy === 'dayRangePercent') return r.dayRangePercent ?? 0;
+        return 0;
+      };
+      const av = getVal(a);
+      const bv = getVal(b);
+      const diff = av - bv;
+      return sortDir === 'asc' ? diff : -diff;
+    });
+    return list;
+  }, [rows, sortBy, sortDir]);
 
   return (
     <div
@@ -252,19 +306,51 @@ export default function VolumePopup() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-zinc-800/80 border-b border-zinc-700/70">
-                  <th className="py-2.5 px-3 text-left font-medium text-zinc-400">Symbol</th>
+                  <th
+                    className="py-2.5 px-3 text-left font-medium text-zinc-400 cursor-pointer select-none"
+                    onClick={() => {
+                      setSortBy('symbol');
+                      setSortDir((d) => (sortBy === 'symbol' && d === 'desc' ? 'asc' : 'desc'));
+                    }}
+                  >
+                    Symbol
+                  </th>
                   <th className="py-2.5 px-3 text-left font-medium text-zinc-400">Name</th>
                   <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Last</th>
                   <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Chg %</th>
                   <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Chg</th>
-                  <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Range</th>
+                  <th
+                    className="py-2.5 px-3 text-right font-medium text-zinc-400 cursor-pointer select-none"
+                    onClick={() => {
+                      setSortBy('dayRangePercent');
+                      setSortDir((d) => (sortBy === 'dayRangePercent' && d === 'desc' ? 'asc' : 'desc'));
+                    }}
+                  >
+                    Range
+                  </th>
                   <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Range %</th>
-                  <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Volume</th>
-                  <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Vs 20d Vol</th>
+                  <th
+                    className="py-2.5 px-3 text-right font-medium text-zinc-400 cursor-pointer select-none"
+                    onClick={() => {
+                      setSortBy('volume');
+                      setSortDir((d) => (sortBy === 'volume' && d === 'desc' ? 'asc' : 'desc'));
+                    }}
+                  >
+                    Volume
+                  </th>
+                  <th
+                    className="py-2.5 px-3 text-right font-medium text-zinc-400 cursor-pointer select-none"
+                    onClick={() => {
+                      setSortBy('volumeVsAvg');
+                      setSortDir((d) => (sortBy === 'volumeVsAvg' && d === 'desc' ? 'asc' : 'desc'));
+                    }}
+                  >
+                    Vs 20d Vol
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
+                {sortedRows.map((row) => {
                   const up = row.changePercent >= 0;
                   const chgClass = up ? 'text-emerald-400' : 'text-red-400';
                   const rangePts = row.dayRangePoints ?? 0;
