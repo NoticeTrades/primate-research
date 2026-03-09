@@ -129,18 +129,9 @@ export async function GET(request: Request) {
     } else rawList = rawActive;
 
     const slice = rawList.slice(0, limit);
-    const symbols = [
-      ...new Set(
-        slice
-          .map((r: { ticker?: string }) => String(r.ticker || '').trim())
-          .filter((s: unknown): s is string => typeof s === 'string' && s.length > 0)
-      ),
-    ] as string[];
-    const overviews = await Promise.all(symbols.map((s) => fetchOverview(s)));
 
-    const overviewBySymbol = new Map<string, OverviewCacheEntry | null>();
-    symbols.forEach((s, i) => overviewBySymbol.set(s, overviews[i] ?? null));
-
+    // For Alpha Vantage free tier we avoid extra OVERVIEW calls (which quickly hit the 25/day limit)
+    // and instead just use the TOP_GAINERS_LOSERS payload. That keeps MOST usable throughout the day.
     const rows: MostActiveRow[] = slice.map((r: Record<string, unknown>) => {
       const ticker = String(r.ticker || '').trim();
       const price = parseFloat(String(r.price || 0)) || 0;
@@ -148,33 +139,22 @@ export async function GET(request: Request) {
       const changePercent = parseFloat(String(r.change_percentage || 0).replace('%', '')) || 0;
       const volume = parseFloat(String(r.volume || 0)) || 0;
       const volumeDollar = price * volume;
-      const ov = overviewBySymbol.get(ticker);
-      const rawSector = ov?.sector ?? '—';
       return {
         ticker,
-        name: ov?.name || ticker,
+        name: ticker,
         price,
         changePercent,
         change,
         volume,
         volumeDollar,
-        marketCap: ov?.marketCap ?? 0,
-        sector: normalizeSector(rawSector),
+        marketCap: 0,
+        sector: 'Unknown',
       };
     });
 
-    let filtered = rows;
-    if (sector !== 'all' && sector !== '') {
-      const normalizedFilter = normalizeSector(sector);
-      filtered = rows.filter((row) => row.sector === normalizedFilter);
-    }
-
-    const fromData = rows.map((r) => r.sector).filter((s): s is string => Boolean(s) && s !== '—');
-    const hasUnknown = rows.some((r) => r.sector === '—');
-    const fromSet = new Set(fromData);
-    if (hasUnknown) fromSet.add('Unknown');
-    SECTOR_OPTIONS.forEach((s) => fromSet.add(s));
-    const sectors = ['All', ...[...fromSet].sort()];
+    // With free-tier data we don't have reliable sectors; keep a simple "All" option.
+    const filtered = rows;
+    const sectors = ['All'];
 
     return NextResponse.json({
       data: filtered,

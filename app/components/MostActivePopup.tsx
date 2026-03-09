@@ -106,7 +106,7 @@ export default function MostActivePopup() {
     if (!isMostActiveOpen) return;
     const id = window.setInterval(() => {
       loadData();
-    }, 180_000); // refresh every 3 minutes
+    }, 900_000); // refresh every 15 minutes
     return () => window.clearInterval(id);
   }, [isMostActiveOpen, loadData]);
 
