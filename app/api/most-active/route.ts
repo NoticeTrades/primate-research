@@ -100,8 +100,14 @@ export async function GET(request: Request) {
     );
     const data = await res.json();
     if (data['Note'] || data['Information']) {
+      const raw = (data['Note'] || data['Information']) as string;
       return NextResponse.json(
-        { error: data['Note'] || data['Information'] || 'Rate limit or API error' },
+        {
+          error: 'Alpha Vantage rate limit reached',
+          hint:
+            raw ||
+            'Alpha Vantage free API keys are limited to 25 requests/day and 1 request/second. Please wait a bit before trying again or upgrade your key.',
+        },
         { status: 429 }
       );
     }

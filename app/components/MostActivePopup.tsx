@@ -101,12 +101,12 @@ export default function MostActivePopup() {
     loadData();
   }, [isMostActiveOpen, loadData]);
 
-  // Auto-refresh while the panel is open so data stays live
+  // Auto-refresh while the panel is open so data stays live, but respect free API limits
   useEffect(() => {
     if (!isMostActiveOpen) return;
     const id = window.setInterval(() => {
       loadData();
-    }, 30_000); // refresh every 30 seconds
+    }, 180_000); // refresh every 3 minutes
     return () => window.clearInterval(id);
   }, [isMostActiveOpen, loadData]);
 
