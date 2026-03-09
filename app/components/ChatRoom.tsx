@@ -45,14 +45,14 @@ function TickerPill({ symbol }: { symbol: string }) {
   const isPositive = data != null && data.changePercent >= 0;
   const pillClass =
     data == null
-      ? 'bg-zinc-700/80 hover:bg-zinc-600/80 border-zinc-600 text-zinc-200'
+      ? 'bg-zinc-700/80 hover:bg-zinc-600/80 border border-zinc-600 text-zinc-200'
       : isPositive
-        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/50 text-emerald-100'
-        : 'bg-red-500/20 hover:bg-red-500/30 border-red-500/50 text-red-100';
+        ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 text-white'
+        : 'bg-red-600 hover:bg-red-500 border border-red-500 text-white';
   return (
     <Link
       href={`/indices/${sym}`}
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-sm font-medium border no-underline ${pillClass}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-sm font-medium no-underline ${pillClass}`}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
@@ -61,7 +61,7 @@ function TickerPill({ symbol }: { symbol: string }) {
       {data != null ? (
         <>
           <span className="tabular-nums">{data.price.toFixed(2)}</span>
-          <span className={`tabular-nums font-semibold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+          <span className="tabular-nums font-semibold">
             {isPositive ? '+' : ''}{data.changePercent.toFixed(2)}%
           </span>
         </>
