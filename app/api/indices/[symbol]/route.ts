@@ -36,6 +36,19 @@ const INDEX_NAMES: Record<string, string> = {
   DAX: 'DAX Index',
 };
 
+// Volume meaning: futures = contracts traded; cash indices = aggregate constituent share volume (not comparable).
+const VOLUME_TYPE: Record<string, 'contracts' | 'constituent'> = {
+  ES: 'contracts',
+  NQ: 'contracts',
+  YM: 'contracts',
+  RTY: 'contracts',
+  CL: 'contracts',
+  DXY: 'contracts',
+  FTSE: 'constituent',
+  GER40: 'constituent',
+  DAX: 'constituent',
+};
+
 // Fetch data from Alpha Vantage (more reliable for futures)
 async function fetchAlphaVantageData(symbol: string) {
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
@@ -484,6 +497,7 @@ export async function GET(
         close: price,
       },
       volume,
+      volumeType: VOLUME_TYPE[symbol] ?? 'contracts',
       volumeAvg20: volumeAvg20 || undefined,
       volumeVsAvg: volumeVsAvg || undefined,
       dayRangePoints: dayRangePoints || undefined,

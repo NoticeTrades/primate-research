@@ -10,6 +10,7 @@ type VolumeRow = {
   changePercent: number;
   change: number;
   volume: number;
+  volumeType?: 'contracts' | 'constituent';
   volumeAvg20?: number;
   volumeVsAvg?: number;
   dayRangePoints?: number;
@@ -78,7 +79,7 @@ export default function VolumePopup() {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [sortBy, setSortBy] = useState<'symbol' | 'volume' | 'volumeVsAvg' | 'dayRangePercent'>('volumeVsAvg');
+  const [sortBy, setSortBy] = useState<'symbol' | 'volume' | 'volumeVsAvg' | 'dayRangePoints' | 'dayRangePercent'>('volumeVsAvg');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
@@ -103,6 +104,7 @@ export default function VolumePopup() {
         changePercent: number;
         change: number;
         volume: number;
+        volumeType?: 'contracts' | 'constituent';
         volumeAvg20?: number;
         volumeVsAvg?: number;
         dayRangePoints?: number;
@@ -115,6 +117,7 @@ export default function VolumePopup() {
         changePercent: Number(body.changePercent) || 0,
         change: Number(body.change) || 0,
         volume: Number(body.volume) || 0,
+        volumeType: body.volumeType === 'constituent' ? 'constituent' : 'contracts',
         volumeAvg20: typeof body.volumeAvg20 === 'number' ? body.volumeAvg20 : undefined,
         volumeVsAvg: typeof body.volumeVsAvg === 'number' ? body.volumeVsAvg : undefined,
         dayRangePoints: typeof body.dayRangePoints === 'number' ? body.dayRangePoints : undefined,
@@ -208,6 +211,7 @@ export default function VolumePopup() {
       const getVal = (r: VolumeRow) => {
         if (sortBy === 'volume') return r.volume ?? 0;
         if (sortBy === 'volumeVsAvg') return r.volumeVsAvg ?? 0;
+        if (sortBy === 'dayRangePoints') return r.dayRangePoints ?? 0;
         if (sortBy === 'dayRangePercent') return r.dayRangePercent ?? 0;
         return 0;
       };
@@ -289,6 +293,9 @@ export default function VolumePopup() {
         <p className="text-[11px] text-zinc-500">
           Supports CME futures (ES, NQ, YM, RTY, CL, DXY) and cash indices like FTSE 100 (FTSE) and Germany 40 (GER40 / DAX).
         </p>
+        <p className="text-[11px] text-zinc-500">
+          Volume: futures show <strong className="text-zinc-400">contracts</strong>; cash indices show <strong className="text-zinc-400">constituent shares</strong> (sum of index members)—not directly comparable.
+        </p>
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto px-4 py-3">
@@ -323,19 +330,28 @@ export default function VolumePopup() {
                   <th
                     className="py-2.5 px-3 text-right font-medium text-zinc-400 cursor-pointer select-none"
                     onClick={() => {
-                      setSortBy('dayRangePercent');
-                      setSortDir((d) => (sortBy === 'dayRangePercent' && d === 'desc' ? 'asc' : 'desc'));
+                      setSortBy('dayRangePoints');
+                      setSortDir((d) => (sortBy === 'dayRangePoints' && d === 'desc' ? 'asc' : 'desc'));
                     }}
                   >
                     Range
                   </th>
-                  <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Range %</th>
+                  <th
+                    className="py-2.5 px-3 text-right font-medium text-zinc-400 cursor-pointer select-none"
+                    onClick={() => {
+                      setSortBy('dayRangePercent');
+                      setSortDir((d) => (sortBy === 'dayRangePercent' && d === 'desc' ? 'asc' : 'desc'));
+                    }}
+                  >
+                    Range %
+                  </th>
                   <th
                     className="py-2.5 px-3 text-right font-medium text-zinc-400 cursor-pointer select-none"
                     onClick={() => {
                       setSortBy('volume');
                       setSortDir((d) => (sortBy === 'volume' && d === 'desc' ? 'asc' : 'desc'));
                     }}
+                    title="Futures = contracts; cash indices = constituent share volume"
                   >
                     Volume
                   </th>
@@ -376,8 +392,15 @@ export default function VolumePopup() {
                       <td className="py-2.5 px-3 text-right text-zinc-100 tabular-nums">
                         {rangePct ? `${rangePct.toFixed(2)}%` : '—'}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-zinc-100 tabular-nums">
-                        {row.volume ? formatNumber(row.volume) : '—'}
+                      <td className="py-2.5 px-3 text-right text-zinc-100 tabular-nums" title={row.volumeType === 'constituent' ? 'Aggregate volume of index constituents (shares)' : 'Futures contracts traded'}>
+                        {row.volume ? (
+                          <span className="inline-block text-right">
+                            {formatNumber(row.volume)}
+                            <span className="block text-[10px] text-zinc-500 font-normal">
+                              {row.volumeType === 'constituent' ? 'constituent' : 'contracts'}
+                            </span>
+                          </span>
+                        ) : '—'}
                       </td>
                       <td className="py-2.5 px-3 text-right text-zinc-100 tabular-nums">
                         {volVs ? `${volVs.toFixed(0)}%` : '—'}
