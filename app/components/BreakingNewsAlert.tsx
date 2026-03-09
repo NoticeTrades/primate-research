@@ -29,6 +29,29 @@ function setDismissedStorage() {
   } catch {}
 }
 
+/** Format API time (e.g. 20240315T211811) or ISO string to "9:18:11 PM" */
+function formatTime(timeStr: string): string {
+  if (!timeStr) return '';
+  try {
+    let date: Date;
+    if (/^\d{8}T\d{6}$/.test(timeStr)) {
+      const y = timeStr.slice(0, 4);
+      const m = timeStr.slice(4, 6);
+      const d = timeStr.slice(6, 8);
+      const h = timeStr.slice(9, 11);
+      const min = timeStr.slice(11, 13);
+      const s = timeStr.slice(13, 15);
+      date = new Date(`${y}-${m}-${d}T${h}:${min}:${s}Z`);
+    } else {
+      date = new Date(timeStr);
+    }
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+  } catch {
+    return '';
+  }
+}
+
 export default function BreakingNewsAlert() {
   const [items, setItems] = useState<BreakingItem[]>([]);
   const [dismissed, setDismissed] = useState(() => getDismissed());
@@ -60,64 +83,46 @@ export default function BreakingNewsAlert() {
   const latest = items[0];
   if (loading || !latest?.title || dismissed) return null;
 
-  const isNegative = latest.sentiment?.toLowerCase() === 'negative' || latest.sentiment?.toLowerCase() === 'somewhat_negative';
+  const timeDisplay = formatTime(latest.time) || new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+  const headline = latest.title.trim().toUpperCase();
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-[100] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300"
+      className="fixed bottom-0 right-0 z-[100] flex items-center bg-red-600 text-white shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-full"
       aria-live="polite"
+      style={{ minHeight: '44px' }}
     >
-      <div
-        className={`rounded-xl border shadow-xl overflow-hidden ${
-          isNegative
-            ? 'bg-red-950/95 border-red-800/60'
-            : 'bg-zinc-900/95 border-zinc-700/80'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-zinc-700/50">
-          <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-              isNegative
-                ? 'bg-red-900/80 text-red-200 border border-red-700/50'
-                : 'bg-zinc-800 text-zinc-400 border border-zinc-600'
-            }`}
+      <div className="flex items-center gap-3 px-4 py-2.5 max-w-2xl min-w-0">
+        <span className="flex-shrink-0 text-sm font-medium tabular-nums whitespace-nowrap">
+          {timeDisplay}
+        </span>
+        <span className="flex-shrink-0 text-white/80">|</span>
+        {latest.url ? (
+          <a
+            href={latest.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 min-w-0 text-sm font-semibold text-white hover:underline truncate sm:whitespace-normal sm:line-clamp-2"
+            title={latest.title}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${isNegative ? 'bg-red-400 animate-pulse' : 'bg-amber-400'}`} />
-            Breaking
+            {headline}
+          </a>
+        ) : (
+          <span className="flex-1 min-w-0 text-sm font-semibold truncate sm:whitespace-normal sm:line-clamp-2">
+            {headline}
           </span>
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="p-2 -m-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700/80 active:bg-zinc-600 transition-colors cursor-pointer touch-manipulation select-none"
-            aria-label="Dismiss"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="p-3">
-          {latest.url ? (
-            <a
-              href={latest.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`block text-sm font-medium leading-snug hover:underline ${
-                isNegative ? 'text-red-100' : 'text-zinc-200'
-              }`}
-            >
-              {latest.title}
-            </a>
-          ) : (
-            <p className={`text-sm font-medium leading-snug ${isNegative ? 'text-red-100' : 'text-zinc-200'}`}>
-              {latest.title}
-            </p>
-          )}
-          {latest.source && (
-            <p className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">{latest.source}</p>
-          )}
-        </div>
+        )}
       </div>
+      <button
+        type="button"
+        onClick={handleDismiss}
+        className="flex-shrink-0 p-2.5 text-white hover:bg-red-700 transition-colors cursor-pointer touch-manipulation select-none"
+        aria-label="Dismiss"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
   );
 }

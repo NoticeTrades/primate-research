@@ -14,13 +14,14 @@ async function fetchRssFallback(): Promise<BreakingItem[]> {
     });
     const xml = await res.text();
     const items: BreakingItem[] = [];
-    // Match <item>...</item> with <title> and <link>
-    const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*?<\/item>/gi;
+    // Match <item>...</item> with <title>, <link>, optional <pubDate>
+    const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*(?:<pubDate>([^<]*)<\/pubDate>)?[\s\S]*?<\/item>/gi;
     let m;
     while ((m = itemRegex.exec(xml)) !== null && items.length < 3) {
       const title = m[1].replace(/<[^>]+>/g, '').trim();
       const url = m[2].trim();
-      if (title && url) items.push({ title, url, time: '', source: 'Yahoo Finance', sentiment: '' });
+      const pubDate = m[3] ? m[3].trim() : '';
+      if (title && url) items.push({ title, url, time: pubDate, source: 'Yahoo Finance', sentiment: '' });
     }
     return items;
   } catch {
