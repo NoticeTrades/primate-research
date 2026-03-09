@@ -69,8 +69,11 @@ export async function GET(
                 cm.username,
                 cm.message_text,
                 cm.created_at,
+                cm.reply_to_id,
                 u.profile_picture_url,
                 u.user_role,
+                reply_to.username AS reply_to_username,
+                LEFT(reply_to.message_text, 150) AS reply_to_text,
                 COALESCE(
                   json_agg(
                     json_build_object(
@@ -85,9 +88,10 @@ export async function GET(
                 ) as files
               FROM chat_messages cm
               LEFT JOIN users u ON u.email = cm.user_email
+              LEFT JOIN chat_messages reply_to ON reply_to.id = cm.reply_to_id
               LEFT JOIN chat_message_files cmf ON cmf.message_id = cm.id
               WHERE cm.room_id = ${roomIdNum} AND cm.id > ${lastMessageId}
-              GROUP BY cm.id, cm.room_id, cm.user_email, cm.username, cm.message_text, cm.created_at, u.profile_picture_url, u.user_role
+              GROUP BY cm.id, cm.room_id, cm.user_email, cm.username, cm.message_text, cm.created_at, cm.reply_to_id, u.profile_picture_url, u.user_role, reply_to.username, LEFT(reply_to.message_text, 150)
               ORDER BY cm.created_at ASC
             `;
 

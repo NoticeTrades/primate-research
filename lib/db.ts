@@ -232,9 +232,14 @@ export async function initDb() {
       username TEXT NOT NULL,
       message_text TEXT NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      reply_to_id INTEGER REFERENCES chat_messages(id) ON DELETE SET NULL,
       FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE
     )
   `;
+  // Add reply_to_id if table already existed without it (e.g. existing deployments)
+  await sql`
+    ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER REFERENCES chat_messages(id) ON DELETE SET NULL
+  `.catch(() => { /* column may already exist with different definition; ignore */ });
 
   // Chat message files table (for file attachments)
   await sql`
