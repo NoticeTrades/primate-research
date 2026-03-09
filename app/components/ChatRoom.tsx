@@ -833,13 +833,13 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0"
         style={{ scrollBehavior: 'smooth' }}
       >
-        {/* Jump to latest – slim bar at top when user is scrolled up */}
+        {/* Jump to latest – minimal pill at top when user is scrolled up (no shaded bar) */}
         {!isAtBottom && messages.length > 0 && (
-          <div className="sticky top-0 z-10 flex justify-center pb-2 bg-gradient-to-b from-black/95 via-black/60 to-transparent">
+          <div className="sticky top-2 z-10 flex justify-center pointer-events-none">
             <button
               type="button"
               onClick={() => scrollToBottom(false)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-100 bg-zinc-800/90 hover:bg-zinc-700 border border-zinc-700 shadow-sm transition-colors"
+              className="pointer-events-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-100 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 shadow-sm transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -997,10 +997,10 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                           </div>
                         )}
                         <div
-                          className={`inline-block px-3 py-2 rounded-lg max-w-[92%] text-sm ${
+                          className={`inline-block px-3 py-1.5 rounded-md max-w-[92%] text-sm ${
                             isOwnMessage
-                              ? 'bg-zinc-700/90 text-zinc-50'
-                              : 'bg-zinc-900/80 text-zinc-100 border border-zinc-800'
+                              ? 'bg-zinc-800/90 text-zinc-50'
+                              : 'bg-transparent text-zinc-100 hover:bg-zinc-900/40'
                           }`}
                         >
                           {message.reply_to_id != null && (
