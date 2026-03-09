@@ -19,7 +19,16 @@ export async function GET(
       );
     }
 
-    const sql = getDb();
+    let sql;
+    try {
+      sql = getDb();
+    } catch (dbError: any) {
+      console.error('Chat GET getDb failed:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to fetch messages', detail: dbError?.message ?? 'Database not configured' },
+        { status: 503 }
+      );
+    }
     const roomIdNum = parseInt(roomId, 10);
 
     if (isNaN(roomIdNum)) {
@@ -53,11 +62,14 @@ export async function GET(
     // Get pagination params (for scalability - load messages in chunks)
     const url = new URL(request.url);
     const beforeId = url.searchParams.get('before_id');
-    const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 200); // Max 200 per request
+    const limitParam = parseInt(url.searchParams.get('limit') || '100', 10);
+    const limit = Number.isNaN(limitParam) ? 100 : Math.min(Math.max(1, limitParam), 200);
 
     // Get messages (paginated for scalability)
+    const beforeIdNum = beforeId ? parseInt(beforeId, 10) : NaN;
+    const usePagination = beforeId != null && beforeId !== '' && !Number.isNaN(beforeIdNum) && beforeIdNum > 0;
     let rawMessages: unknown;
-    if (beforeId) {
+    if (usePagination) {
       rawMessages = await sql`
         SELECT 
           cm.id,
@@ -74,7 +86,7 @@ export async function GET(
         FROM chat_messages cm
         LEFT JOIN users u ON u.email = cm.user_email
         LEFT JOIN chat_messages reply_to ON reply_to.id = cm.reply_to_id
-        WHERE cm.room_id = ${roomIdNum} AND cm.id < ${parseInt(beforeId, 10)}
+        WHERE cm.room_id = ${roomIdNum} AND cm.id < ${beforeIdNum}
         ORDER BY cm.created_at DESC
         LIMIT ${limit}
       `;
@@ -166,9 +178,10 @@ export async function GET(
 
     return NextResponse.json({ messages: reversedMessages });
   } catch (error: any) {
+    const message = error?.message ?? String(error);
     console.error('Error fetching chat messages:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch messages' },
+      { error: 'Failed to fetch messages', detail: message },
       { status: 500 }
     );
   }
@@ -210,9 +223,10 @@ export async function POST(
       );
     }
 
-    // Sanitize message (prevent XSS) - allow empty if files are provided
-    const sanitizedMessage = message_text
-      ? message_text
+    // Sanitize message (prevent XSS) - allow empty if files are provided; ensure string so .trim() never throws
+    const rawText = typeof message_text === 'string' ? message_text : (message_text != null ? String(message_text) : '');
+    const sanitizedMessage = rawText
+      ? rawText
           .trim()
           .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
           .replace(/javascript:/gi, '')
@@ -233,7 +247,16 @@ export async function POST(
       }
     }
 
-    const sql = getDb();
+    let sql;
+    try {
+      sql = getDb();
+    } catch (dbError: any) {
+      console.error('Chat POST getDb failed:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to post message', detail: dbError?.message ?? 'Database not configured' },
+        { status: 503 }
+      );
+    }
     const roomIdNum = parseInt(roomId, 10);
 
     if (isNaN(roomIdNum)) {
@@ -269,10 +292,11 @@ export async function POST(
     if (replyToId != null && replyToId !== '') {
       const id = parseInt(String(replyToId), 10);
       if (!Number.isNaN(id) && id > 0) {
-        const existing = await sql`
+        const existingRaw = await sql`
           SELECT id FROM chat_messages WHERE id = ${id} AND room_id = ${roomIdNum}
         `;
-        if (existing.length > 0) replyToIdNum = id;
+        const existingList = Array.isArray(existingRaw) ? existingRaw : (existingRaw as { rows?: unknown[] })?.rows ?? [];
+        if (existingList.length > 0) replyToIdNum = id;
       }
     }
 
@@ -379,9 +403,10 @@ export async function POST(
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error: any) {
+    const message = error?.message ?? String(error);
     console.error('Error posting chat message:', error);
     return NextResponse.json(
-      { error: 'Failed to post message' },
+      { error: 'Failed to post message', detail: message },
       { status: 500 }
     );
   }

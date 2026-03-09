@@ -206,6 +206,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       try {
         const response = await fetch(`/api/chat/rooms/${roomId}/messages`, {
           cache: 'no-store',
+          credentials: 'include',
           headers: { 'Cache-Control': 'no-cache' },
         });
         if (response.ok) {
@@ -215,6 +216,9 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
           if (list.length > 0) {
             lastMessageIdRef.current = Math.max(...list.map((m: ChatMessage) => m.id));
           }
+        } else {
+          const err = await response.json().catch(() => ({}));
+          console.error('Chat load failed', response.status, err);
         }
       } catch (error) {
         console.error('Error loading messages:', error);
@@ -443,6 +447,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     try {
       const response = await fetch(`/api/chat/rooms/${roomId}/messages`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -465,8 +470,9 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         lastMessageIdRef.current = Math.max(lastMessageIdRef.current, data.message.id);
         scrollToBottom();
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to send message');
+        const errBody = await response.json().catch(() => ({}));
+        const msg = errBody.detail ? `${errBody.error ?? 'Error'}: ${errBody.detail}` : (errBody.error || 'Failed to send message');
+        alert(msg);
         setNewMessage(messageToSend); // Restore message on error
         setUploadedFiles(filesToSend); // Restore files on error
       }
