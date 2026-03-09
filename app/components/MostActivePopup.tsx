@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMostActive } from '../contexts/MostActiveContext';
 
 type TabId = 'active' | 'gainers' | 'losers' | 'value';
@@ -68,7 +68,7 @@ export default function MostActivePopup() {
   const [errorHint, setErrorHint] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     if (!isMostActiveOpen) return;
     setLoading(true);
     setError(null);
@@ -94,6 +94,21 @@ export default function MostActivePopup() {
       })
       .finally(() => setLoading(false));
   }, [isMostActiveOpen, tab, limit, sector]);
+
+  // Initial load and whenever tab/limit/sector change
+  useEffect(() => {
+    if (!isMostActiveOpen) return;
+    loadData();
+  }, [isMostActiveOpen, loadData]);
+
+  // Auto-refresh while the panel is open so data stays live
+  useEffect(() => {
+    if (!isMostActiveOpen) return;
+    const id = window.setInterval(() => {
+      loadData();
+    }, 30_000); // refresh every 30 seconds
+    return () => window.clearInterval(id);
+  }, [isMostActiveOpen, loadData]);
 
   useEffect(() => {
     if (!isMostActiveOpen) return;
