@@ -30,9 +30,10 @@ export async function GET(
     }
 
     // Verify room exists
-    const rooms = await sql`
+    const roomsRaw = await sql`
       SELECT id, name, is_active FROM chat_rooms WHERE id = ${roomIdNum}
     `;
+    const rooms = Array.isArray(roomsRaw) ? roomsRaw : (roomsRaw as { rows?: { is_active?: boolean }[] })?.rows ?? [];
 
     if (rooms.length === 0) {
       return NextResponse.json(
@@ -41,7 +42,8 @@ export async function GET(
       );
     }
 
-    if (!rooms[0].is_active) {
+    const room = rooms[0] as { id: number; name: string; is_active?: boolean };
+    if (room.is_active === false) {
       return NextResponse.json(
         { error: 'Room is not active' },
         { status: 403 }
@@ -54,10 +56,9 @@ export async function GET(
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 200); // Max 200 per request
 
     // Get messages (paginated for scalability)
-    let messages;
+    let rawMessages: unknown;
     if (beforeId) {
-      // Load older messages (pagination)
-      messages = await sql`
+      rawMessages = await sql`
         SELECT 
           cm.id,
           cm.room_id,
@@ -78,8 +79,7 @@ export async function GET(
         LIMIT ${limit}
       `;
     } else {
-      // Load most recent messages
-      messages = await sql`
+      rawMessages = await sql`
         SELECT 
           cm.id,
           cm.room_id,
@@ -100,6 +100,7 @@ export async function GET(
         LIMIT ${limit}
       `;
     }
+    const messages = Array.isArray(rawMessages) ? rawMessages : (rawMessages as { rows?: unknown[] })?.rows ?? [];
 
     // Get files and reactions by joining on room (avoids ANY(array) which can fail with Neon)
     const messageIds = messages.map((m: any) => m.id);
@@ -190,7 +191,16 @@ export async function POST(
       );
     }
 
-    const { message_text, files, reply_to_id: replyToId } = await request.json();
+    let body: { message_text?: string; files?: unknown[]; reply_to_id?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+    const { message_text, files, reply_to_id: replyToId } = body;
 
     // Message text is optional if files are provided
     if (!message_text && (!files || files.length === 0)) {
@@ -211,8 +221,9 @@ export async function POST(
       : '';
 
     // Validate files array if provided
+    type FileEntry = { file_url?: string; file_name?: string; file_type?: string; file_size?: number };
     if (files && Array.isArray(files)) {
-      for (const file of files) {
+      for (const file of files as FileEntry[]) {
         if (!file.file_url || !file.file_name || !file.file_type) {
           return NextResponse.json(
             { error: 'Invalid file data. file_url, file_name, and file_type are required.' },
@@ -233,9 +244,10 @@ export async function POST(
     }
 
     // Verify room exists and is active
-    const rooms = await sql`
+    const roomsRaw = await sql`
       SELECT id, name, is_active FROM chat_rooms WHERE id = ${roomIdNum}
     `;
+    const rooms = Array.isArray(roomsRaw) ? roomsRaw : (roomsRaw as { rows?: { is_active?: boolean }[] })?.rows ?? [];
 
     if (rooms.length === 0) {
       return NextResponse.json(
@@ -244,7 +256,8 @@ export async function POST(
       );
     }
 
-    if (!rooms[0].is_active) {
+    const roomPost = rooms[0] as { id: number; name: string; is_active?: boolean };
+    if (roomPost.is_active === false) {
       return NextResponse.json(
         { error: 'Room is not active' },
         { status: 403 }
@@ -270,57 +283,56 @@ export async function POST(
       VALUES (${roomIdNum}, ${userEmail}, ${username}, ${messageText}, ${replyToIdNum})
       RETURNING id, room_id, user_email, username, message_text, created_at, reply_to_id
     `;
-
-    const messageId = result[0].id;
+    type InsertRow = { id: number; room_id: number; user_email: string; username: string; message_text: string; created_at: string; reply_to_id: number | null };
+    const row = (Array.isArray(result) ? result[0] : (result as unknown as { rows?: InsertRow[] })?.rows?.[0]) as InsertRow | undefined;
+    if (!row || row.id == null) {
+      console.error('Chat POST: INSERT RETURNING did not return a row', result);
+      return NextResponse.json(
+        { error: 'Failed to save message' },
+        { status: 500 }
+      );
+    }
+    const messageId = row.id;
 
     // Insert file attachments if provided
     if (files && Array.isArray(files) && files.length > 0) {
-      for (const file of files) {
+      for (const file of files as FileEntry[]) {
         await sql`
           INSERT INTO chat_message_files (message_id, file_url, file_name, file_type, file_size)
-          VALUES (${messageId}, ${file.file_url}, ${file.file_name}, ${file.file_type}, ${file.file_size || null})
+          VALUES (${messageId}, ${file.file_url}, ${file.file_name}, ${file.file_type}, ${file.file_size ?? null})
         `;
       }
     }
 
-    // Parse @mentions and create notifications
+    // Parse @mentions and create notifications (query one username at a time to avoid ANY(array) with Neon)
     if (sanitizedMessage) {
       const mentionRegex = /@(\w+)/g;
       const mentionedUsernames = new Set<string>();
       let match;
-      
       while ((match = mentionRegex.exec(sanitizedMessage)) !== null) {
         mentionedUsernames.add(match[1].toLowerCase());
       }
 
-      // Create notifications for mentioned users
       if (mentionedUsernames.size > 0) {
-        const mentionedUsers = await sql`
-          SELECT email, username
-          FROM users
-          WHERE LOWER(username) = ANY(${Array.from(mentionedUsernames)})
-            AND verified = true
-            AND email != ${userEmail}
-        `;
-
-        // Get room name for the notification
         const roomInfo = await sql`
           SELECT name FROM chat_rooms WHERE id = ${roomIdNum}
         `;
-        const roomName = roomInfo[0]?.name || 'Chat';
+        const roomName = (roomInfo[0] as { name?: string } | undefined)?.name || 'Chat';
+        const notifTitle = `${username} mentioned you in #${roomName}`;
+        const notifDesc = sanitizedMessage.length > 100 ? sanitizedMessage.substring(0, 100) + '...' : sanitizedMessage;
+        const notifLink = `/chat?room=${roomIdNum}`;
 
-        // Create notification for each mentioned user (type chat_mention for bell + sound)
-        for (const mentionedUser of mentionedUsers) {
-          await sql`
-            INSERT INTO notifications (title, description, link, type, user_email)
-            VALUES (
-              ${`${username} mentioned you in #${roomName}`},
-              ${sanitizedMessage.length > 100 ? sanitizedMessage.substring(0, 100) + '...' : sanitizedMessage},
-              ${`/chat?room=${roomIdNum}`},
-              'chat_mention',
-              ${mentionedUser.email}
-            )
+        for (const uname of mentionedUsernames) {
+          const mentionedUsers = await sql`
+            SELECT email, username FROM users
+            WHERE LOWER(username) = ${uname} AND verified = true AND email != ${userEmail}
           `;
+          for (const mentionedUser of mentionedUsers as { email: string; username: string }[]) {
+            await sql`
+              INSERT INTO notifications (title, description, link, type, user_email)
+              VALUES (${notifTitle}, ${notifDesc}, ${notifLink}, 'chat_mention', ${mentionedUser.email})
+            `;
+          }
         }
       }
     }
@@ -342,7 +354,7 @@ export async function POST(
         }))
       : [];
 
-    const msgRow = result[0] as { id: number; room_id: number; user_email: string; username: string; message_text: string; created_at: string; reply_to_id: number | null };
+    const msgRow = row as { id: number; room_id: number; user_email: string; username: string; message_text: string; created_at: string; reply_to_id: number | null };
     let reply_to_username: string | null = null;
     let reply_to_text: string | null = null;
     if (msgRow.reply_to_id) {
