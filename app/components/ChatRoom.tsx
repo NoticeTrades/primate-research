@@ -935,7 +935,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                               : 'bg-zinc-800 text-zinc-100 border border-zinc-700'
                           }`}
                         >
-                          {message.reply_to_id != null && (message.reply_to_username != null || message.reply_to_text != null) && (
+                          {message.reply_to_id != null && (
                             <button
                               type="button"
                               onClick={() => {
@@ -947,10 +947,12 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                               <span className="text-xs font-medium text-zinc-400">
                                 Replying to <span className="text-zinc-300">@{message.reply_to_username ?? 'unknown'}</span>
                               </span>
-                              {(message.reply_to_text ?? '').trim() && (
+                              {(message.reply_to_text ?? '').trim() ? (
                                 <span className="text-xs text-zinc-500 truncate max-w-full block">
                                   {message.reply_to_text!.length > 80 ? message.reply_to_text!.slice(0, 80) + '…' : message.reply_to_text}
                                 </span>
+                              ) : (
+                                <span className="text-xs text-zinc-500 italic">(message or attachment)</span>
                               )}
                             </button>
                           )}
