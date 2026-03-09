@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 
 const DISMISS_KEY = 'breaking-news-dismissed';
+/** If user dismissed the banner, show it again after this many ms (so they can see it on later visits). */
+const DISMISS_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 type BreakingItem = {
   title: string;
@@ -17,7 +19,11 @@ const POLL_MS = 5 * 60 * 1000; // 5 minutes
 function getDismissed(): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    return sessionStorage.getItem(DISMISS_KEY) === '1';
+    const raw = sessionStorage.getItem(DISMISS_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!Number.isFinite(ts)) return true; // legacy "1" value
+    return Date.now() - ts < DISMISS_TTL_MS;
   } catch {
     return false;
   }
@@ -25,7 +31,7 @@ function getDismissed(): boolean {
 
 function setDismissedStorage() {
   try {
-    sessionStorage.setItem(DISMISS_KEY, '1');
+    sessionStorage.setItem(DISMISS_KEY, String(Date.now()));
   } catch {}
 }
 
@@ -62,9 +68,15 @@ export default function BreakingNewsAlert() {
       fetch('/api/breaking-news', { cache: 'no-store' })
         .then((r) => r.json())
         .then((data) => {
-          setItems(Array.isArray(data.items) ? data.items : []);
+          const list = Array.isArray(data.items) ? data.items : [];
+          setItems(list);
         })
-        .catch(() => setItems([]))
+        .catch(() => {
+          // If API fails, show a single fallback so the banner still appears
+          setItems([
+            { title: 'Latest market news', url: 'https://finance.yahoo.com/news/', time: '', source: '', sentiment: '' },
+          ]);
+        })
         .finally(() => setLoading(false));
     };
 

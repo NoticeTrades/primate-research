@@ -85,26 +85,44 @@ async function fetchSpectatorIndexTweet(bearerToken: string): Promise<SpectatorR
 
 /** Parse RSS XML and return first few items (title, link). */
 async function fetchRssFallback(): Promise<BreakingItem[]> {
-  try {
-    const res = await fetch('https://finance.yahoo.com/news/rssindex', {
-      cache: 'no-store',
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' },
-    });
-    const xml = await res.text();
-    const items: BreakingItem[] = [];
-    // Match <item>...</item> with <title>, <link>, optional <pubDate>
-    const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*(?:<pubDate>([^<]*)<\/pubDate>)?[\s\S]*?<\/item>/gi;
-    let m;
-    while ((m = itemRegex.exec(xml)) !== null && items.length < 3) {
-      const title = m[1].replace(/<[^>]+>/g, '').trim();
-      const url = m[2].trim();
-      const pubDate = m[3] ? m[3].trim() : '';
-      if (title && url) items.push({ title, url, time: pubDate, source: 'Yahoo Finance', sentiment: '' });
+  const items: BreakingItem[] = [];
+  const urls = [
+    'https://finance.yahoo.com/news/rssindex',
+    'https://feeds.content.dailyfx.com/xml/dailyfx_news',
+  ];
+  const opts = { cache: 'no-store' as RequestCache, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' } };
+
+  for (const feedUrl of urls) {
+    if (items.length >= 3) break;
+    try {
+      const res = await fetch(feedUrl, opts);
+      const xml = await res.text();
+      // Match <item>...</item> with <title> and <link> (order and CDATA tolerant)
+      const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>/gi;
+      let m;
+      while ((m = itemRegex.exec(xml)) !== null && items.length < 3) {
+        const title = m[1].replace(/<[^>]+>/g, '').trim();
+        const url = m[2].trim();
+        if (title && url && url.startsWith('http')) {
+          items.push({ title, url, time: '', source: 'Yahoo Finance', sentiment: '' });
+        }
+      }
+      // Also try link before title (some feeds)
+      if (items.length === 0) {
+        const altRegex = /<item>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/gi;
+        while ((m = altRegex.exec(xml)) !== null && items.length < 3) {
+          const url = m[1].trim();
+          const title = m[2].replace(/<[^>]+>/g, '').trim();
+          if (title && url && url.startsWith('http')) {
+            items.push({ title, url, time: '', source: 'RSS', sentiment: '' });
+          }
+        }
+      }
+    } catch {
+      continue;
     }
-    return items;
-  } catch {
-    return [];
   }
+  return items;
 }
 
 /** Fetch latest market/financial news: optional Spectator Index tweet, then Alpha Vantage, with RSS fallback. */
@@ -148,13 +166,14 @@ export async function GET(request: Request) {
 
       if (!data['Note'] && !data['Information']) {
         const feed = Array.isArray(data.feed) ? data.feed : Array.isArray((data as { news?: unknown[] }).news) ? (data as { news: unknown[] }).news : [];
-        items = feed.slice(0, 3).map((item: { title?: string; url?: string; time_published?: string; source?: string; overall_sentiment_label?: string }) => ({
+        const avItems = feed.slice(0, 3).map((item: { title?: string; url?: string; time_published?: string; source?: string; overall_sentiment_label?: string }) => ({
           title: typeof item.title === 'string' ? item.title : '',
           url: typeof item.url === 'string' ? item.url : '',
           time: typeof item.time_published === 'string' ? item.time_published : '',
           source: typeof item.source === 'string' ? item.source : '',
           sentiment: typeof item.overall_sentiment_label === 'string' ? item.overall_sentiment_label : '',
         }));
+        items.push(...avItems.filter((i) => i.title && i.url));
       }
     } catch (e) {
       console.error('[breaking-news] Alpha Vantage', e);
@@ -163,6 +182,19 @@ export async function GET(request: Request) {
 
   if (items.length === 0) {
     items = await fetchRssFallback();
+  }
+
+  // Ensure we always have at least one item so the banner can show
+  if (items.length === 0) {
+    items = [
+      {
+        title: 'Latest market and world news',
+        url: 'https://finance.yahoo.com/news/',
+        time: new Date().toISOString(),
+        source: 'Headlines',
+        sentiment: '',
+      },
+    ];
   }
 
   const body: { items: BreakingItem[]; debug?: { spectator_index?: typeof spectatorDebug } } = { items };
