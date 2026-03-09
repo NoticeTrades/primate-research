@@ -612,6 +612,12 @@ export default function Navigation() {
               }
             }}
             onKeyDown={(e) => {
+              // Ignore backtick while the search terminal is focused so it only acts as a toggle key
+              if (e.key === '`' || e.key === 'Backquote') {
+                e.preventDefault();
+                return;
+              }
+
               // Handle ESC to close search
               if (e.key === 'Escape') {
                 e.preventDefault();
@@ -731,6 +737,12 @@ export default function Navigation() {
                   return;
                 }
                 if (e.key === 'Enter') {
+                  // If the query is an exact command like MOST / VOL / COMP etc,
+                  // let the form submit handler run the command instead of opening a research article.
+                  const upper = raw.toUpperCase();
+                  if (upper === 'MOST' || upper === 'VOL' || upper === 'COMP' || upper === 'R' || upper === 'V' || upper === 'EI') {
+                    return;
+                  }
                   e.preventDefault();
                   let currentIndex = 0;
                   
