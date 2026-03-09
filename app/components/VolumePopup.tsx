@@ -10,6 +10,10 @@ type VolumeRow = {
   changePercent: number;
   change: number;
   volume: number;
+  volumeAvg20?: number;
+  volumeVsAvg?: number;
+  dayRangePoints?: number;
+  dayRangePercent?: number;
 };
 
 const MIN_W = 640;
@@ -85,6 +89,10 @@ export default function VolumePopup() {
         changePercent: number;
         change: number;
         volume: number;
+        volumeAvg20?: number;
+        volumeVsAvg?: number;
+        dayRangePoints?: number;
+        dayRangePercent?: number;
       };
       const row: VolumeRow = {
         symbol: sym,
@@ -93,6 +101,10 @@ export default function VolumePopup() {
         changePercent: Number(body.changePercent) || 0,
         change: Number(body.change) || 0,
         volume: Number(body.volume) || 0,
+        volumeAvg20: typeof body.volumeAvg20 === 'number' ? body.volumeAvg20 : undefined,
+        volumeVsAvg: typeof body.volumeVsAvg === 'number' ? body.volumeVsAvg : undefined,
+        dayRangePoints: typeof body.dayRangePoints === 'number' ? body.dayRangePoints : undefined,
+        dayRangePercent: typeof body.dayRangePercent === 'number' ? body.dayRangePercent : undefined,
       };
       setRows((prev) => {
         const without = prev.filter((r) => r.symbol !== sym);
@@ -245,13 +257,19 @@ export default function VolumePopup() {
                   <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Last</th>
                   <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Chg %</th>
                   <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Chg</th>
+                  <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Range</th>
+                  <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Range %</th>
                   <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Volume</th>
+                  <th className="py-2.5 px-3 text-right font-medium text-zinc-400">Vs 20d Vol</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => {
                   const up = row.changePercent >= 0;
                   const chgClass = up ? 'text-emerald-400' : 'text-red-400';
+                  const rangePts = row.dayRangePoints ?? 0;
+                  const rangePct = row.dayRangePercent ?? 0;
+                  const volVs = row.volumeVsAvg ?? 0;
                   return (
                     <tr key={row.symbol} className="border-b border-zinc-800/70 last:border-b-0 bg-zinc-900/60 hover:bg-zinc-800/80">
                       <td className="py-2.5 px-3 font-semibold text-zinc-100 tabular-nums whitespace-nowrap">{row.symbol}</td>
@@ -266,7 +284,16 @@ export default function VolumePopup() {
                         {row.change ? `${row.change >= 0 ? '+' : ''}${row.change.toFixed(2)}` : '—'}
                       </td>
                       <td className="py-2.5 px-3 text-right text-zinc-100 tabular-nums">
+                        {rangePts ? rangePts.toFixed(1) : '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-zinc-100 tabular-nums">
+                        {rangePct ? `${rangePct.toFixed(2)}%` : '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-zinc-100 tabular-nums">
                         {row.volume ? formatNumber(row.volume) : '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-zinc-100 tabular-nums">
+                        {volVs ? `${volVs.toFixed(0)}%` : '—'}
                       </td>
                     </tr>
                   );

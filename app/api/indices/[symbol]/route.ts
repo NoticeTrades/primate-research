@@ -351,7 +351,7 @@ export async function GET(
       }
     }
 
-    // Fetch YTD data
+    // Fetch YTD data and 20-day average volume
     try {
       const ytdUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1y`;
       const ytdRes = await fetch(ytdUrl, {
@@ -362,7 +362,10 @@ export async function GET(
         const ytdData = await ytdRes.json();
         const result = ytdData?.chart?.result?.[0];
         const timestamps = result?.timestamp as number[] | undefined;
-        const closes = result?.indicators?.quote?.[0]?.close as number[] | undefined;
+        const quoteSeries = result?.indicators?.quote?.[0] as { close?: number[]; volume?: number[] } | undefined;
+        const closes = quoteSeries?.close as number[] | undefined;
+        const volumes = quoteSeries?.volume as number[] | undefined;
+
         if (Array.isArray(closes) && Array.isArray(timestamps) && timestamps.length === closes.length && closes.length > 0) {
           const yearStart = Math.floor(new Date(new Date().getFullYear(), 0, 1).getTime() / 1000);
           let ytdStart: number | null = null;
@@ -376,6 +379,18 @@ export async function GET(
           if (ytdStart == null && typeof closes[0] === 'number') ytdStart = closes[0];
           if (typeof ytdStart === 'number' && typeof lastClose === 'number' && ytdStart > 0) {
             ytdPercent = ((lastClose - ytdStart) / ytdStart) * 100;
+          }
+        }
+
+        // 20-day average volume (using most recent non-zero volumes)
+        if (Array.isArray(volumes) && volumes.length > 0) {
+          const nonZero = volumes.filter((v) => typeof v === 'number' && v > 0);
+          const last20 = nonZero.slice(-20);
+          if (last20.length > 0) {
+            const sum = last20.reduce((a, b) => a + b, 0);
+            const avg20 = sum / last20.length;
+            // attach to outer scope via mutable reference
+            (globalThis as any)._indexVolumeAvg20 = avg20;
           }
         }
       }
@@ -438,6 +453,13 @@ export async function GET(
       { term: 'Q4 Rally', months: [9, 10, 11], description: 'October–December often stronger; earnings and year-end flows.', avgReturn: getAvgForMonths([9, 10, 11]) },
     ].filter((t) => t.avgReturn != null);
 
+    const dayRangePoints = high > 0 && low > 0 ? high - low : 0;
+    const dayRangePercent = previousClose > 0 && dayRangePoints > 0 ? (dayRangePoints / previousClose) * 100 : 0;
+
+    const volumeAvg20 = typeof (globalThis as any)._indexVolumeAvg20 === 'number' ? (globalThis as any)._indexVolumeAvg20 : 0;
+    const volumeVsAvg = volumeAvg20 > 0 && volume > 0 ? (volume / volumeAvg20) * 100 : 0;
+    (globalThis as any)._indexVolumeAvg20 = undefined;
+
     const body = {
       symbol,
       name: INDEX_NAMES[symbol] || symbol,
@@ -453,6 +475,10 @@ export async function GET(
         close: price,
       },
       volume,
+      volumeAvg20: volumeAvg20 || undefined,
+      volumeVsAvg: volumeVsAvg || undefined,
+      dayRangePoints: dayRangePoints || undefined,
+      dayRangePercent: dayRangePercent || undefined,
       marketStructure: structureData[0] ? {
         daily: structureData[0].daily_structure,
         weekly: structureData[0].weekly_structure,
