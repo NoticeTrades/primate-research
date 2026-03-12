@@ -997,7 +997,7 @@ export default function AdminPage() {
     );
   }
 
-  const AdminTabPanels = () => (
+  const adminTabPanelsContent = (
     <div className="contents">
           {/* Tab: Overview */}
           {activeTab === 'overview' && (
@@ -2143,7 +2143,7 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        <AdminTabPanels />
+        {adminTabPanelsContent}
       </div>
     </div>
   );
