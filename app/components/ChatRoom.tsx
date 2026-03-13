@@ -162,6 +162,16 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
   const scrollThreshold = 80;
   const initialScrollFromStorageRef = useRef(false);
 
+  // Keep input focused when chat loads / room changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.setTimeout(() => {
+      if (messageInputRef.current) {
+        messageInputRef.current.focus();
+      }
+    }, 0);
+  }, [roomId]);
+
   // Scroll to bottom of messages (instant for initial load, smooth for new messages)
   const scrollToBottom = useCallback((instant = false) => {
     const container = messagesContainerRef.current;
@@ -484,10 +494,8 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     await uploadFiles(files);
   };
 
-  // Handle sending a message
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  // Core send logic used by both Enter key and Send button
+  const sendMessage = async () => {
     if ((!newMessage.trim() && uploadedFiles.length === 0) || isSending) return;
 
     setIsSending(true);
@@ -545,6 +553,12 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
         }, 0);
       }
     }
+  };
+
+  // Handle sending a message from form submit
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    void sendMessage();
   };
 
   // Handle deleting a message
@@ -1255,7 +1269,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
                 }
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSendMessage(e);
+                  void sendMessage();
                 }
               }}
             />
