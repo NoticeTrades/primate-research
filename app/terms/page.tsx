@@ -246,6 +246,19 @@ export default function TermsPage() {
               </p>
             </section>
 
+            <section className="mb-12">
+              <h2 className="text-2xl font-bold text-black dark:text-zinc-50 mb-4">
+                23. SMS/Text Communications & Consent
+              </h2>
+              <p className="text-lg text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                By voluntarily providing your mobile phone number and checking any box, toggling any setting, or otherwise indicating that you agree to receive text messages from Primate Trading, you expressly consent to receive recurring SMS or text communications at the number you provide, including service alerts and account-related messages. Message and data rates may apply and message frequency may vary. We maintain records of your opt-in, opt-out, and preference changes as proof of consent and may rely on those records to demonstrate that you authorized such communications. You can revoke consent at any time by following the instructions in a text message (for example, replying STOP) or by contacting us at{' '}
+                <a href="mailto:nickthomasfx@gmail.com" className="text-blue-600 dark:text-blue-400 hover:underline">
+                  nickthomasfx@gmail.com
+                </a>
+                ; revocation will not affect the lawfulness of messages sent before we reasonably could act on your request.
+              </p>
+            </section>
+
             <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800">
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
                 Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}

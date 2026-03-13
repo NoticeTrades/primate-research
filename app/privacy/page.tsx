@@ -40,6 +40,9 @@ export default function PrivacyPage() {
                 <li>
                   <strong>Communications:</strong> support requests, survey responses, and notification preferences when you contact us or subscribe to updates.
                 </li>
+                <li>
+                  <strong>Contact and consent records:</strong> your phone number (if you choose to provide it) and records of your opt-in and opt-out preferences for SMS or text messages, which we maintain as proof of consent to receive those communications.
+                </li>
               </ul>
             </section>
 
