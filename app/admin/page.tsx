@@ -118,7 +118,7 @@ export default function AdminPage() {
   const [tradeUpdateStatus, setTradeUpdateStatus] = useState('');
   const [deleteTradeId, setDeleteTradeId] = useState<number | null>(null);
   const [deleteTradeStatus, setDeleteTradeStatus] = useState('');
-  const [breakEvenStatus, setBreakEvenStatus] = useState('');
+  const [tradeActionStatus, setTradeActionStatus] = useState('');
 
   type AdminTab = 'overview' | 'notifications' | 'trades' | 'videos' | 'indices' | 'feedback' | 'users';
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -685,10 +685,34 @@ export default function AdminPage() {
     const direction = t.side === 'long' ? 'Long' : 'Short';
     const title = `Trade update — ${t.symbol} ${direction} now break even`;
     const desc = `Live trade ${direction} ${t.quantity} ${t.symbol} at ${t.entryPrice.toFixed(2)} has been moved to break even / risk managed.`;
-    setBreakEvenStatus('Sending break-even alert...');
+    setTradeActionStatus('Sending break-even alert...');
     await createBellNotification(title, desc, '/dashboard', 'trade');
-    setBreakEvenStatus('✅ Break-even alert sent.');
-    setTimeout(() => setBreakEvenStatus(''), 4000);
+    setTradeActionStatus('✅ Break-even alert sent.');
+    setTimeout(() => setTradeActionStatus(''), 4000);
+  };
+
+  const handleScaleOutTrade = async (t: { symbol: string; side: string; quantity: number; entryPrice: number }, fraction: number) => {
+    const direction = t.side === 'long' ? 'Long' : 'Short';
+    const qty = Math.max(1, Math.round(t.quantity * fraction));
+    const pctLabel = fraction === 0.5 ? '50%' : `${Math.round(fraction * 100)}%`;
+    const title = `Trade update — scaled out ${pctLabel} of ${t.symbol} ${direction}`;
+    const desc = `Scaled out ${qty} (${pctLabel}) of ${t.quantity} ${t.symbol} ${direction} at/around ${t.entryPrice.toFixed(2)}. Remaining position managed.`;
+    setTradeActionStatus(`Sending scale-out ${pctLabel} alert...`);
+    await createBellNotification(title, desc, '/dashboard', 'trade');
+    setTradeActionStatus('✅ Scale-out alert sent.');
+    setTimeout(() => setTradeActionStatus(''), 4000);
+  };
+
+  const handleAddSizeTrade = async (t: { symbol: string; side: string; quantity: number; entryPrice: number }, fraction: number) => {
+    const direction = t.side === 'long' ? 'Long' : 'Short';
+    const addedQty = Math.max(1, Math.round(t.quantity * fraction));
+    const pctLabel = fraction === 0.5 ? '50%' : `${Math.round(fraction * 100)}%`;
+    const title = `Trade update — added ${pctLabel} size to ${t.symbol} ${direction}`;
+    const desc = `Added ${addedQty} (${pctLabel}) more contracts to live ${t.symbol} ${direction} position (current base ${t.quantity} @ ${t.entryPrice.toFixed(2)}).`;
+    setTradeActionStatus(`Sending add-size ${pctLabel} alert...`);
+    await createBellNotification(title, desc, '/dashboard', 'trade');
+    setTradeActionStatus('✅ Add-size alert sent.');
+    setTimeout(() => setTradeActionStatus(''), 4000);
   };
 
   const handleVideoUpload = async () => {
@@ -1474,10 +1498,11 @@ export default function AdminPage() {
                               {t.status}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {t.status === 'open' && (
                               <>
                                 <button
+                                  type="button"
                                   onClick={() => handleBreakEvenTrade(t)}
                                   className="px-3 py-1.5 bg-sky-700/80 hover:bg-sky-600 text-white text-xs font-semibold rounded-lg"
                                   title="Send alert that this trade is now break even / risk managed"
@@ -1485,6 +1510,31 @@ export default function AdminPage() {
                                   Break even
                                 </button>
                                 <button
+                                  type="button"
+                                  onClick={() => handleScaleOutTrade(t, 0.5)}
+                                  className="px-3 py-1.5 bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg"
+                                  title="Send alert that 50% of the position has been taken off"
+                                >
+                                  Scale out 50%
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddSizeTrade(t, 0.5)}
+                                  className="px-3 py-1.5 bg-indigo-700/80 hover:bg-indigo-600 text-white text-xs font-semibold rounded-lg"
+                                  title="Send alert that an additional 50% size has been added"
+                                >
+                                  Add 50%
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddSizeTrade(t, 1)}
+                                  className="px-3 py-1.5 bg-purple-700/80 hover:bg-purple-600 text-white text-xs font-semibold rounded-lg"
+                                  title="Send alert that an additional 100% size has been added"
+                                >
+                                  Add 100%
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => openEditTradeAsClose(t)}
                                   className="px-3 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg"
                                   title="Mark trade closed: enter exit price and save"
@@ -1518,9 +1568,9 @@ export default function AdminPage() {
                 {deleteTradeStatus}
               </div>
             )}
-            {breakEvenStatus && (
-              <div className={`px-6 py-2 border-t border-zinc-800 text-sm ${breakEvenStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
-                {breakEvenStatus}
+            {tradeActionStatus && (
+              <div className={`px-6 py-2 border-t border-zinc-800 text-sm ${tradeActionStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
+                {tradeActionStatus}
               </div>
             )}
           </div>
