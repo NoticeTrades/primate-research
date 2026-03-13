@@ -536,6 +536,10 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
       setUploadedFiles(filesToSend); // Restore files on error
     } finally {
       setIsSending(false);
+      // Keep focus in the input so user can type the next message immediately
+      if (messageInputRef.current) {
+        messageInputRef.current.focus();
+      }
     }
   };
 
