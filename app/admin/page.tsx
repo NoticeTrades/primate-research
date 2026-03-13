@@ -118,6 +118,7 @@ export default function AdminPage() {
   const [tradeUpdateStatus, setTradeUpdateStatus] = useState('');
   const [deleteTradeId, setDeleteTradeId] = useState<number | null>(null);
   const [deleteTradeStatus, setDeleteTradeStatus] = useState('');
+  const [breakEvenStatus, setBreakEvenStatus] = useState('');
 
   type AdminTab = 'overview' | 'notifications' | 'trades' | 'videos' | 'indices' | 'feedback' | 'users';
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -678,6 +679,16 @@ export default function AdminPage() {
     } catch (e: any) {
       setDeleteTradeStatus(e.message || 'Failed to delete');
     }
+  };
+
+  const handleBreakEvenTrade = async (t: { symbol: string; side: string; quantity: number; entryPrice: number }) => {
+    const direction = t.side === 'long' ? 'Long' : 'Short';
+    const title = `Trade update — ${t.symbol} ${direction} now break even`;
+    const desc = `Live trade ${direction} ${t.quantity} ${t.symbol} at ${t.entryPrice.toFixed(2)} has been moved to break even / risk managed.`;
+    setBreakEvenStatus('Sending break-even alert...');
+    await createBellNotification(title, desc, '/dashboard', 'trade');
+    setBreakEvenStatus('✅ Break-even alert sent.');
+    setTimeout(() => setBreakEvenStatus(''), 4000);
   };
 
   const handleVideoUpload = async () => {
@@ -1465,13 +1476,22 @@ export default function AdminPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             {t.status === 'open' && (
-                              <button
-                                onClick={() => openEditTradeAsClose(t)}
-                                className="px-3 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg"
-                                title="Mark trade closed: enter exit price and save"
-                              >
-                                Close trade
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleBreakEvenTrade(t)}
+                                  className="px-3 py-1.5 bg-sky-700/80 hover:bg-sky-600 text-white text-xs font-semibold rounded-lg"
+                                  title="Send alert that this trade is now break even / risk managed"
+                                >
+                                  Break even
+                                </button>
+                                <button
+                                  onClick={() => openEditTradeAsClose(t)}
+                                  className="px-3 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg"
+                                  title="Mark trade closed: enter exit price and save"
+                                >
+                                  Close trade
+                                </button>
+                              </>
                             )}
                             <button
                               onClick={() => openEditTrade(t)}
@@ -1496,6 +1516,11 @@ export default function AdminPage() {
             {deleteTradeStatus && (
               <div className={`px-6 py-2 border-t border-zinc-800 text-sm ${deleteTradeStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
                 {deleteTradeStatus}
+              </div>
+            )}
+            {breakEvenStatus && (
+              <div className={`px-6 py-2 border-t border-zinc-800 text-sm ${breakEvenStatus.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
+                {breakEvenStatus}
               </div>
             )}
           </div>
