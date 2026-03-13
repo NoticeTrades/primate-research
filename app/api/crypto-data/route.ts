@@ -5,145 +5,51 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const apiKey = process.env.COINMARKETCAP_API_KEY;
-    
-    // Use CoinMarketCap for real-time prices if API key is available
-    if (apiKey) {
-      try {
-        console.log('[Crypto Data API] Using CoinMarketCap for real-time data');
-        
-        // CoinMarketCap API v2 - get latest quotes for BTC and ETH
-        const cmcUrl = `https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?symbol=BTC,ETH&convert=USD`;
-        const cmcRes = await fetch(cmcUrl, {
-          headers: {
-            'X-CMC_PRO_API_KEY': apiKey,
-            'Accept': 'application/json',
-          },
+    // Prefer CoinGecko (no key required) for BTC/ETH USD prices and 24h change
+    try {
+      console.log('[Crypto Data API] Using CoinGecko simple price API');
+      const cgRes = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true',
+        {
+          headers: { Accept: 'application/json' },
           cache: 'no-store',
-        });
-
-        // Handle rate limiting
-        if (cmcRes.status === 429) {
-          console.warn('[Crypto Data API] CoinMarketCap rate limit (429) - falling back to Yahoo Finance');
-          // Fall through to Yahoo Finance fallback
-        } else if (cmcRes.ok) {
-          const cmcData = await cmcRes.json();
-          const result: { bitcoin?: { usd: number; usd_24h_change: number }; ethereum?: { usd: number; usd_24h_change: number } } = {};
-
-          // Process Bitcoin
-          if (cmcData.data?.BTC?.[0]) {
-            const btc = cmcData.data.BTC[0];
-            const price = btc.quote?.USD?.price || 0;
-            
-            // Get day's open from Yahoo Finance for accurate intraday change calculation
-            let dayOpen = 0;
-            try {
-              const yahooChartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?interval=1m&range=1d`;
-              const yahooChartRes = await fetch(yahooChartUrl, {
-                headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-                cache: 'no-store',
-              });
-              if (yahooChartRes.ok) {
-                const chartData = await yahooChartRes.json();
-                const meta = chartData?.chart?.result?.[0]?.meta;
-                const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
-                if (meta?.regularMarketOpen) {
-                  dayOpen = meta.regularMarketOpen;
-                } else if (quote?.open && Array.isArray(quote.open)) {
-                  const opens = quote.open.filter((n: number) => n != null && typeof n === 'number' && n > 0);
-                  if (opens.length > 0) {
-                    dayOpen = opens[0];
-                  }
-                }
-              }
-            } catch (err) {
-              console.error('[Crypto Data API] Error fetching BTC day open from Yahoo:', err);
-            }
-            
-            // Calculate intraday change from day's open if available, otherwise use CoinMarketCap's 24h change
-            let changePercent = 0;
-            if (dayOpen > 0 && price > 0) {
-              changePercent = ((price - dayOpen) / dayOpen) * 100;
-              console.log(`[Crypto Data API] CoinMarketCap BTC: price=${price}, dayOpen=${dayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
-            } else if (price > 0) {
-              // Fallback to CoinMarketCap's 24h change if day's open not available
-              changePercent = btc.quote?.USD?.percent_change_24h || 0;
-              console.warn(`[Crypto Data API] CoinMarketCap BTC: Using 24h change fallback: ${changePercent.toFixed(2)}%`);
-            }
-            
-            if (price > 0) {
-              result.bitcoin = {
-                usd: price,
-                usd_24h_change: changePercent,
-              };
-            }
-          }
-
-          // Process Ethereum
-          if (cmcData.data?.ETH?.[0]) {
-            const eth = cmcData.data.ETH[0];
-            const price = eth.quote?.USD?.price || 0;
-            
-            // Get day's open from Yahoo Finance for accurate intraday change calculation
-            let dayOpen = 0;
-            try {
-              const yahooChartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/ETH-USD?interval=1m&range=1d`;
-              const yahooChartRes = await fetch(yahooChartUrl, {
-                headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-                cache: 'no-store',
-              });
-              if (yahooChartRes.ok) {
-                const chartData = await yahooChartRes.json();
-                const meta = chartData?.chart?.result?.[0]?.meta;
-                const quote = chartData?.chart?.result?.[0]?.indicators?.quote?.[0];
-                if (meta?.regularMarketOpen) {
-                  dayOpen = meta.regularMarketOpen;
-                } else if (quote?.open && Array.isArray(quote.open)) {
-                  const opens = quote.open.filter((n: number) => n != null && typeof n === 'number' && n > 0);
-                  if (opens.length > 0) {
-                    dayOpen = opens[0];
-                  }
-                }
-              }
-            } catch (err) {
-              console.error('[Crypto Data API] Error fetching ETH day open from Yahoo:', err);
-            }
-            
-            // Calculate intraday change from day's open if available, otherwise use CoinMarketCap's 24h change
-            let changePercent = 0;
-            if (dayOpen > 0 && price > 0) {
-              changePercent = ((price - dayOpen) / dayOpen) * 100;
-              console.log(`[Crypto Data API] CoinMarketCap ETH: price=${price}, dayOpen=${dayOpen}, intradayChange=${changePercent.toFixed(2)}%`);
-            } else if (price > 0) {
-              // Fallback to CoinMarketCap's 24h change if day's open not available
-              changePercent = eth.quote?.USD?.percent_change_24h || 0;
-              console.warn(`[Crypto Data API] CoinMarketCap ETH: Using 24h change fallback: ${changePercent.toFixed(2)}%`);
-            }
-            
-            if (price > 0) {
-              result.ethereum = {
-                usd: price,
-                usd_24h_change: changePercent,
-              };
-            }
-          }
-
-          if (result.bitcoin || result.ethereum) {
-            console.log('[Crypto Data API] CoinMarketCap result:', JSON.stringify(result));
-            return NextResponse.json(result);
-          }
-        } else {
-          const errorText = await cmcRes.text();
-          console.error(`[Crypto Data API] CoinMarketCap API error: ${cmcRes.status} - ${errorText}`);
         }
-      } catch (cmcError) {
-        console.error('[Crypto Data API] CoinMarketCap API error:', cmcError);
+      );
+
+      if (cgRes.ok) {
+        const cgData = await cgRes.json();
+        const result: {
+          bitcoin?: { usd: number; usd_24h_change: number };
+          ethereum?: { usd: number; usd_24h_change: number };
+        } = {};
+
+        if (cgData.bitcoin?.usd) {
+          result.bitcoin = {
+            usd: Number(cgData.bitcoin.usd) || 0,
+            usd_24h_change: Number(cgData.bitcoin.usd_24h_change) || 0,
+          };
+        }
+
+        if (cgData.ethereum?.usd) {
+          result.ethereum = {
+            usd: Number(cgData.ethereum.usd) || 0,
+            usd_24h_change: Number(cgData.ethereum.usd_24h_change) || 0,
+          };
+        }
+
+        if (result.bitcoin || result.ethereum) {
+          console.log('[Crypto Data API] CoinGecko result:', JSON.stringify(result));
+          return NextResponse.json(result);
+        }
+        console.warn('[Crypto Data API] CoinGecko returned no usable data, falling back to Yahoo Finance');
+      } else {
+        console.warn(`[Crypto Data API] CoinGecko response not OK (${cgRes.status}), falling back to Yahoo Finance`);
       }
-    } else {
-      console.warn('[Crypto Data API] COINMARKETCAP_API_KEY not set, falling back to Yahoo Finance');
+    } catch (cgError) {
+      console.error('[Crypto Data API] CoinGecko error, falling back to Yahoo Finance:', cgError);
     }
 
-    // Fallback to Yahoo Finance if CoinMarketCap fails or API key not set
+    // Fallback to Yahoo Finance if CoinGecko fails
     return await fetchYahooFinanceData();
   } catch (error) {
     console.error('Error fetching crypto data:', error);
