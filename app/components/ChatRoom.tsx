@@ -537,8 +537,12 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
     } finally {
       setIsSending(false);
       // Keep focus in the input so user can type the next message immediately
-      if (messageInputRef.current) {
-        messageInputRef.current.focus();
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          if (messageInputRef.current) {
+            messageInputRef.current.focus();
+          }
+        }, 0);
       }
     }
   };
@@ -1236,8 +1240,7 @@ export default function ChatRoom({ roomId, roomName, currentUserEmail, currentUs
               onPaste={handlePaste}
               placeholder="Type a message, @mention someone, or paste an image..."
               maxLength={2000}
-              disabled={isSending}
-              className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent disabled:opacity-50"
+              className="w-full px-4 py-2.5 bg-zinc-800/80 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
               onKeyDown={(e) => {
                 if (showMentionSuggestions && mentionSuggestions.length > 0) {
                   // Handle arrow keys for mention selection
