@@ -84,6 +84,12 @@ async function fetchN225SessionOpen(yahooSymbol: string): Promise<number> {
 
 /** When market is closed (e.g. weekend), quote APIs often return change 0. Get last session change from 5d daily chart (last close vs previous close). */
 async function fetchLastSessionChangeFromChart(yahooSymbol: string): Promise<{ change: number; changePercent: number; previousClose: number } | null> {
+  const full = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
+  return full ? { change: full.change, changePercent: full.changePercent, previousClose: full.previousClose } : null;
+}
+
+/** Get last close (price) and last-session change from 5d daily chart. Used when market is closed (e.g. weekend) so nav bar shows Friday close and % change. */
+async function fetchPriceAndChangeFrom5dChart(yahooSymbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
     const res = await fetch(url, {
@@ -101,7 +107,7 @@ async function fetchLastSessionChangeFromChart(yahooSymbol: string): Promise<{ c
     if (typeof lastClose !== 'number' || typeof prevClose !== 'number' || prevClose <= 0) return null;
     const change = lastClose - prevClose;
     const changePercent = (change / prevClose) * 100;
-    return { change, changePercent, previousClose: prevClose };
+    return { price: lastClose, change, changePercent, previousClose: prevClose };
   } catch {
     return null;
   }
@@ -210,7 +216,21 @@ export async function GET(request: Request) {
           ytdPercent: ytdPercent ?? undefined,
         }, { headers: NO_CACHE_HEADERS });
       }
-      // Twelve Data failed: try Yahoo 5m intraday for slightly fresher price than quote API
+      // Twelve Data failed (e.g. weekend): use 5d chart so nav bar shows last close (e.g. Friday) and last-session % change
+      const chart5d = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
+      if (chart5d && chart5d.price > 0) {
+        const yahooSymbolForYtd = YAHOO_SYMBOLS[symbol] || symbol;
+        const ytdPercent = await fetchYtdFromYahoo(yahooSymbolForYtd);
+        return NextResponse.json({
+          symbol,
+          price: chart5d.price,
+          change: chart5d.change,
+          changePercent: chart5d.changePercent,
+          previousClose: chart5d.previousClose,
+          ytdPercent: ytdPercent ?? undefined,
+        }, { headers: NO_CACHE_HEADERS });
+      }
+      // When market is open: try Yahoo 5m intraday for slightly fresher price than quote API
       try {
         const intradayUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=5m&range=1d`;
         const intradayRes = await fetch(intradayUrl, {
