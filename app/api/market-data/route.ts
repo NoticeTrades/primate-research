@@ -88,29 +88,48 @@ async function fetchLastSessionChangeFromChart(yahooSymbol: string): Promise<{ c
   return full ? { change: full.change, changePercent: full.changePercent, previousClose: full.previousClose } : null;
 }
 
-/** Get last close (price) and last-session change from 5d daily chart. Used when market is closed (e.g. weekend) so nav bar shows Friday close and % change. */
+const YAHOO_CHART_HEADERS = {
+  'Accept': 'application/json',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+} as const;
+
+/** Get last close (price) and last-session change from Yahoo daily chart. Tries 5d first, then 1mo if needed. Used when Twelve Data fails or market is closed so nav bar shows last close and % change. */
 async function fetchPriceAndChangeFrom5dChart(yahooSymbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
-  try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
-    const res = await fetch(url, {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-      cache: 'no-store',
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const result = data?.chart?.result?.[0];
-    const quote = result?.indicators?.quote?.[0];
-    const closeArr = quote?.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number' && n > 0) : []) : [];
-    if (closeArr.length < 2) return null;
-    const lastClose = closeArr[closeArr.length - 1];
-    const prevClose = closeArr[closeArr.length - 2];
-    if (typeof lastClose !== 'number' || typeof prevClose !== 'number' || prevClose <= 0) return null;
-    const change = lastClose - prevClose;
-    const changePercent = (change / prevClose) * 100;
-    return { price: lastClose, change, changePercent, previousClose: prevClose };
-  } catch {
-    return null;
+  for (const range of ['5d', '1mo'] as const) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=${range}`;
+      const res = await fetch(url, { headers: YAHOO_CHART_HEADERS, cache: 'no-store' });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const result = data?.chart?.result?.[0];
+      const meta = result?.meta;
+      const quote = result?.indicators?.quote?.[0];
+      const closeArr = quote?.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number' && n > 0) : []) : [];
+      let lastClose: number;
+      let prevClose: number;
+      if (closeArr.length >= 2) {
+        lastClose = closeArr[closeArr.length - 1];
+        prevClose = closeArr[closeArr.length - 2];
+      } else if (closeArr.length === 1 && meta?.regularMarketPrice) {
+        lastClose = closeArr[0];
+        prevClose = meta.previousClose ?? meta.chartPreviousClose ?? lastClose;
+        if (prevClose <= 0 || prevClose === lastClose) continue;
+      } else if (meta?.regularMarketPrice && (meta?.previousClose ?? meta?.chartPreviousClose)) {
+        lastClose = meta.regularMarketPrice;
+        prevClose = meta.previousClose ?? meta.chartPreviousClose;
+        if (prevClose <= 0) continue;
+      } else {
+        continue;
+      }
+      if (typeof lastClose !== 'number' || typeof prevClose !== 'number' || prevClose <= 0) continue;
+      const change = lastClose - prevClose;
+      const changePercent = (change / prevClose) * 100;
+      return { price: lastClose, change, changePercent, previousClose: prevClose };
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 /** Fetch YTD % from Yahoo chart (1y daily). Used for futures when Twelve Data doesn't provide YTD. */
@@ -146,7 +165,7 @@ async function fetchYtdFromYahoo(yahooSymbol: string): Promise<number | null> {
   }
 }
 
-/** Twelve Data: get real-time price and session open for index/commodity futures (ES, NQ, YM, RTY, CL). */
+/** Twelve Data: get real-time price and session open for index/commodity futures (ES, NQ, YM, RTY, CL). Returns null when out of data (429/402) or any error so caller can re-route to Yahoo. */
 async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
   if (!apiKey) return null;
@@ -164,6 +183,8 @@ async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; 
         fetch(`https://api.twelvedata.com/price?symbol=${twelveSymbol}&apikey=${apiKey}`, { cache: 'no-store' }),
         fetch(`https://api.twelvedata.com/quote?symbol=${twelveSymbol}&apikey=${apiKey}`, { cache: 'no-store' }),
       ]);
+      // Out of data / rate limit / payment required: fail fast and re-route to Yahoo
+      if (priceRes.status === 429 || priceRes.status === 402 || quoteRes.status === 429 || quoteRes.status === 402) return null;
       if (!priceRes.ok || !quoteRes.ok) continue;
       const priceData = await priceRes.json();
       const quoteData = await quoteRes.json();
@@ -268,7 +289,44 @@ export async function GET(request: Request) {
           }
         }
       } catch {
-        // fall through to generic Yahoo quote
+        // fall through
+      }
+      // Twelve Data failed and 5d/intraday didn't return: explicitly fetch Yahoo quote so nav bar gets data
+      try {
+        const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSymbol)}`;
+        const quoteRes = await fetch(quoteUrl, { headers: { ...YAHOO_CHART_HEADERS }, cache: 'no-store' });
+        if (quoteRes.ok) {
+          const data = await quoteRes.json();
+          const q = data?.quoteResponse?.result?.[0];
+          if (q) {
+            const regularMarketPrice = q.regularMarketPrice ?? q.price ?? 0;
+            let previousClose = q.regularMarketPreviousClose ?? q.previousClose ?? 0;
+            if (previousClose === 0 || previousClose === regularMarketPrice) previousClose = q.previousClose ?? q.regularMarketPreviousClose ?? regularMarketPrice;
+            if (regularMarketPrice > 0) {
+              let change = previousClose > 0 ? regularMarketPrice - previousClose : 0;
+              let changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
+              if (change === 0 && changePercent === 0) {
+                const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
+                if (lastSession) {
+                  change = lastSession.change;
+                  changePercent = lastSession.changePercent;
+                  previousClose = lastSession.previousClose;
+                }
+              }
+              const ytdPercent = await fetchYtdFromYahoo(yahooSymbol);
+              return NextResponse.json({
+                symbol,
+                price: regularMarketPrice,
+                change,
+                changePercent,
+                previousClose,
+                ytdPercent: ytdPercent ?? undefined,
+              }, { headers: NO_CACHE_HEADERS });
+            }
+          }
+        }
+      } catch {
+        // fall through to generic Yahoo quote below
       }
     }
     // Use CoinMarketCap for BTC/ETH if API key is available
