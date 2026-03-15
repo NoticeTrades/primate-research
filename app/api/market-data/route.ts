@@ -93,6 +93,43 @@ const YAHOO_CHART_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 } as const;
 
+/** Alpha Vantage GLOBAL_QUOTE - better reliability than Yahoo when available. Free tier: 5 req/min so we cache 90s per symbol. */
+const alphaVantageCache = new Map<string, { data: { price: number; change: number; changePercent: number; previousClose: number }; until: number }>();
+const ALPHA_VANTAGE_CACHE_MS = 90_000;
+
+async function fetchAlphaVantageQuote(symbol: string, yahooSymbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
+  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+  if (!apiKey) return null;
+  const now = Date.now();
+  const cached = alphaVantageCache.get(symbol);
+  if (cached && cached.until > now) return cached.data;
+  try {
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(yahooSymbol)}&apikey=${apiKey}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const q = data?.['Global Quote'];
+    if (!q) return null;
+    const price = parseFloat(q['05. price']);
+    const previousClose = parseFloat(q['08. previous close']);
+    const change = parseFloat(q['09. change']);
+    const changePercentStr = q['10. change percent'];
+    let changePercent = typeof changePercentStr === 'string' ? parseFloat(changePercentStr.replace('%', '')) : 0;
+    if (Number.isNaN(changePercent) && previousClose > 0 && !Number.isNaN(change)) changePercent = (change / previousClose) * 100;
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const result = {
+      price,
+      change: Number.isFinite(change) ? change : price - previousClose,
+      changePercent: Number.isFinite(changePercent) ? changePercent : (previousClose > 0 ? ((price - previousClose) / previousClose) * 100 : 0),
+      previousClose: Number.isFinite(previousClose) ? previousClose : price,
+    };
+    alphaVantageCache.set(symbol, { data: result, until: now + ALPHA_VANTAGE_CACHE_MS });
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 /** Get last close (price) and last-session change from Yahoo daily chart. Tries 5d first, then 1mo if needed. Used when Twelve Data fails or market is closed so nav bar shows last close and % change. */
 async function fetchPriceAndChangeFrom5dChart(yahooSymbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
   for (const range of ['5d', '1mo'] as const) {
@@ -240,7 +277,31 @@ export async function GET(request: Request) {
           ytdPercent: ytdPercent ?? undefined,
         }, { headers: NO_CACHE_HEADERS });
       }
-      // Twelve Data failed (e.g. weekend): use 5d chart so nav bar shows last close (e.g. Friday) and last-session % change
+      // Twelve Data failed: try Alpha Vantage next (more reliable than Yahoo; free tier 5/min so we cache 90s)
+      const av = await fetchAlphaVantageQuote(symbol, yahooSymbol);
+      if (av && av.price > 0) {
+        let change = av.change;
+        let changePercent = av.changePercent;
+        let previousClose = av.previousClose;
+        if (change === 0 && changePercent === 0) {
+          const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
+          if (lastSession) {
+            change = lastSession.change;
+            changePercent = lastSession.changePercent;
+            previousClose = lastSession.previousClose;
+          }
+        }
+        const ytdPercent = await fetchYtdFromYahoo(YAHOO_SYMBOLS[symbol] || symbol);
+        return NextResponse.json({
+          symbol,
+          price: av.price,
+          change,
+          changePercent,
+          previousClose,
+          ytdPercent: ytdPercent ?? undefined,
+        }, { headers: NO_CACHE_HEADERS });
+      }
+      // Fallback: Yahoo 5d chart so nav bar shows last close and last-session % change
       const chart5d = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
       let useChart5d = chart5d != null && chart5d.price > 0;
       if (useChart5d && chart5d) {
@@ -427,6 +488,38 @@ export async function GET(request: Request) {
         console.error(`[Market Data API] CoinMarketCap API error for ${symbol}:`, cmcError);
       }
       // Fall through to Yahoo Finance if CoinMarketCap fails
+    }
+
+    // For DXY, GC, SI and any symbol not in index futures: try Alpha Vantage before Yahoo (better data when available)
+    if (symbol !== 'BTC' && symbol !== 'ETH' && YAHOO_SYMBOLS[symbol]) {
+      const av = await fetchAlphaVantageQuote(symbol, yahooSymbol);
+      if (av && av.price > 0) {
+        let change = av.change;
+        let changePercent = av.changePercent;
+        let previousClose = av.previousClose;
+        if (change === 0 && changePercent === 0) {
+          const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
+          if (lastSession) {
+            change = lastSession.change;
+            changePercent = lastSession.changePercent;
+            previousClose = lastSession.previousClose;
+          }
+        }
+        let ytdPercent: number | null = null;
+        try {
+          ytdPercent = await fetchYtdFromYahoo(yahooSymbol);
+        } catch {
+          // ignore
+        }
+        return NextResponse.json({
+          symbol,
+          price: av.price,
+          change,
+          changePercent,
+          previousClose,
+          ytdPercent: ytdPercent ?? undefined,
+        }, { headers: NO_CACHE_HEADERS });
+      }
     }
 
     const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSymbol)}`;
