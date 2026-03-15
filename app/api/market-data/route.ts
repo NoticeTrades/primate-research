@@ -110,6 +110,9 @@ async function fetchPriceAndChangeFrom5dChart(yahooSymbol: string): Promise<{ pr
       if (closeArr.length >= 2) {
         lastClose = closeArr[closeArr.length - 1];
         prevClose = closeArr[closeArr.length - 2];
+        // If last two closes are equal (e.g. weekend duplicate), use earlier close so we get non-zero change
+        if (lastClose === prevClose && closeArr.length >= 3) prevClose = closeArr[closeArr.length - 3];
+        if (prevClose <= 0 || prevClose === lastClose) continue;
       } else if (closeArr.length === 1 && meta?.regularMarketPrice) {
         lastClose = closeArr[0];
         prevClose = meta.previousClose ?? meta.chartPreviousClose ?? lastClose;
@@ -209,8 +212,8 @@ export async function GET(request: Request) {
   const yahooSymbol = YAHOO_SYMBOLS[symbol] || symbol;
 
   try {
-    // Index/commodity futures: try Twelve Data first (real-time; Yahoo is 10–15 min delayed)
-    const indexFutures = ['ES', 'NQ', 'YM', 'RTY', 'CL'];
+    // Index/commodity futures (and N225): try Twelve Data first when supported; else Yahoo 5d chart + quote so nav bar always gets data
+    const indexFutures = ['ES', 'NQ', 'YM', 'RTY', 'CL', 'N225'];
     if (indexFutures.includes(symbol)) {
       const twelve = await fetchTwelveDataFutures(symbol);
       if (twelve) {
@@ -239,17 +242,35 @@ export async function GET(request: Request) {
       }
       // Twelve Data failed (e.g. weekend): use 5d chart so nav bar shows last close (e.g. Friday) and last-session % change
       const chart5d = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
-      if (chart5d && chart5d.price > 0) {
-        const yahooSymbolForYtd = YAHOO_SYMBOLS[symbol] || symbol;
-        const ytdPercent = await fetchYtdFromYahoo(yahooSymbolForYtd);
-        return NextResponse.json({
-          symbol,
-          price: chart5d.price,
-          change: chart5d.change,
-          changePercent: chart5d.changePercent,
-          previousClose: chart5d.previousClose,
-          ytdPercent: ytdPercent ?? undefined,
-        }, { headers: NO_CACHE_HEADERS });
+      let useChart5d = chart5d != null && chart5d.price > 0;
+      if (useChart5d && chart5d) {
+        let change = chart5d.change;
+        let changePercent = chart5d.changePercent;
+        let previousClose = chart5d.previousClose;
+        // Never return 0% when we have a valid price - fill from last session if chart gave 0
+        if (change === 0 && changePercent === 0) {
+          const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
+          if (lastSession) {
+            change = lastSession.change;
+            changePercent = lastSession.changePercent;
+            previousClose = lastSession.previousClose;
+          } else {
+            // Chart gave price but no change and lastSession failed; try quote path below instead of returning 0%
+            useChart5d = false;
+          }
+        }
+        if (useChart5d) {
+          const yahooSymbolForYtd = YAHOO_SYMBOLS[symbol] || symbol;
+          const ytdPercent = await fetchYtdFromYahoo(yahooSymbolForYtd);
+          return NextResponse.json({
+            symbol,
+            price: chart5d.price,
+            change,
+            changePercent,
+            previousClose,
+            ytdPercent: ytdPercent ?? undefined,
+          }, { headers: NO_CACHE_HEADERS });
+        }
       }
       // When market is open: try Yahoo 5m intraday for slightly fresher price than quote API
       try {
