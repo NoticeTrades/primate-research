@@ -49,6 +49,31 @@ const VOLUME_TYPE: Record<string, 'contracts' | 'constituent'> = {
   DAX: 'constituent',
 };
 
+/** When market is closed (e.g. weekend), APIs often return change 0. Get last session change from 5d daily chart. */
+async function fetchLastSessionChangeFromChart(yahooSymbol: string): Promise<{ change: number; changePercent: number; previousClose: number } | null> {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const result = data?.chart?.result?.[0];
+    const quote = result?.indicators?.quote?.[0];
+    const closeArr = quote?.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number' && n > 0) : []) : [];
+    if (closeArr.length < 2) return null;
+    const lastClose = closeArr[closeArr.length - 1];
+    const prevClose = closeArr[closeArr.length - 2];
+    if (typeof lastClose !== 'number' || typeof prevClose !== 'number' || prevClose <= 0) return null;
+    const change = lastClose - prevClose;
+    const changePercent = (change / prevClose) * 100;
+    return { change, changePercent, previousClose: prevClose };
+  } catch {
+    return null;
+  }
+}
+
 // Fetch data from Alpha Vantage (more reliable for futures)
 async function fetchAlphaVantageData(symbol: string) {
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
@@ -209,6 +234,15 @@ export async function GET(
       low = twelveData.holc.low;
       open = twelveData.holc.open;
       volume = twelveData.volume;
+      // When markets are closed (e.g. weekend), Twelve Data often returns change 0. Use last session from 5d chart.
+      if (price > 0 && changePercent === 0 && change === 0 && YAHOO_SYMBOLS[symbol]) {
+        const lastSession = await fetchLastSessionChangeFromChart(YAHOO_SYMBOLS[symbol]);
+        if (lastSession) {
+          change = lastSession.change;
+          changePercent = lastSession.changePercent;
+          previousClose = lastSession.previousClose;
+        }
+      }
     } else {
       console.log(`[Index API] Twelve Data failed for ${symbol}, falling back to Yahoo Finance`);
     }
@@ -229,11 +263,20 @@ export async function GET(
           const closes = quote?.close ? (Array.isArray(quote.close) ? quote.close.filter((n: number) => n != null && typeof n === 'number') : []) : [];
           const lastClose = closes.length > 0 ? closes[closes.length - 1] : 0;
           if (lastClose > 0) {
-            const prevClose = meta?.previousClose ?? (closes.length >= 2 ? closes[closes.length - 2] : lastClose);
+            let prevClose = meta?.previousClose ?? (closes.length >= 2 ? closes[closes.length - 2] : lastClose);
             price = lastClose;
             previousClose = prevClose;
             change = prevClose > 0 ? price - prevClose : 0;
             changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+            // When markets are closed (e.g. weekend), intraday may give change 0. Use last session from 5d chart.
+            if (change === 0 && changePercent === 0) {
+              const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
+              if (lastSession) {
+                change = lastSession.change;
+                changePercent = lastSession.changePercent;
+                previousClose = lastSession.previousClose;
+              }
+            }
             if (meta?.regularMarketOpen) open = meta.regularMarketOpen;
             if (meta?.regularMarketDayHigh) high = meta.regularMarketDayHigh;
             if (meta?.regularMarketDayLow) low = meta.regularMarketDayLow;
