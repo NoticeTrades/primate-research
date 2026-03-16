@@ -26,7 +26,8 @@ export interface NewsEvent {
 
 export type SectionTextBlock = { type: 'text'; content: string };
 export type SectionImagesBlock = { type: 'images'; images: string[]; imageClassName?: string };
-export type SectionBlock = SectionTextBlock | SectionImagesBlock;
+export type SectionTweetBlock = { type: 'tweet'; url: string };
+export type SectionBlock = SectionTextBlock | SectionImagesBlock | SectionTweetBlock;
 
 export interface ReportSection {
   title: string;
@@ -35,6 +36,8 @@ export interface ReportSection {
   images?: string[]; // paths to chart images in /public/charts/
   /** When set, section is rendered as ordered blocks (text + images) instead of content then images. */
   blocks?: SectionBlock[];
+  /** Optional Twitter/X post URL to embed inline (e.g. where the tweet is mentioned). */
+  tweetUrl?: string;
 }
 
 export interface ResearchArticle {
@@ -70,6 +73,62 @@ export function getArticleBySlug(slug: string): ResearchArticle | undefined {
 }
 
 export const researchArticles: ResearchArticle[] = [
+  // ──────────────────────────────────────────────
+  // Weekly Chart Analysis — Week of March 16, 2026
+  // ──────────────────────────────────────────────
+  {
+    title: 'Weekly Chart Analysis — March 16, 2026: Dollar at Key Level, Oil and Equities in Focus',
+    description:
+      'Volume and open interest show roll out of MAR 2026 and build in JUN; DXY retests previous year low amid US/Iran tensions; Truflation CPI at 1.54% YoY; crude oil extends rally; ES holds below November low. Embedded macro context from Heather Long.',
+    content: `Weekly Chart Analysis March 16 2026. Volume and open interest by contract month. DXY daily retesting previous year low 100.167, current 99.822, rally on rising US/Iran tensions. Truflation US CPI 1.54% YoY, +0.05% daily, BLS 2.40%. Crude oil CL strong rally into March, current near 94.34. ES daily broke below Nov low 6,632.75, current 6,745. Macro and Fed context with embedded tweet.`,
+    category: 'Weekly Chart Analysis',
+    date: 'Mar 16, 2026',
+    dateRange: '03/16/2026',
+    slug: 'weekly-chart-analysis-03-16-2026',
+    tags: ['DXY', 'ES', 'CL', 'Truflation', 'CPI', 'Volume', 'Open Interest', 'Macro'],
+
+    intro: `This week’s chart analysis reviews volume and open interest across contract months, the US dollar index retesting a major level, inflation data from Truflation, crude oil’s rally, and the E-mini S&P 500 below its November low. We also include relevant macro context and a linked perspective on the Fed and inflation.`,
+
+    sections: [
+      {
+        title: 'Volume & Open Interest',
+        subtitle: 'By contract month',
+        content: `Volume and open interest by expiry provide a clear view of where participation is concentrated and how positioning is shifting.\n\nMarch 2026 (MAR 2026) continues to dominate volume with 609,146 total contracts (GLOBEX 607,641; PNT CLEARPORT 1,505), with a meaningful share in EFP and EFR. Open interest at the close is 222,769, down 28,717 from the prior period — consistent with roll-out ahead of expiry.\n\nJune 2026 (JUN 2026) is building as the next front month: total volume 87,121, with open interest at 51,719, up 36,498. September and December 2026 show much smaller volume and open interest, with December 2029 at 1 contract open — typical back-month liquidity.\n\nThis structure supports a normal roll from MAR into JUN, with liquidity and focus shifting to the next front month.`,
+        images: ['/charts/weekly-03-16-2026/volume-oi.png'],
+      },
+      {
+        title: 'DXY (US Dollar Index)',
+        subtitle: 'Daily',
+        content: `The US Dollar Index has rallied sharply from the February lows and is now retesting a major structural level: the previous year low at 100.167.\n\nAs of the session shown, the DXY is trading at 99.822 (open 100.427, high 100.480, low 99.660, close 99.822). Price is just under the previous year low, which often acts as a magnet and potential resistance in the first retest.\n\nRising US/Iran tensions have been cited as a driver of the dollar’s strength in early March, reinforcing the role of geopolitics alongside rates and growth in the dollar’s path. How price reacts around 100.167 will be important for the short-term bias.`,
+        images: ['/charts/weekly-03-16-2026/dxy-daily.png'],
+      },
+      {
+        title: 'Truflation US CPI',
+        subtitle: 'Year over year, updating daily',
+        content: `The Truflation US CPI Inflation Index (TruCPI-US) offers a high-frequency read on inflation. As of March 16, 2026, the year-over-year rate is 1.54%, with a daily change of +0.05%.\n\nThe BLS-reported rate is 2.40%, so Truflation is running below the official print. The year-to-date range is 0.68% (YTD low) to 1.95% (YTD high), indicating a move off the lows but still well within a subdued band.\n\nThis context is relevant for Fed expectations and for cross-asset views on rates, the dollar, and risk.`,
+        images: ['/charts/weekly-03-16-2026/truflation-cpi.png'],
+      },
+      {
+        title: 'Crude Oil (CL)',
+        subtitle: 'Daily — NYMEX',
+        content: `CL (crude oil futures) has extended its rally from late February into March 2026. After consolidating through much of November 2025–January 2026 in roughly the mid-$50s–$68 range, price broke higher with a series of strong daily candles.\n\nMarch saw a sharp move into the $100–$102 area, with a brief spike toward the $118–$120 zone before a pullback. As of the chart snapshot, price is near 94.34 (open 94.41, high 94.64, low 93.88, close 94.34).\n\nGeopolitical tension and supply concerns have supported the move. How CL behaves around current levels and the recent high will be key for trend continuation versus a deeper correction.`,
+        images: ['/charts/weekly-03-16-2026/cl-daily.png'],
+      },
+      {
+        title: 'ES (E-mini S&P 500)',
+        subtitle: 'Daily — CME',
+        content: `ES (E-mini S&P 500) has broken below the November low at 6,632.75 and remains in a weaker short-term structure. Price is currently around 6,745 (open 6,751.75, high 6,752.00, low 6,743.50, close 6,745.00).\n\nA note on the chart highlights that bar 1 was unable to trade to the Friday high — a sign of follow-through selling and reduced buying interest. The break of the November low opens the door to further downside unless buyers can reclaim that level and hold it.\n\nGiven the correlation between ES and broader risk sentiment, this level and the next few sessions will be important for confirming whether the breakdown holds or triggers a squeeze.`,
+        images: ['/charts/weekly-03-16-2026/es-daily.png'],
+      },
+      {
+        title: 'Macro Context & Fed',
+        subtitle: '',
+        content: `Inflation and Fed policy remain central to how rates, the dollar, and risk assets behave. As discussed above, Truflation’s read is below the BLS figure, but the direction of travel and the Fed’s reaction function still matter for DXY, bonds, and equities.\n\nFor additional perspective on the Fed and inflation narrative, see the following post from Heather Long.`,
+        tweetUrl: 'https://x.com/byHeatherLong/status/2029915324951527800',
+      },
+    ],
+  },
+
   // ──────────────────────────────────────────────
   // Week of 02/16/2026 – 02/20/2026
   // ──────────────────────────────────────────────

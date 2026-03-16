@@ -75,3 +75,22 @@ export function getTickerHref(symbol: string): string {
   if (isCryptoTicker(s)) return `/ticker/${s}`;
   return `https://finance.yahoo.com/quote/${encodeURIComponent(s)}`;
 }
+
+/** Display name for indices/futures (used in report ticker pills and chat). */
+export const TICKER_DISPLAY_NAMES: Record<string, string> = {
+  NQ: 'E-mini NASDAQ-100',
+  ES: 'E-mini S&P 500',
+  YM: 'E-mini Dow Jones',
+  RTY: 'E-mini Russell 2000',
+  DXY: 'US Dollar Index',
+  CL: 'WTI Crude Oil',
+  GC: 'Gold',
+  SI: 'Silver',
+  N225: 'Nikkei 225',
+  BTC: 'Bitcoin',
+  ETH: 'Ethereum',
+};
+
+export function getTickerDisplayName(symbol: string): string {
+  return TICKER_DISPLAY_NAMES[symbol.toUpperCase()] ?? symbol;
+}
