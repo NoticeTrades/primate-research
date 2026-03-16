@@ -74,16 +74,16 @@ export function getArticleBySlug(slug: string): ResearchArticle | undefined {
 
 export const researchArticles: ResearchArticle[] = [
   // ──────────────────────────────────────────────
-  // Weekly Chart Analysis — Week of March 16, 2026
+  // Weekly Market Outlook — Week of March 16, 2026
   // ──────────────────────────────────────────────
   {
-    title: 'Weekly Chart Analysis — March 16, 2026: Dollar at Key Level, Oil and Equities in Focus',
+    title: 'Weekly Market Outlook (03/16-03/20): Dollar at Key Level, Oil and Equities in Focus',
     description:
       'Volume and open interest show roll out of MAR 2026 and build in JUN; DXY retests previous year low amid US/Iran tensions; Truflation CPI at 1.54% YoY; crude oil extends rally; ES holds below November low. Embedded macro context from Heather Long.',
-    content: `Weekly Chart Analysis March 16 2026. Volume and open interest by contract month. DXY daily retesting previous year low 100.167, current 99.822, rally on rising US/Iran tensions. Truflation US CPI 1.54% YoY, +0.05% daily, BLS 2.40%. Crude oil CL strong rally into March, current near 94.34. ES daily broke below Nov low 6,632.75, current 6,745. Macro and Fed context with embedded tweet.`,
-    category: 'Weekly Chart Analysis',
+    content: `Weekly Market Outlook 03/16-03/20. Volume and open interest by contract month. DXY daily retesting previous year low 100.167, current 99.822, rally on rising US/Iran tensions. Truflation US CPI 1.54% YoY, +0.05% daily, BLS 2.40%. Crude oil CL strong rally into March, current near 94.34. ES daily broke below Nov low 6,632.75, current 6,745. Macro and Fed context with embedded tweet from Heather Long.`,
+    category: 'Weekly Market Outlook',
     date: 'Mar 16, 2026',
-    dateRange: '03/16/2026',
+    dateRange: '03/16/2026 - 03/20/2026',
     slug: 'weekly-chart-analysis-03-16-2026',
     tags: ['DXY', 'ES', 'CL', 'Truflation', 'CPI', 'Volume', 'Open Interest', 'Macro'],
 
@@ -123,7 +123,7 @@ export const researchArticles: ResearchArticle[] = [
       {
         title: 'Macro Context & Fed',
         subtitle: '',
-        content: `Inflation and Fed policy remain central to how rates, the dollar, and risk assets behave. As discussed above, Truflation’s read is below the BLS figure, but the direction of travel and the Fed’s reaction function still matter for DXY, bonds, and equities.\n\nFor additional perspective on the Fed and inflation narrative, see the following post from Heather Long.`,
+        content: `Inflation and Fed policy remain central to how rates, the dollar, and risk assets behave. As discussed above, Truflation’s read is below the BLS figure, but the direction of travel and the Fed’s reaction function still matter for DXY, bonds, and equities.\n\nHeather Long shared the following on X — her perspective on the Fed and inflation is embedded below.`,
         tweetUrl: 'https://x.com/byHeatherLong/status/2029915324951527800',
       },
     ],

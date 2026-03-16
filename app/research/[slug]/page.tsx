@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Script from 'next/script';
 import { getArticleBySlug } from '../../../data/research';
 import Navigation from '../../components/Navigation';
 import MarketTicker from '../../components/MarketTicker';
 import StructuredData from '../../components/StructuredData';
 import ResearchComments from '../../components/ResearchComments';
 import { ReportContentWithTickers } from '../../components/ReportContentWithTickers';
+import TweetEmbed from '../../components/TweetEmbed';
 
 const LIKED_KEY = 'primate-report-liked';
 
@@ -151,14 +151,9 @@ export default function ReportViewer() {
     articleSection: article.category,
   };
 
-  const hasTweetEmbed = hasSections && article.sections!.some((s) => s.tweetUrl || s.blocks?.some((b) => b.type === 'tweet'));
-
   return (
     <div className="min-h-screen bg-black text-zinc-50">
       <StructuredData data={articleSchema} />
-      {hasTweetEmbed && (
-        <Script src="https://platform.twitter.com/widgets.js" strategy="lazyOnload" />
-      )}
       <Navigation />
       <div className="fixed top-[72px] left-0 right-0 z-40">
         <MarketTicker />
@@ -347,13 +342,7 @@ export default function ReportViewer() {
                       );
                     }
                     if (block.type === 'tweet') {
-                      return (
-                        <div key={bi} className="flex justify-center my-6">
-                          <blockquote className="twitter-tweet" data-dnt="true">
-                            <a href={block.url}>{block.url}</a>
-                          </blockquote>
-                        </div>
-                      );
+                      return <TweetEmbed key={bi} url={block.url} />;
                     }
                     const isRotated = block.imageClassName?.includes('report-failure-swing-rotated');
                     return (
@@ -401,13 +390,7 @@ export default function ReportViewer() {
                       </p>
                     ))}
                   </div>
-                  {section.tweetUrl && (
-                    <div className="flex justify-center my-6">
-                      <blockquote className="twitter-tweet" data-dnt="true">
-                        <a href={section.tweetUrl}>{section.tweetUrl}</a>
-                      </blockquote>
-                    </div>
-                  )}
+                  {section.tweetUrl && <TweetEmbed url={section.tweetUrl} />}
                   {section.images && section.images.length > 0 && (
                     <div className={`grid gap-4 ${section.images.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                       {section.images.map((img, j) => (

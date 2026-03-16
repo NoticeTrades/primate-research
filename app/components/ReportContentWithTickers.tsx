@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment, ReactNode } from 'react';
 import Link from 'next/link';
-import { isChatTicker, getTickerHref, getTickerDisplayName } from '@/lib/chatTickers';
+import { isIndexTicker, getTickerHref, getTickerDisplayName } from '@/lib/chatTickers';
 
 /** Match words that could be tickers (2–6 letters, or $TICKER). */
 const TICKER_WORD_REGEX = /\$[A-Za-z]{1,6}\b|\b[A-Za-z]{2,6}\b/g;
@@ -17,7 +17,7 @@ function parseSegments(text: string): Segment[] {
   while ((m = re.exec(text)) !== null) {
     const raw = m[0];
     const ticker = raw.replace(/^\$/, '').toUpperCase();
-    if (isChatTicker(ticker)) {
+    if (isIndexTicker(ticker)) {
       if (m.index > lastEnd) {
         segments.push({ type: 'text', value: text.slice(lastEnd, m.index) });
       }
