@@ -74,57 +74,57 @@ export function getArticleBySlug(slug: string): ResearchArticle | undefined {
 
 export const researchArticles: ResearchArticle[] = [
   // ──────────────────────────────────────────────
-  // Weekly Market Outlook — Week of March 16, 2026
+  // Weekly Market Outlook — Week of May 12, 2026
   // ──────────────────────────────────────────────
   {
-    title: 'Weekly Market Outlook (03/16-03/20): Dollar at Key Level, Oil and Equities in Focus',
+    title: 'Weekly Market Outlook (05/12-05/16): Dollar at Key Level, Oil and Equities in Focus',
     description:
-      'Volume and open interest show roll out of MAR 2026 and build in JUN; DXY retests previous year low amid US/Iran tensions; Truflation CPI at 1.54% YoY; crude oil extends rally; ES holds below November low. Embedded macro context from Heather Long.',
-    content: `Weekly Market Outlook 03/16-03/20. Volume and open interest by contract month. DXY daily retesting previous year low 100.167, current 99.822, rally on rising US/Iran tensions. Truflation US CPI 1.54% YoY, +0.05% daily, BLS 2.40%. Crude oil CL strong rally into March, current near 94.34. ES daily broke below Nov low 6,632.75, current 6,745. Macro and Fed context with embedded tweet from Heather Long.`,
+      'Charts and levels as futures roll to June contracts. DXY has tested the previous year low at 100.157 eight times; risk-off sentiment from Iran/US–Israel tensions. CL spiked above 100 then cooled toward 94. Jobs data and Heather Long on the labor market. NQ short into Tuesday overnight.',
+    content: `Weekly Market Outlook 05/12-05/16. Happy Monday. Charts and levels as futures roll over; switch to June contracts. Short NQ heading into Tuesday overnight. DXY struggled for continuation above previous year low 100.157; tested and fake out above on May 12, eight times now. Risk-off from Iran/US-Israel; CL spiked above 100, since cooled toward 94. Jobs cooled; Heather Long: US economy has lost jobs since April 2025. Truflation 1.54%. DXY question: reclaim PYL and build base for higher. Macro context and embedded tweet.`,
     category: 'Weekly Market Outlook',
-    date: 'Mar 16, 2026',
-    dateRange: '03/16/2026 - 03/20/2026',
+    date: 'May 12, 2026',
+    dateRange: '05/12/2026 - 05/16/2026',
     slug: 'weekly-chart-analysis-03-16-2026',
-    tags: ['DXY', 'ES', 'CL', 'Truflation', 'CPI', 'Volume', 'Open Interest', 'Macro'],
+    tags: ['DXY', 'NQ', 'ES', 'CL', 'Truflation', 'CPI', 'Volume', 'Open Interest', 'Macro'],
 
-    intro: `This week’s chart analysis reviews volume and open interest across contract months, the US dollar index retesting a major level, inflation data from Truflation, crude oil’s rally, and the E-mini S&P 500 below its November low. We also include relevant macro context and a linked perspective on the Fed and inflation.`,
+    intro: `Happy Monday to everyone. I hope you are all having a good start to your week. In this report we will go over the charts and levels I am watching as futures contracts roll over.\n\nBe sure you are switched over to the June contracts.\n\nIn regard to my current positions, I am short the NQ heading into Tuesday’s overnight trading and will go over my analysis as to why that is and how I will be playing it. With that, let’s start with the DXY.`,
 
     sections: [
       {
         title: 'Volume & Open Interest',
         subtitle: 'By contract month',
-        content: `Volume and open interest by expiry provide a clear view of where participation is concentrated and how positioning is shifting.\n\nMarch 2026 (MAR 2026) continues to dominate volume with 609,146 total contracts (GLOBEX 607,641; PNT CLEARPORT 1,505), with a meaningful share in EFP and EFR. Open interest at the close is 222,769, down 28,717 from the prior period — consistent with roll-out ahead of expiry.\n\nJune 2026 (JUN 2026) is building as the next front month: total volume 87,121, with open interest at 51,719, up 36,498. September and December 2026 show much smaller volume and open interest, with December 2029 at 1 contract open — typical back-month liquidity.\n\nThis structure supports a normal roll from MAR into JUN, with liquidity and focus shifting to the next front month.`,
+        content: `Volume and open interest by expiry show where participation is concentrated and how positioning is shifting as we roll into June contracts.\n\nMarch 2026 (MAR 2026) continues to dominate volume with 609,146 total contracts (GLOBEX 607,641; PNT CLEARPORT 1,505), including EFP and EFR activity. Open interest at the close is 222,769, down 28,717 from the prior period—consistent with roll-out ahead of expiry.\n\nJune 2026 (JUN 2026) is building as the next front month, with total volume 87,121 and open interest at 51,719, up 36,498. September and December 2026 show much smaller volume and open interest; December 2029 has 1 contract open—typical back-month liquidity.\n\nOverall, the structure points to a normal roll from MAR into JUN, with liquidity and focus shifting to the next front month.`,
         images: ['/charts/weekly-03-16-2026/volume-oi.png'],
       },
       {
         title: 'DXY (US Dollar Index)',
         subtitle: 'Daily',
-        content: `The US Dollar Index has rallied sharply from the February lows and is now retesting a major structural level: the previous year low at 100.167.\n\nAs of the session shown, the DXY is trading at 99.822 (open 100.427, high 100.480, low 99.660, close 99.822). Price is just under the previous year low, which often acts as a magnet and potential resistance in the first retest.\n\nRising US/Iran tensions have been cited as a driver of the dollar’s strength in early March, reinforcing the role of geopolitics alongside rates and growth in the dollar’s path. How price reacts around 100.167 will be important for the short-term bias.`,
+        content: `The dollar has struggled to see continuation above the previous year low at 100.157. We have seen DXY trade toward that level and even take a deviation above it (a fake out) on May 12—eight times now.\n\nThe last few daily bull bars on DXY have come from risk-off sentiment in global markets amid increased tension around the Iran/US–Israel conflict. Those macro tensions have also pushed CL to spike above 100 in the last few trading days; it has since cooled toward 94.\n\nWith this uncertainty—and with uncertainty around the AI trade—jobs have cooled. According to Heather Long, “The US economy has LOST jobs since April 2025.” She notes that total job gains from May 2025 to February 2026 are now -19,000, and that “Companies are not hiring in the face of all of these headwinds and uncertainty. And even healthcare is starting to slow down.” Her full post, including the dismal February jobs report (U.S. economy lost 92,000 jobs in February; unemployment rate ticked back up to 4.4%; healthcare shed 28,000 jobs), is embedded below.\n\nThe question for DXY now is whether we can reclaim above the previous year low and build a solid base to trade higher.\n\nFundamentally, with lower rates, inflation easing since Trump’s inauguration (Truflation sitting at 1.54%), and the broader shift in how the dollar is acting as the global currency as the U.S. has in recent months lost close partners, that is a bigger-picture recipe for a lower DXY. But short-term noise can interfere: if we continue to see risk-off in US indices and equities, the DXY will most likely continue to hold higher for the time being.\n\nAfter the DXY ran the PYL (previous year low), the daily structure has remained in a short-term bullish trend. I will be watching this structure.`,
         images: ['/charts/weekly-03-16-2026/dxy-daily.png'],
+        tweetUrl: 'https://x.com/byHeatherLong/status/2029915324951527800',
       },
       {
         title: 'Truflation US CPI',
         subtitle: 'Year over year, updating daily',
-        content: `The Truflation US CPI Inflation Index (TruCPI-US) offers a high-frequency read on inflation. As of March 16, 2026, the year-over-year rate is 1.54%, with a daily change of +0.05%.\n\nThe BLS-reported rate is 2.40%, so Truflation is running below the official print. The year-to-date range is 0.68% (YTD low) to 1.95% (YTD high), indicating a move off the lows but still well within a subdued band.\n\nThis context is relevant for Fed expectations and for cross-asset views on rates, the dollar, and risk.`,
+        content: `The Truflation US CPI Inflation Index (TruCPI-US) offers a high-frequency read on inflation. As noted above, Truflation is sitting at 1.54% year over year—inflation has been lowering since Trump’s inauguration, and this context is relevant for the Fed, rates, and the dollar. The BLS-reported rate is 2.40%; the year-to-date range is 0.68% (YTD low) to 1.95% (YTD high).`,
         images: ['/charts/weekly-03-16-2026/truflation-cpi.png'],
       },
       {
         title: 'Crude Oil (CL)',
         subtitle: 'Daily — NYMEX',
-        content: `CL (crude oil futures) has extended its rally from late February into March 2026. After consolidating through much of November 2025–January 2026 in roughly the mid-$50s–$68 range, price broke higher with a series of strong daily candles.\n\nMarch saw a sharp move into the $100–$102 area, with a brief spike toward the $118–$120 zone before a pullback. As of the chart snapshot, price is near 94.34 (open 94.41, high 94.64, low 93.88, close 94.34).\n\nGeopolitical tension and supply concerns have supported the move. How CL behaves around current levels and the recent high will be key for trend continuation versus a deeper correction.`,
+        content: `Macro tensions around Iran/US–Israel have driven CL to spike above 100 in recent trading days; it has since cooled toward 94. As of the chart snapshot, price is near 94.34 (open 94.41, high 94.64, low 93.88, close 94.34). How CL behaves around current levels and the recent high will be key for trend continuation versus a deeper correction.`,
         images: ['/charts/weekly-03-16-2026/cl-daily.png'],
       },
       {
         title: 'ES (E-mini S&P 500)',
         subtitle: 'Daily — CME',
-        content: `ES (E-mini S&P 500) has broken below the November low at 6,632.75 and remains in a weaker short-term structure. Price is currently around 6,745 (open 6,751.75, high 6,752.00, low 6,743.50, close 6,745.00).\n\nA note on the chart highlights that bar 1 was unable to trade to the Friday high — a sign of follow-through selling and reduced buying interest. The break of the November low opens the door to further downside unless buyers can reclaim that level and hold it.\n\nGiven the correlation between ES and broader risk sentiment, this level and the next few sessions will be important for confirming whether the breakdown holds or triggers a squeeze.`,
+        content: `On the ES (E-mini S&P 500) daily chart, the November low at 6,632.75 is a key level to watch. Price is currently around 6,745 (open 6,751.75, high 6,752.00, low 6,743.50, close 6,745.00). A note on the chart observes that bar 1 was unable to trade to the Friday high. With risk-off sentiment in US indices and equities, how ES and the indices behave around these levels will be important for short-term structure.`,
         images: ['/charts/weekly-03-16-2026/es-daily.png'],
       },
       {
-        title: 'Macro Context & Fed',
-        subtitle: '',
-        content: `Inflation and Fed policy remain central to how rates, the dollar, and risk assets behave. As discussed above, Truflation’s read is below the BLS figure, but the direction of travel and the Fed’s reaction function still matter for DXY, bonds, and equities.\n\nHeather Long shared the following on X — her perspective on the Fed and inflation is embedded below.`,
-        tweetUrl: 'https://x.com/byHeatherLong/status/2029915324951527800',
+        title: 'Heather Long on Jobs',
+        subtitle: 'Macro context',
+        content: `Heather Long’s reporting on the labor market is central to the macro picture. As quoted in the DXY section: the US economy has lost jobs since April 2025; total job gains from May 2025 to February 2026 are now -19,000; and companies are not hiring in the face of headwinds and uncertainty, with even healthcare starting to slow down. Her February jobs report summary—92,000 jobs lost in February, unemployment rate back up to 4.4%, healthcare shedding 28,000 jobs—is embedded in that section above.`,
       },
     ],
   },
