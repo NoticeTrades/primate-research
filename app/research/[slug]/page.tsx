@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { getArticleBySlug } from '../../../data/research';
@@ -12,6 +12,30 @@ import { ReportContentWithTickers } from '../../components/ReportContentWithTick
 import TweetEmbed from '../../components/TweetEmbed';
 
 const LIKED_KEY = 'primate-report-liked';
+
+/** Parse [text](url) markdown links in paragraph content for rendering. */
+function parseParagraphWithLinks(
+  text: string
+): Array<{ type: 'text' | 'link'; value: string; url?: string }> {
+  const segments: Array<{ type: 'text' | 'link'; value: string; url?: string }> = [];
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = linkRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+    }
+    segments.push({ type: 'link', value: match[1], url: match[2] });
+    lastIndex = linkRegex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    segments.push({ type: 'text', value: text.slice(lastIndex) });
+  }
+  if (segments.length === 0) {
+    segments.push({ type: 'text', value: text });
+  }
+  return segments;
+}
 
 export default function ReportViewer() {
   const params = useParams();
@@ -335,7 +359,23 @@ export default function ReportViewer() {
                         <div key={bi} className="space-y-4">
                           {block.content.split('\n\n').filter(p => p.trim()).map((p, j) => (
                             <p key={j} className="text-base text-zinc-300 leading-relaxed">
-                              <ReportContentWithTickers text={p} />
+                              {parseParagraphWithLinks(p).map((seg, i) =>
+                                seg.type === 'link' ? (
+                                  <a
+                                    key={i}
+                                    href={seg.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:underline"
+                                  >
+                                    {seg.value}
+                                  </a>
+                                ) : (
+                                  <Fragment key={i}>
+                                    <ReportContentWithTickers text={seg.value} />
+                                  </Fragment>
+                                )
+                              )}
                             </p>
                           ))}
                         </div>
@@ -386,7 +426,23 @@ export default function ReportViewer() {
                   <div className="space-y-4 mb-6">
                     {section.content.split('\n\n').filter(p => p.trim()).map((p, j) => (
                       <p key={j} className="text-base text-zinc-300 leading-relaxed">
-                        <ReportContentWithTickers text={p} />
+                        {parseParagraphWithLinks(p).map((seg, i) =>
+                          seg.type === 'link' ? (
+                            <a
+                              key={i}
+                              href={seg.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:underline"
+                            >
+                              {seg.value}
+                            </a>
+                          ) : (
+                            <Fragment key={i}>
+                              <ReportContentWithTickers text={seg.value} />
+                            </Fragment>
+                          )
+                        )}
                       </p>
                     ))}
                   </div>
