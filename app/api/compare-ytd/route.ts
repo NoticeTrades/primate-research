@@ -14,6 +14,15 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   ETH: 'ETH-USD',
 };
 
+/** June 2026 CME futures for correct contract after roll. Update next quarter (e.g. U26 for Sep). */
+const YAHOO_JUNE_2026: Record<string, string> = {
+  ES: 'ESM26.CME',
+  NQ: 'NQM26.CME',
+  YM: 'YMM26.CME',
+  RTY: 'RTYM26.CME',
+  CL: 'CLM26.CME',
+};
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -32,7 +41,8 @@ async function fetchSeries(
   symbol: string,
   range: string
 ): Promise<{ date: string; return: number }[] | null> {
-  const yahooSymbol = YAHOO_SYMBOLS[symbol.toUpperCase()] || symbol;
+  const sym = symbol.toUpperCase();
+  const yahooSymbol = (YAHOO_JUNE_2026[sym] || YAHOO_SYMBOLS[sym] || symbol);
   const yahooRange = RANGE_MAP[range] || RANGE_MAP.ytd;
   const currentYear = new Date().getFullYear();
   const isYtd = range === 'ytd';

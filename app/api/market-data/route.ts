@@ -13,6 +13,15 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   BTC: 'BTC-USD',
 };
 
+/** June 2026 CME futures (explicit contract so we get correct data after roll). Month: M=June. Update next quarter when rolling to Sep (U26). */
+const YAHOO_JUNE_2026: Record<string, string> = {
+  ES: 'ESM26.CME',
+  NQ: 'NQM26.CME',
+  YM: 'YMM26.CME',
+  RTY: 'RTYM26.CME',
+  CL: 'CLM26.CME',
+};
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // No caching - always fetch fresh data
 
@@ -246,15 +255,19 @@ async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const symbol = (searchParams.get('symbol') || '').toUpperCase();
-  const yahooSymbol = YAHOO_SYMBOLS[symbol] || symbol;
+  // Use June 2026 contract for futures so we get correct data after roll; fallback to front-month symbol
+  const indexFuturesList = ['ES', 'NQ', 'YM', 'RTY', 'CL'];
+  const yahooSymbol = (indexFuturesList.includes(symbol) && YAHOO_JUNE_2026[symbol])
+    ? YAHOO_JUNE_2026[symbol]
+    : (YAHOO_SYMBOLS[symbol] || symbol);
 
   try {
-    // Index/commodity futures (and N225): try Twelve Data first when supported; else Yahoo 5d chart + quote so nav bar always gets data
+    // Index/commodity futures (and N225): try Twelve Data first (June 2026 contract); else Yahoo. Use June contract for Yahoo when available.
     const indexFutures = ['ES', 'NQ', 'YM', 'RTY', 'CL', 'N225'];
     if (indexFutures.includes(symbol)) {
       const twelve = await fetchTwelveDataFutures(symbol);
       if (twelve) {
-        const yahooSymbolForYtd = YAHOO_SYMBOLS[symbol] || symbol;
+        const yahooSymbolForYtd = YAHOO_JUNE_2026[symbol] || YAHOO_SYMBOLS[symbol] || symbol;
         let change = twelve.change;
         let changePercent = twelve.changePercent;
         let previousClose = twelve.previousClose;

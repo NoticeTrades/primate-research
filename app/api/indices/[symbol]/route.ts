@@ -16,6 +16,15 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   DAX: '^GDAXI',
 };
 
+/** June 2026 CME futures (explicit contract after roll). Update next quarter when rolling to Sep (U26). */
+const YAHOO_JUNE_2026: Record<string, string> = {
+  ES: 'ESM26.CME',
+  NQ: 'NQM26.CME',
+  YM: 'YMM26.CME',
+  RTY: 'RTYM26.CME',
+  CL: 'CLM26.CME',
+};
+
 const ALPHA_VANTAGE_SYMBOLS: Record<string, string> = {
   ES: 'ES',
   NQ: 'NQ',
@@ -104,15 +113,14 @@ async function fetchTwelveData(symbol: string) {
   }
 
   try {
-    // Twelve Data CME futures symbols - try multiple formats
+    // June 2026 first so we get correct contract after roll; then front-month fallbacks
     const twelveSymbols: Record<string, string[]> = {
-      ES: ['ES1!', 'ES=F', 'ES'],
-      NQ: ['NQ1!', 'NQ=F', 'NQ'],
-      YM: ['YM1!', 'YM=F', 'YM'],
-      RTY: ['RTY1!', 'RTY=F', 'RTY'],
-      CL: ['CL1!', 'CL=F', 'CL'],
+      ES: ['ESM26', 'ES1!', 'ES=F', 'ES'],
+      NQ: ['NQM26', 'NQ1!', 'NQ=F', 'NQ'],
+      YM: ['YMM26', 'YM1!', 'YM=F', 'YM'],
+      RTY: ['RTYM26', 'RTY1!', 'RTY=F', 'RTY'],
+      CL: ['CLM26', 'CL1!', 'CL=F', 'CL'],
     };
-    
     const symbolVariants = twelveSymbols[symbol] || [symbol];
     console.log(`[Twelve Data] Attempting to fetch ${symbol} with variants:`, symbolVariants);
     
@@ -202,7 +210,8 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid index symbol' }, { status: 400 });
     }
 
-    const yahooSymbol = YAHOO_SYMBOLS[symbol];
+    // Use June 2026 contract for CME futures so we get correct data after roll
+    const yahooSymbol = YAHOO_JUNE_2026[symbol] || YAHOO_SYMBOLS[symbol];
     const sql = getDb();
 
     // Fetch market structure from database
@@ -235,8 +244,8 @@ export async function GET(
       open = twelveData.holc.open;
       volume = twelveData.volume;
       // When markets are closed (e.g. weekend), Twelve Data often returns change 0. Use last session from 5d chart.
-      if (price > 0 && changePercent === 0 && change === 0 && YAHOO_SYMBOLS[symbol]) {
-        const lastSession = await fetchLastSessionChangeFromChart(YAHOO_SYMBOLS[symbol]);
+      if (price > 0 && changePercent === 0 && change === 0 && yahooSymbol) {
+        const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
         if (lastSession) {
           change = lastSession.change;
           changePercent = lastSession.changePercent;
