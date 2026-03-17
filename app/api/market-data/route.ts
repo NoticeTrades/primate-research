@@ -13,13 +13,13 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   BTC: 'BTC-USD',
 };
 
-/** June 2026 futures (explicit contract after roll). ES/NQ/RTY/CL = CME; YM = CBOT. Update next quarter (e.g. U26 for Sep). */
+/** June 2026 futures (explicit contract after roll). ES/NQ/RTY = CME; YM = CBOT; CL = NYMEX. Update next quarter (e.g. U26 for Sep). */
 const YAHOO_JUNE_2026: Record<string, string> = {
   ES: 'ESM26.CME',
   NQ: 'NQM26.CME',
-  YM: 'YMM26.CBT',   // E-mini Dow trades on CBOT, not CME
+  YM: 'YMM26.CBT',   // E-mini Dow = CBOT
   RTY: 'RTYM26.CME',
-  CL: 'CLM26.CME',
+  CL: 'CLM26.NYM',   // WTI Crude = NYMEX (not .CME)
 };
 
 export const dynamic = 'force-dynamic';
@@ -318,14 +318,19 @@ export async function GET(request: Request) {
       }
       // Fallback: Yahoo 5d chart so nav bar shows last close and last-session % change
       let chart5d = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
-      // YM (E-mini Dow) is on CBOT; if June contract (YMM26.CBT) returns no data, try front-month YM=F
+      // YM (E-mini Dow) is on CBOT; if June contract returns no data, try front-month YM=F
       if (symbol === 'YM' && (!chart5d || chart5d.price <= 0)) {
         const chartYMF = await fetchPriceAndChangeFrom5dChart(YAHOO_SYMBOLS['YM']);
         if (chartYMF && chartYMF.price > 0) chart5d = chartYMF;
       }
+      // CL (WTI Crude) is on NYMEX; if June contract (CLM26.NYM) returns no data, try front-month CL=F
+      if (symbol === 'CL' && (!chart5d || chart5d.price <= 0)) {
+        const chartCLF = await fetchPriceAndChangeFrom5dChart(YAHOO_SYMBOLS['CL']);
+        if (chartCLF && chartCLF.price > 0) chart5d = chartCLF;
+      }
       let useChart5d = chart5d != null && chart5d.price > 0;
-      // For YM use front-month YM=F for session/change so we get data even when June contract (CBOT) is thin
-      const yahooSymbolForSession = symbol === 'YM' ? YAHOO_SYMBOLS['YM'] : yahooSymbol;
+      // For YM and CL use front-month for session/change so nav bar gets data when June contract is thin or missing
+      const yahooSymbolForSession = (symbol === 'YM' || symbol === 'CL') ? YAHOO_SYMBOLS[symbol] : yahooSymbol;
       if (useChart5d && chart5d) {
         let change = chart5d.change;
         let changePercent = chart5d.changePercent;
