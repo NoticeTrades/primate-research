@@ -16,11 +16,11 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   DAX: '^GDAXI',
 };
 
-/** June 2026 CME futures (explicit contract after roll). Update next quarter when rolling to Sep (U26). */
+/** June 2026 futures (explicit contract after roll). ES/NQ/RTY/CL = CME; YM = CBOT. Update next quarter (e.g. U26 for Sep). */
 const YAHOO_JUNE_2026: Record<string, string> = {
   ES: 'ESM26.CME',
   NQ: 'NQM26.CME',
-  YM: 'YMM26.CME',
+  YM: 'YMM26.CBT',   // E-mini Dow trades on CBOT, not CME
   RTY: 'RTYM26.CME',
   CL: 'CLM26.CME',
 };

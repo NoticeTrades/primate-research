@@ -13,11 +13,11 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   BTC: 'BTC-USD',
 };
 
-/** June 2026 CME futures (explicit contract so we get correct data after roll). Month: M=June. Update next quarter when rolling to Sep (U26). */
+/** June 2026 futures (explicit contract after roll). ES/NQ/RTY/CL = CME; YM = CBOT. Update next quarter (e.g. U26 for Sep). */
 const YAHOO_JUNE_2026: Record<string, string> = {
   ES: 'ESM26.CME',
   NQ: 'NQM26.CME',
-  YM: 'YMM26.CME',
+  YM: 'YMM26.CBT',   // E-mini Dow trades on CBOT, not CME
   RTY: 'RTYM26.CME',
   CL: 'CLM26.CME',
 };
@@ -214,18 +214,20 @@ async function fetchYtdFromYahoo(yahooSymbol: string): Promise<number | null> {
   }
 }
 
+/** Twelve Data: June 2026 first for correct contract; then front-month. YM = Dow (CBOT). */
+const TWELVE_DATA_JUNE_FIRST: Record<string, string[]> = {
+  ES: ['ESM26', 'ES1!', 'ES=F', 'ES'],
+  NQ: ['NQM26', 'NQ1!', 'NQ=F', 'NQ'],
+  YM: ['YMM26', 'YM1!', 'YM=F', 'YM'],
+  RTY: ['RTYM26', 'RTY1!', 'RTY=F', 'RTY'],
+  CL: ['CLM26', 'CL1!', 'CL=F', 'CL'],
+};
+
 /** Twelve Data: get real-time price and session open for index/commodity futures (ES, NQ, YM, RTY, CL). Returns null when out of data (429/402) or any error so caller can re-route to Yahoo. */
 async function fetchTwelveDataFutures(symbol: string): Promise<{ price: number; change: number; changePercent: number; previousClose: number } | null> {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
   if (!apiKey) return null;
-  const twelveSymbols: Record<string, string[]> = {
-    ES: ['ES1!', 'ES=F', 'ES'],
-    NQ: ['NQ1!', 'NQ=F', 'NQ'],
-    YM: ['YM1!', 'YM=F', 'YM'],
-    RTY: ['RTY1!', 'RTY=F', 'RTY'],
-    CL: ['CL1!', 'CL=F', 'CL'],
-  };
-  const variants = twelveSymbols[symbol] || [];
+  const variants = TWELVE_DATA_JUNE_FIRST[symbol] || [symbol];
   for (const twelveSymbol of variants) {
     try {
       const [priceRes, quoteRes] = await Promise.all([
@@ -315,15 +317,22 @@ export async function GET(request: Request) {
         }, { headers: NO_CACHE_HEADERS });
       }
       // Fallback: Yahoo 5d chart so nav bar shows last close and last-session % change
-      const chart5d = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
+      let chart5d = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
+      // YM (E-mini Dow) is on CBOT; if June contract (YMM26.CBT) returns no data, try front-month YM=F
+      if (symbol === 'YM' && (!chart5d || chart5d.price <= 0)) {
+        const chartYMF = await fetchPriceAndChangeFrom5dChart(YAHOO_SYMBOLS['YM']);
+        if (chartYMF && chartYMF.price > 0) chart5d = chartYMF;
+      }
       let useChart5d = chart5d != null && chart5d.price > 0;
+      // For YM use front-month YM=F for session/change so we get data even when June contract (CBOT) is thin
+      const yahooSymbolForSession = symbol === 'YM' ? YAHOO_SYMBOLS['YM'] : yahooSymbol;
       if (useChart5d && chart5d) {
         let change = chart5d.change;
         let changePercent = chart5d.changePercent;
         let previousClose = chart5d.previousClose;
         // Never return 0% when we have a valid price - fill from last session if chart gave 0
         if (change === 0 && changePercent === 0) {
-          const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
+          const lastSession = await fetchLastSessionChangeFromChart(yahooSymbolForSession);
           if (lastSession) {
             change = lastSession.change;
             changePercent = lastSession.changePercent;

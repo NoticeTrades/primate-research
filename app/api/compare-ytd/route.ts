@@ -14,11 +14,11 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   ETH: 'ETH-USD',
 };
 
-/** June 2026 CME futures for correct contract after roll. Update next quarter (e.g. U26 for Sep). */
+/** June 2026 futures for correct contract after roll. ES/NQ/RTY/CL = CME; YM = CBOT. Update next quarter (e.g. U26 for Sep). */
 const YAHOO_JUNE_2026: Record<string, string> = {
   ES: 'ESM26.CME',
   NQ: 'NQM26.CME',
-  YM: 'YMM26.CME',
+  YM: 'YMM26.CBT',   // E-mini Dow = CBOT
   RTY: 'RTYM26.CME',
   CL: 'CLM26.CME',
 };
