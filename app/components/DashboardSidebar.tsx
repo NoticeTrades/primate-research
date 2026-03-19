@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { researchArticles, generateSlug, type ResearchArticle } from '../../data/research';
-import { videos, type VideoEntry, type VideoType } from '../../data/videos';
+import { videos, type VideoCategory, type VideoEntry, type VideoType } from '../../data/videos';
 
 type SidebarFilter = 'all' | 'research' | 'videos';
 
@@ -65,6 +65,21 @@ function coerceVideoType(value: unknown): VideoType | undefined {
   return undefined;
 }
 
+function coerceVideoCategory(value: unknown): VideoCategory | undefined {
+  const v = typeof value === 'string' ? value.trim() : '';
+  if (!v) return undefined;
+  const allowed = new Set<VideoCategory>([
+    'market-analysis',
+    'trading-strategies',
+    'educational',
+    'live-trading',
+    'market-structure',
+    'risk-management',
+    'all',
+  ]);
+  return allowed.has(v as VideoCategory) ? (v as VideoCategory) : undefined;
+}
+
 export default function DashboardSidebar() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SidebarFilter>('all');
@@ -77,8 +92,8 @@ export default function DashboardSidebar() {
         if (!res.ok) return;
         const json = (await res.json()) as { videos?: unknown[] };
         const rawVideos = Array.isArray(json?.videos) ? json.videos : [];
-        const mapped: VideoEntry[] = rawVideos
-          .map((v) => {
+        const mapped = rawVideos
+          .map((v): VideoEntry | null => {
             const obj = v as {
               title?: unknown;
               description?: unknown;
@@ -95,7 +110,7 @@ export default function DashboardSidebar() {
             const description = typeof obj.description === 'string' ? obj.description : '';
             const videoUrl = typeof obj.videoUrl === 'string' ? obj.videoUrl : '';
             const videoType = coerceVideoType(obj.videoType) ?? 'exclusive';
-            const category = typeof obj.category === 'string' ? obj.category : undefined;
+            const category = coerceVideoCategory(obj.category);
             const thumbnailUrl = typeof obj.thumbnailUrl === 'string' ? obj.thumbnailUrl : undefined;
             const date = typeof obj.date === 'string' ? obj.date : undefined;
             const duration = typeof obj.duration === 'string' ? obj.duration : undefined;
@@ -115,7 +130,7 @@ export default function DashboardSidebar() {
               isExclusive,
             } satisfies VideoEntry;
           })
-          .filter((x): x is VideoEntry => x != null);
+          .filter((x): x is VideoEntry => x !== null);
 
         setDbVideos(mapped);
       } catch {
