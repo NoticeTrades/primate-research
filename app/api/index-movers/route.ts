@@ -70,20 +70,20 @@ export async function GET(request: Request) {
   const index = (searchParams.get('index') || 'index').toUpperCase();
   const limit = Math.min(5, Math.max(1, parseInt(searchParams.get('limit') || '5', 10) || 5));
 
-  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'Alpha Vantage API key not configured' },
-      { status: 503 }
-    );
-  }
-
   try {
     const yahooMovers = await fetchYahooConstituentMovers(index, limit);
     if (yahooMovers) {
       return NextResponse.json(
         { index, source: 'yahoo-constituents', gainers: yahooMovers.gainers, losers: yahooMovers.losers },
         { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+      );
+    }
+
+    const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { index, source: 'unavailable', gainers: [], losers: [], error: 'No free constituent data mapping for this symbol yet.' },
+        { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }
 

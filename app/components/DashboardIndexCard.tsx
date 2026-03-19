@@ -68,6 +68,14 @@ type IndexNewsItem = {
   source: string;
 };
 
+type SocialPost = {
+  id: string;
+  text: string;
+  createdAt: string;
+  url: string;
+  account: string;
+};
+
 function getStructureColor(structure: string | null | undefined): string {
   if (!structure) return 'text-zinc-400';
   const s = structure.toLowerCase();
@@ -124,6 +132,9 @@ export default function DashboardIndexCard({
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState<string | null>(null);
   const [newsItems, setNewsItems] = useState<IndexNewsItem[]>([]);
+  const [socialLoading, setSocialLoading] = useState(false);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
 
   const hasCharts = charts.length > 0;
   const hasTrades = trades.length > 0;
@@ -166,6 +177,33 @@ export default function DashboardIndexCard({
 
     loadMovers();
 
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSocial = async () => {
+      setSocialLoading(true);
+      setSocialError(null);
+      setSocialPosts([]);
+      try {
+        const res = await fetch('/api/social-feed?limit=3', { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to load social feed');
+        const json = (await res.json()) as { posts?: SocialPost[] };
+        if (cancelled) return;
+        setSocialPosts(Array.isArray(json.posts) ? json.posts.slice(0, 3) : []);
+      } catch (e) {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : 'Failed to load social feed';
+        setSocialError(msg);
+      } finally {
+        if (!cancelled) setSocialLoading(false);
+      }
+    };
+
+    loadSocial();
     return () => {
       cancelled = true;
     };
@@ -559,6 +597,42 @@ export default function DashboardIndexCard({
                   >
                     <p className="text-sm text-zinc-200 line-clamp-2">{n.title}</p>
                     <p className="text-xs text-zinc-500 mt-1">{n.source}</p>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Latest X posts</h4>
+              <span className="text-xs text-zinc-500">Auto-updated</span>
+            </div>
+            {socialLoading ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-8 bg-zinc-800/50 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : socialError ? (
+              <p className="text-sm text-red-400">{socialError}</p>
+            ) : socialPosts.length === 0 ? (
+              <p className="text-sm text-zinc-500">No recent posts available.</p>
+            ) : (
+              <div className="space-y-2">
+                {socialPosts.map((p) => (
+                  <a
+                    key={p.id}
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 hover:border-zinc-700 transition-colors"
+                  >
+                    <p className="text-sm text-zinc-200 line-clamp-3">{p.text}</p>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      @{p.account}
+                      {p.createdAt ? ` • ${new Date(p.createdAt).toLocaleString()}` : ''}
+                    </p>
                   </a>
                 ))}
               </div>

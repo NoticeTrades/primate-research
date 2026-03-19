@@ -59,7 +59,6 @@ type IndexData = {
   } | null;
 };
 
-const MAX_SELECTED = 6;
 const INDEX_PICKS: { symbol: string; label: string }[] = [
   { symbol: 'NQ', label: 'E-mini NASDAQ-100' },
   { symbol: 'ES', label: 'E-mini S&P 500' },
@@ -72,10 +71,10 @@ const INDEX_PICKS: { symbol: string; label: string }[] = [
   { symbol: 'DAX', label: 'DAX Index' },
 ];
 
-const DEFAULT_SELECTED = ['NQ', 'ES'];
+const DEFAULT_SELECTED = 'NQ';
 
 export default function DashboardPage() {
-  const [selectedSymbols, setSelectedSymbols] = useState<string[]>(DEFAULT_SELECTED);
+  const [selectedSymbol, setSelectedSymbol] = useState<string>(DEFAULT_SELECTED);
   const [indexSearch, setIndexSearch] = useState('');
 
   const [indexDataBySymbol, setIndexDataBySymbol] = useState<Record<string, IndexData | null>>({});
@@ -88,48 +87,27 @@ export default function DashboardPage() {
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [tradesLastUpdated, setTradesLastUpdated] = useState<Date | null>(null);
 
-  const selectedSet = useMemo(() => new Set(selectedSymbols), [selectedSymbols]);
-  const tradesBySymbol = useMemo(() => {
-    const map: Record<string, Trade[]> = {};
-    for (const t of openTrades) {
-      const s = (t.symbol || '').toUpperCase();
-      if (!s) continue;
-      if (!map[s]) map[s] = [];
-      map[s].push(t);
-    }
-    return map;
-  }, [openTrades]);
-
-  const addSymbol = (sym: string) => {
-    const upper = sym.toUpperCase();
-    if (selectedSet.has(upper)) return;
-    setSelectedSymbols((prev) => {
-      if (prev.length >= MAX_SELECTED) return prev;
-      return [...prev, upper];
-    });
-    setIndexSearch('');
-  };
-
-  const removeSymbol = (sym: string) => {
-    const upper = sym.toUpperCase();
-    setSelectedSymbols((prev) => prev.filter((s) => s !== upper));
-  };
+  const selectedSet = useMemo(() => new Set([selectedSymbol]), [selectedSymbol]);
+  const selectedTrades = useMemo(
+    () => openTrades.filter((t) => (t.symbol || '').toUpperCase() === selectedSymbol),
+    [openTrades, selectedSymbol]
+  );
 
   const resetSelection = () => {
-    setSelectedSymbols(DEFAULT_SELECTED);
+    setSelectedSymbol(DEFAULT_SELECTED);
     setIndexSearch('');
   };
 
   const availableSuggestions = useMemo(() => {
     const q = indexSearch.trim().toLowerCase();
     const base = INDEX_PICKS.filter((p) => !selectedSet.has(p.symbol));
-    if (!q) return base.slice(0, 6);
+    if (!q) return base.slice(0, 8);
     return base
       .filter((p) => p.symbol.toLowerCase().includes(q) || p.label.toLowerCase().includes(q))
       .slice(0, 8);
   }, [indexSearch, selectedSet]);
 
-  // Poll index data for selected symbols.
+  // Poll index data for selected symbol.
   useEffect(() => {
     let cancelled = false;
 
@@ -138,30 +116,22 @@ export default function DashboardPage() {
       const requestId = indicesRequestIdRef.current;
 
       const ts = Date.now();
+      const sym = selectedSymbol;
       const nextData: Record<string, IndexData | null> = {};
-
-      await Promise.all(
-        selectedSymbols.map(async (sym) => {
-          try {
-            const res = await fetch(`/api/indices/${sym}?t=${ts}`, {
-              cache: 'no-store',
-              headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
-            });
-            if (!res.ok) {
-              nextData[sym] = null;
-              return;
-            }
-            const body = (await res.json()) as IndexData & { error?: string };
-            if (body?.error) {
-              nextData[sym] = null;
-              return;
-            }
-            nextData[sym] = body;
-          } catch {
-            nextData[sym] = null;
-          }
-        })
-      );
+      try {
+        const res = await fetch(`/api/indices/${sym}?t=${ts}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+        });
+        if (!res.ok) {
+          nextData[sym] = null;
+        } else {
+          const body = (await res.json()) as IndexData & { error?: string };
+          nextData[sym] = body?.error ? null : body;
+        }
+      } catch {
+        nextData[sym] = null;
+      }
 
       if (cancelled) return;
       if (requestId !== indicesRequestIdRef.current) return;
@@ -175,43 +145,38 @@ export default function DashboardPage() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [selectedSymbols]);
+  }, [selectedSymbol]);
 
-  // Load charts once per symbol (or when added).
+  // Load charts once for selected symbol.
   useEffect(() => {
     let cancelled = false;
 
     const loadMissingCharts = async () => {
-      const missing = selectedSymbols.filter((sym) => !chartsBySymbol[sym]);
-      if (missing.length === 0) return;
-
-      await Promise.all(
-        missing.map(async (sym) => {
-          try {
-            const res = await fetch(`/api/indices/${sym}/charts`, { cache: 'no-store' });
-            if (!res.ok) {
-              if (!cancelled) setChartsBySymbol((prev) => ({ ...prev, [sym]: [] }));
-              return;
-            }
-            const body = await res.json();
-            if (!cancelled) {
-              setChartsBySymbol((prev) => ({
-                ...prev,
-                [sym]: body.charts || [],
-              }));
-            }
-          } catch {
-            if (!cancelled) setChartsBySymbol((prev) => ({ ...prev, [sym]: [] }));
-          }
-        })
-      );
+      const sym = selectedSymbol;
+      if (chartsBySymbol[sym]) return;
+      try {
+        const res = await fetch(`/api/indices/${sym}/charts`, { cache: 'no-store' });
+        if (!res.ok) {
+          if (!cancelled) setChartsBySymbol((prev) => ({ ...prev, [sym]: [] }));
+          return;
+        }
+        const body = await res.json();
+        if (!cancelled) {
+          setChartsBySymbol((prev) => ({
+            ...prev,
+            [sym]: body.charts || [],
+          }));
+        }
+      } catch {
+        if (!cancelled) setChartsBySymbol((prev) => ({ ...prev, [sym]: [] }));
+      }
     };
 
     loadMissingCharts();
     return () => {
       cancelled = true;
     };
-  }, [selectedSymbols, chartsBySymbol]);
+  }, [selectedSymbol, chartsBySymbol]);
 
   // Poll live trades.
   useEffect(() => {
@@ -259,8 +224,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="pt-44 pb-24 px-4 sm:px-6 relative z-10">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <main className="lg:col-span-9">
+        <div className="max-w-7xl mx-auto">
+          <main>
             <header className="mb-5">
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
@@ -272,7 +237,7 @@ export default function DashboardPage() {
                     Primate Dashboard
                   </h1>
                   <p className="text-zinc-400 text-sm mt-2">
-                    Search and pin multiple indices. You’ll see live daily bar stats, market structure, published charts, and any live trades for the selected tickers.
+                    Search one index and load it full-width. You’ll see live daily bar stats, market structure, published charts, relevant movers, relevant news, and live trades.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -294,7 +259,7 @@ export default function DashboardPage() {
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="flex-1">
                   <label className="block">
-                    <span className="text-xs text-zinc-500">Add indices</span>
+                    <span className="text-xs text-zinc-500">Search index</span>
                     <input
                       type="search"
                       value={indexSearch}
@@ -306,7 +271,7 @@ export default function DashboardPage() {
 
                   <div className="mt-3">
                     <p className="text-xs text-zinc-500 mb-2">
-                      Suggestions (up to {MAX_SELECTED} pinned)
+                      Select index
                     </p>
                     {availableSuggestions.length === 0 ? (
                       <p className="text-sm text-zinc-500">No matches.</p>
@@ -316,9 +281,11 @@ export default function DashboardPage() {
                           <button
                             key={p.symbol}
                             type="button"
-                            onClick={() => addSymbol(p.symbol)}
-                            disabled={selectedSymbols.length >= MAX_SELECTED}
-                            className="px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-950/20 hover:bg-zinc-950/40 text-sm text-zinc-200 hover:border-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => {
+                              setSelectedSymbol(p.symbol);
+                              setIndexSearch('');
+                            }}
+                            className="px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-950/20 hover:bg-zinc-950/40 text-sm text-zinc-200 hover:border-zinc-600 transition-colors"
                           >
                             <span className="font-mono font-semibold">{p.symbol}</span>
                             <span className="text-zinc-500 ml-2">{p.label}</span>
@@ -330,20 +297,9 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="lg:w-[320px]">
-                  <div className="text-xs text-zinc-500 mb-2">Pinned indices</div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSymbols.map((sym) => (
-                      <button
-                        key={sym}
-                        type="button"
-                        onClick={() => removeSymbol(sym)}
-                        aria-label={`Remove ${sym} from dashboard`}
-                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-950/20 hover:bg-zinc-950/40 transition-colors"
-                      >
-                        <span className="font-mono font-semibold text-zinc-200">{sym}</span>
-                        <span className="text-zinc-500 group-hover:text-zinc-300 text-xs">×</span>
-                      </button>
-                    ))}
+                  <div className="text-xs text-zinc-500 mb-2">Current index</div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-950/20">
+                    <span className="font-mono font-semibold text-zinc-200">{selectedSymbol}</span>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <button
@@ -355,26 +311,22 @@ export default function DashboardPage() {
                     </button>
                   </div>
                   <p className="text-xs text-zinc-500 mt-3">
-                    Data refreshes automatically every ~10 seconds.
+                    Data refreshes automatically every ~10 seconds for the selected index.
                   </p>
                 </div>
               </div>
             </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {selectedSymbols.map((sym) => (
-                <DashboardIndexCard
-                  key={sym}
-                  symbol={sym}
-                  data={indexDataBySymbol[sym] ?? null}
-                  charts={chartsBySymbol[sym] ?? []}
-                  trades={(tradesBySymbol[sym] ?? []) as Trade[]}
-                />
-              ))}
-            </div>
+            <DashboardIndexCard
+              key={selectedSymbol}
+              symbol={selectedSymbol}
+              data={indexDataBySymbol[selectedSymbol] ?? null}
+              charts={chartsBySymbol[selectedSymbol] ?? []}
+              trades={selectedTrades as Trade[]}
+            />
           </main>
 
-          <aside className="lg:col-span-3">
+          <aside className="mt-6">
             <DashboardSidebar />
           </aside>
         </div>
