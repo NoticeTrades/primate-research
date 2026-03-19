@@ -4,7 +4,9 @@ import { getDb } from '../../../../../lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const VALID_SYMBOLS = ['ES', 'NQ', 'YM', 'CL'];
+// Allow fetching charts for any index symbol we support in the main indices endpoint.
+// If the DB has no rows for a given symbol, this will simply return an empty list.
+const VALID_SYMBOLS = ['ES', 'NQ', 'YM', 'RTY', 'CL', 'DXY', 'FTSE', 'GER40', 'DAX'];
 
 export async function GET(
   request: Request,
