@@ -84,21 +84,71 @@ async function fetchLastSessionChangeFromChart(yahooSymbol: string): Promise<{ c
 }
 
 // Fetch data from Alpha Vantage (more reliable for futures)
-async function fetchAlphaVantageData(symbol: string) {
+type AlphaGlobalQuote = {
+  price: number;
+  previousClose: number;
+  change: number;
+  changePercent: number;
+  open: number;
+  high: number;
+  low: number;
+  volume: number;
+};
+
+const alphaQuoteCache = new Map<string, { data: AlphaGlobalQuote; until: number }>();
+const ALPHA_QUOTE_CACHE_MS = 30_000;
+
+function parseAlphaNum(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v !== 'string') return 0;
+  const n = parseFloat(v.trim());
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function fetchAlphaVantageGlobalQuote(symbol: string): Promise<AlphaGlobalQuote | null> {
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
   if (!apiKey) return null;
 
+  const avSymbol = ALPHA_VANTAGE_SYMBOLS[symbol];
+  if (!avSymbol) return null;
+
+  const now = Date.now();
+  const cached = alphaQuoteCache.get(symbol);
+  if (cached && cached.until > now) return cached.data;
+
   try {
-    const avSymbol = ALPHA_VANTAGE_SYMBOLS[symbol];
-    // Alpha Vantage uses different endpoints, try intraday first
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${avSymbol}&interval=1min&apikey=${apiKey}&datatype=json`;
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(avSymbol)}&apikey=${apiKey}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
-    
     const data = await res.json();
-    // Alpha Vantage format is different, would need parsing
-    // For now, let's use a simpler approach with a different provider
-    return null;
+    const q = data?.['Global Quote'];
+    if (!q) return null;
+
+    const price = parseAlphaNum(q['05. price']);
+    const previousClose = parseAlphaNum(q['08. previous close']);
+    const open = parseAlphaNum(q['02. open']);
+    const high = parseAlphaNum(q['03. high']);
+    const low = parseAlphaNum(q['04. low']);
+    const volume = parseAlphaNum(q['06. volume']);
+
+    if (!Number.isFinite(price) || price <= 0) return null;
+
+    const change = previousClose > 0 ? price - previousClose : 0;
+    const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
+
+    const result: AlphaGlobalQuote = {
+      price,
+      previousClose: previousClose > 0 ? previousClose : price,
+      change,
+      changePercent,
+      open,
+      high: high > 0 ? high : price,
+      low: low > 0 ? low : price,
+      volume,
+    };
+
+    alphaQuoteCache.set(symbol, { data: result, until: now + ALPHA_QUOTE_CACHE_MS });
+    return result;
   } catch {
     return null;
   }
@@ -256,7 +306,22 @@ export async function GET(
       console.log(`[Index API] Twelve Data failed for ${symbol}, falling back to Yahoo Finance`);
     }
 
-    // Fallback to Yahoo Finance if Twelve Data didn't work (Yahoo is often 10–15 min delayed; set TWELVE_DATA_API_KEY for real-time)
+    // Fallback providers if Twelve Data didn't work
+    if (price === 0) {
+      const av = await fetchAlphaVantageGlobalQuote(symbol);
+      if (av && av.price > 0) {
+        price = av.price;
+        change = av.change;
+        changePercent = av.changePercent;
+        previousClose = av.previousClose;
+        high = av.high;
+        low = av.low;
+        open = av.open;
+        volume = av.volume;
+      }
+    }
+
+    // Yahoo fallback (used only if Alpha Vantage didn't return)
     if (price === 0) {
       // Try 5m intraday chart first for slightly fresher price when market is open
       try {

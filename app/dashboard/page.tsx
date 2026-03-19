@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Navigation from '../components/Navigation';
 import CursorGlow from '../components/CursorGlow';
 import CursorHover from '../components/CursorHover';
@@ -82,6 +82,9 @@ export default function DashboardPage() {
   const [chartsBySymbol, setChartsBySymbol] = useState<Record<string, IndexChart[]>>({});
   const [indicesLastUpdated, setIndicesLastUpdated] = useState<Date | null>(null);
 
+  // Prevent out-of-order async responses from overwriting newer dashboard state.
+  const indicesRequestIdRef = useRef(0);
+
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [tradesLastUpdated, setTradesLastUpdated] = useState<Date | null>(null);
 
@@ -131,6 +134,9 @@ export default function DashboardPage() {
     let cancelled = false;
 
     const fetchAll = async () => {
+      indicesRequestIdRef.current += 1;
+      const requestId = indicesRequestIdRef.current;
+
       const ts = Date.now();
       const nextData: Record<string, IndexData | null> = {};
 
@@ -158,6 +164,7 @@ export default function DashboardPage() {
       );
 
       if (cancelled) return;
+      if (requestId !== indicesRequestIdRef.current) return;
       setIndexDataBySymbol((prev) => ({ ...prev, ...nextData }));
       setIndicesLastUpdated(new Date());
     };
