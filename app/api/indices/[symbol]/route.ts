@@ -154,6 +154,14 @@ async function fetchAlphaVantageGlobalQuote(symbol: string): Promise<AlphaGlobal
   }
 }
 
+function isPlausibleFuturesPrice(symbol: string, price: number): boolean {
+  if (!Number.isFinite(price) || price <= 0) return false;
+  // Sanity-check: futures prices are not single-digit.
+  if (['NQ', 'ES', 'YM', 'RTY'].includes(symbol)) return price > 1000;
+  if (symbol === 'CL') return price > 10;
+  return price > 0;
+}
+
 // Fetch data from Twelve Data (excellent for real-time futures)
 async function fetchTwelveData(symbol: string) {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
@@ -309,7 +317,9 @@ export async function GET(
     // Fallback providers if Twelve Data didn't work
     if (price === 0) {
       const av = await fetchAlphaVantageGlobalQuote(symbol);
-      if (av && av.price > 0) {
+      // Alpha Vantage sometimes returns unusable values for futures symbols.
+      // If the returned price is implausible, ignore it and keep Yahoo fallback.
+      if (av && isPlausibleFuturesPrice(symbol, av.price)) {
         price = av.price;
         change = av.change;
         changePercent = av.changePercent;
