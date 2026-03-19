@@ -156,9 +156,16 @@ async function fetchAlphaVantageGlobalQuote(symbol: string): Promise<AlphaGlobal
 
 function isPlausibleFuturesPrice(symbol: string, price: number): boolean {
   if (!Number.isFinite(price) || price <= 0) return false;
-  // Sanity-check: futures prices are not single-digit.
-  if (['NQ', 'ES', 'YM', 'RTY'].includes(symbol)) return price > 1000;
-  if (symbol === 'CL') return price > 10;
+  // Sanity-check: providers sometimes return broken/unscaled values.
+  // Use conservative lower-bounds per index so we don't accept "2.20" type numbers.
+  if (['NQ', 'ES', 'YM', 'RTY'].includes(symbol)) return price > 5000;
+  if (symbol === 'CL') return price > 10; // WTI ~ 50-150
+  if (symbol === 'DXY') return price > 60; // ~70-120
+  if (symbol === 'GC') return price > 500; // gold ~ 1500-3000
+  if (symbol === 'SI') return price > 5; // silver ~ 10-40
+  if (symbol === 'N225') return price > 10000; // nikkei tens-of-thousands in USD terms
+  if (symbol === 'FTSE') return price > 1000;
+  if (symbol === 'GER40' || symbol === 'DAX') return price > 1000;
   return price > 0;
 }
 
@@ -268,8 +275,10 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid index symbol' }, { status: 400 });
     }
 
-    // Use June 2026 contract for CME futures so we get correct data after roll
-    const yahooSymbol = YAHOO_JUNE_2026[symbol] || YAHOO_SYMBOLS[symbol];
+    // Prefer the June 2026 contract for roll accuracy, but we may switch back
+    // to the front-month cash/futures symbol if a provider returns implausible values.
+    let yahooSymbol = YAHOO_JUNE_2026[symbol] || YAHOO_SYMBOLS[symbol];
+    const yahooSymbolFront = YAHOO_SYMBOLS[symbol] || symbol;
     const sql = getDb();
 
     // Fetch market structure from database
@@ -301,6 +310,22 @@ export async function GET(
       low = twelveData.holc.low;
       open = twelveData.holc.open;
       volume = twelveData.volume;
+
+      // If Twelve Data returns an outlier (e.g. mis-scaled price), ignore it and fall back.
+      if (!isPlausibleFuturesPrice(symbol, price)) {
+        console.log(`[Index API] Twelve Data price implausible for ${symbol} (price=${price}), falling back`);
+        price = 0;
+        change = 0;
+        changePercent = 0;
+        previousClose = 0;
+        high = 0;
+        low = 0;
+        open = 0;
+        volume = 0;
+        // If June contract symbol caused a mis-scaled response, retry Yahoo using the front-month symbol.
+        yahooSymbol = yahooSymbolFront;
+      }
+
       // When markets are closed (e.g. weekend), Twelve Data often returns change 0. Use last session from 5d chart.
       if (price > 0 && changePercent === 0 && change === 0 && yahooSymbol) {
         const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
@@ -352,6 +377,16 @@ export async function GET(
             previousClose = prevClose;
             change = prevClose > 0 ? price - prevClose : 0;
             changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+
+            if (!isPlausibleFuturesPrice(symbol, lastClose)) {
+              // Ignore mis-scaled/invalid values and fall through to the next Yahoo path.
+              price = 0;
+              previousClose = 0;
+              change = 0;
+              changePercent = 0;
+              yahooSymbol = yahooSymbolFront;
+            }
+
             // When markets are closed (e.g. weekend), intraday may give change 0. Use last session from 5d chart.
             if (change === 0 && changePercent === 0) {
               const lastSession = await fetchLastSessionChangeFromChart(yahooSymbol);
@@ -431,6 +466,15 @@ export async function GET(
           }
         }
         
+        // Guard against mis-scaled/implausible values.
+        if (regularMarketPrice > 0 && !isPlausibleFuturesPrice(symbol, regularMarketPrice)) {
+          regularMarketPrice = 0;
+          prevClose = 0;
+          changeVal = 0;
+          changePct = 0;
+          yahooSymbol = yahooSymbolFront;
+        }
+
         price = regularMarketPrice;
         previousClose = prevClose;
         change = changeVal;
@@ -439,6 +483,14 @@ export async function GET(
         low = q.regularMarketDayLow ?? q.dayLow ?? q.regularMarketPrice ?? 0;
         open = q.regularMarketOpen ?? q.open ?? q.regularMarketPrice ?? 0;
         volume = q.regularMarketVolume ?? q.volume ?? 0;
+
+        // If price was rejected as implausible, also reject derived OHLC/volume.
+        if (price === 0) {
+          high = 0;
+          low = 0;
+          open = 0;
+          volume = 0;
+        }
         
         // Validate HOLC data - ensure we have valid numbers
         if (high === 0 && price > 0) high = price;
@@ -484,6 +536,19 @@ export async function GET(
             if (high === 0 && priceFromChart > 0) high = priceFromChart;
             if (low === 0 && priceFromChart > 0) low = priceFromChart;
             if (open === 0 && priceFromChart > 0) open = priceFromChart;
+
+            // Guard against mis-scaled/implausible values.
+            if (!isPlausibleFuturesPrice(symbol, priceFromChart)) {
+              price = 0;
+              previousClose = 0;
+              change = 0;
+              changePercent = 0;
+              high = 0;
+              low = 0;
+              open = 0;
+              volume = 0;
+              yahooSymbol = yahooSymbolFront;
+            }
           }
         }
       } catch {

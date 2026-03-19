@@ -68,7 +68,7 @@ const INDEX_PICKS: { symbol: string; label: string }[] = [
   { symbol: 'DXY', label: 'US Dollar Index' },
   { symbol: 'CL', label: 'WTI Crude Oil' },
   { symbol: 'FTSE', label: 'FTSE 100 Index' },
-  { symbol: 'GER40', label: 'DAX / Germany 40' },
+  { symbol: 'GER40', label: 'Germany 40 Index' },
   { symbol: 'DAX', label: 'DAX Index' },
 ];
 

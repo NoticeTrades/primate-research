@@ -214,24 +214,6 @@ export default function DashboardIndexCard({
                   ? data.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                   : '—'}
               </p>
-              <div className="flex items-center gap-3 mt-2">
-                <span
-                  className={`text-lg font-semibold tabular-nums ${
-                    data.change >= 0 ? 'text-emerald-400' : 'text-red-400'
-                  }`}
-                >
-                  {data.change >= 0 ? '+' : ''}
-                  {data.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <span
-                  className={`text-sm font-medium ${
-                    data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'
-                  }`}
-                >
-                  ({data.changePercent >= 0 ? '+' : ''}
-                  {data.changePercent.toFixed(2)}%)
-                </span>
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -266,20 +248,35 @@ export default function DashboardIndexCard({
             </div>
           </div>
 
+          <div className="mt-3 flex items-center gap-3">
+            <span
+              className={`text-lg font-semibold tabular-nums ${
+                data.change >= 0 ? 'text-emerald-400' : 'text-red-400'
+              }`}
+            >
+              {data.price > 0 && data.previousClose > 0
+                ? `${data.change >= 0 ? '+' : ''}${data.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pts`
+                : '—'}
+            </span>
+            <span
+              className={`text-sm font-medium ${
+                data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'
+              }`}
+            >
+              {data.price > 0 && data.previousClose > 0
+                ? `(${data.changePercent >= 0 ? '+' : ''}${data.changePercent.toFixed(2)}%)`
+                : '—'}
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
             <div className="lg:col-span-2 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
-              <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Daily bar (HOLC)</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Trading range (High → Low)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <p className="text-xs text-zinc-500 mb-0.5">High</p>
                   <p className="text-lg font-bold text-emerald-400 tabular-nums">
                     {data.holc.high > 0 ? data.holc.high.toFixed(2) : '—'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-zinc-500 mb-0.5">Open</p>
-                  <p className="text-lg font-bold text-zinc-300 tabular-nums">
-                    {data.holc.open > 0 ? data.holc.open.toFixed(2) : '—'}
                   </p>
                 </div>
                 <div>
@@ -289,9 +286,11 @@ export default function DashboardIndexCard({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500 mb-0.5">Close</p>
-                  <p className="text-lg font-bold text-zinc-50 tabular-nums">
-                    {data.holc.close > 0 ? data.holc.close.toFixed(2) : '—'}
+                  <p className="text-xs text-zinc-500 mb-0.5">Range (pts)</p>
+                  <p className="text-lg font-bold text-zinc-200 tabular-nums">
+                    {data.holc.high > 0 && data.holc.low > 0
+                      ? `${Math.max(0, data.holc.high - data.holc.low).toFixed(2)}`
+                      : '—'}
                   </p>
                 </div>
               </div>
