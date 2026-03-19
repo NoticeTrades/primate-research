@@ -62,6 +62,12 @@ type StockMover = {
   volume: number;
 };
 
+type IndexNewsItem = {
+  title: string;
+  url: string;
+  source: string;
+};
+
 function getStructureColor(structure: string | null | undefined): string {
   if (!structure) return 'text-zinc-400';
   const s = structure.toLowerCase();
@@ -112,10 +118,12 @@ export default function DashboardIndexCard({
   trades: Trade[];
 }) {
   const [chartsOpen, setChartsOpen] = useState(false);
-  const [moversOpen, setMoversOpen] = useState(false);
   const [moversLoading, setMoversLoading] = useState(false);
   const [moversError, setMoversError] = useState<string | null>(null);
   const [movers, setMovers] = useState<{ gainers: StockMover[]; losers: StockMover[] } | null>(null);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
+  const [newsItems, setNewsItems] = useState<IndexNewsItem[]>([]);
 
   const hasCharts = charts.length > 0;
   const hasTrades = trades.length > 0;
@@ -130,13 +138,11 @@ export default function DashboardIndexCard({
   }, [trades]);
 
   useEffect(() => {
-    if (!moversOpen) return;
-    if (movers || moversLoading) return;
-
     let cancelled = false;
     const loadMovers = async () => {
       setMoversLoading(true);
       setMoversError(null);
+      setMovers(null);
       try {
         const res = await fetch(`/api/index-movers?index=${encodeURIComponent(symbol)}&limit=5`, { cache: 'no-store' });
         if (!res.ok) {
@@ -163,7 +169,34 @@ export default function DashboardIndexCard({
     return () => {
       cancelled = true;
     };
-  }, [moversOpen, movers, moversLoading, symbol]);
+  }, [symbol]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadNews = async () => {
+      setNewsLoading(true);
+      setNewsError(null);
+      setNewsItems([]);
+      try {
+        const res = await fetch(`/api/index-news?index=${encodeURIComponent(symbol)}&limit=4`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to load index news');
+        const json = (await res.json()) as { items?: IndexNewsItem[] };
+        if (cancelled) return;
+        setNewsItems(Array.isArray(json.items) ? json.items.slice(0, 4) : []);
+      } catch (e) {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : 'Failed to load index news';
+        setNewsError(msg);
+      } finally {
+        if (!cancelled) setNewsLoading(false);
+      }
+    };
+
+    loadNews();
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol]);
 
   return (
     <section
@@ -187,16 +220,12 @@ export default function DashboardIndexCard({
                 {data.name}
               </h3>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMoversOpen((v) => !v)}
-                  aria-expanded={moversOpen}
-                  aria-controls={`movers-${symbol}`}
-                  className="px-2.5 py-0.5 rounded-md bg-zinc-800/80 border border-zinc-600 text-zinc-300 font-mono text-sm hover:border-zinc-500 transition-colors cursor-pointer"
-                  title="Show top stock movers"
+                <span
+                  className="px-2.5 py-0.5 rounded-md bg-zinc-800/80 border border-zinc-600 text-zinc-300 font-mono text-sm"
+                  title="Selected symbol"
                 >
                   {symbol}
-                </button>
+                </span>
                 {hasTrades && (
                   <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs font-semibold">
                     {trades.length} live trade{trades.length !== 1 ? 's' : ''}
@@ -284,26 +313,40 @@ export default function DashboardIndexCard({
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
             <div className="lg:col-span-2 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
-              <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Trading range (High → Low)</h4>
+              <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">OHLC + trading range</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <p className="text-xs text-zinc-500 mb-0.5">High</p>
-                  <p className="text-lg font-bold text-emerald-400 tabular-nums">
+                  <p className="text-lg font-bold text-emerald-400 tabular-nums whitespace-nowrap">
                     {data.holc.high > 0 ? data.holc.high.toFixed(2) : '—'}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500 mb-0.5">Low</p>
-                  <p className="text-lg font-bold text-red-400 tabular-nums">
+                  <p className="text-lg font-bold text-red-400 tabular-nums whitespace-nowrap">
                     {data.holc.low > 0 ? data.holc.low.toFixed(2) : '—'}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500 mb-0.5">Range (pts)</p>
-                  <p className="text-lg font-bold text-zinc-200 tabular-nums">
+                  <p className="text-lg font-bold text-zinc-200 tabular-nums whitespace-nowrap">
                     {data.holc.high > 0 && data.holc.low > 0
                       ? `${Math.max(0, data.holc.high - data.holc.low).toFixed(2)}`
                       : '—'}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-zinc-500 mb-0.5">Open</p>
+                  <p className="text-base font-semibold text-zinc-300 tabular-nums whitespace-nowrap">
+                    {data.holc.open > 0 ? data.holc.open.toFixed(2) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500 mb-0.5">Close</p>
+                  <p className="text-base font-semibold text-zinc-200 tabular-nums whitespace-nowrap">
+                    {data.holc.close > 0 ? data.holc.close.toFixed(2) : '—'}
                   </p>
                 </div>
               </div>
@@ -420,11 +463,10 @@ export default function DashboardIndexCard({
             </div>
           </div>
 
-          {moversOpen && (
-            <div id={`movers-${symbol}`} className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
+          <div className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Top movers</h4>
-                <span className="text-xs text-zinc-500">Up + down (top 5)</span>
+                <span className="text-xs text-zinc-500">For {symbol} (top 5 up/down)</span>
               </div>
 
               {moversLoading ? (
@@ -488,8 +530,40 @@ export default function DashboardIndexCard({
               ) : (
                 <p className="text-sm text-zinc-500">No data.</p>
               )}
+          </div>
+
+          <div className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Relevant news</h4>
+              <span className="text-xs text-zinc-500">{symbol}</span>
             </div>
-          )}
+            {newsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-8 bg-zinc-800/50 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : newsError ? (
+              <p className="text-sm text-red-400">{newsError}</p>
+            ) : newsItems.length === 0 ? (
+              <p className="text-sm text-zinc-500">No recent headlines.</p>
+            ) : (
+              <div className="space-y-2">
+                {newsItems.map((n) => (
+                  <a
+                    key={`${n.url}-${n.title}`}
+                    href={n.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 hover:border-zinc-700 transition-colors"
+                  >
+                    <p className="text-sm text-zinc-200 line-clamp-2">{n.title}</p>
+                    <p className="text-xs text-zinc-500 mt-1">{n.source}</p>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div>
             <div className="bg-zinc-950/30 border border-zinc-800 rounded-2xl overflow-hidden">
