@@ -211,11 +211,19 @@ export default function Home() {
               Weekly market outlooks, daily research reports, and actionable trade ideas across equities, crypto, and macro markets. Everything you need to stay ahead of the markets.
             </p>
             <div className="flex flex-wrap gap-4 mb-8 justify-center items-center">
-              <ScrollButton targetId="research" variant="primary">
+              <button
+                type="button"
+                onClick={() => router.push('/dashboard')}
+                className="px-8 py-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+                suppressHydrationWarning
+              >
+                View Dashboard
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <ScrollButton targetId="research" variant="secondary">
                 View Research
-              </ScrollButton>
-              <ScrollButton targetId="videos" variant="secondary">
-                Watch Videos
               </ScrollButton>
               <YouTubeLiveIndicator />
             </div>
@@ -419,10 +427,10 @@ export default function Home() {
             </h3>
             <div className="space-y-6">
               <p className="text-lg text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                Primate Trading is designed to be your one-stop shop for traders and investors to get their daily overview of the market, helping prepare you for your trading day. My mission is to provide the knowledge and analytical framework needed to navigate today's complex market landscape—breaking down how markets work, how the machine runs, and what drives price action across equities, crypto, and macro markets.
+                Primate Trading is designed to be your one-stop shop for traders and investors to get their daily overview of the market, helping prepare you for your trading day. My mission is to provide the knowledge and analytical framework needed to navigate today&apos;s complex market landscape—breaking down how markets work, how the machine runs, and what drives price action across equities, crypto, and macro markets.
               </p>
               <p className="text-lg text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                Primate Trading delivers weekly market outlooks, daily research reports, and actionable trade ideas across equities, crypto, and macro markets. Through comprehensive analysis and educational video content, I focus on regime identification, active investing strategies, trade execution, and risk management. The goal is to bridge the gap between institutional-level research and accessible, practical guidance—helping traders understand not just what's happening in markets, but why it's happening and how to position accordingly. My aim is to empower active market participants with the clarity, context, and analytical tools needed to make informed decisions and manage risk effectively in any market environment.
+                Primate Trading delivers weekly market outlooks, daily research reports, and actionable trade ideas across equities, crypto, and macro markets. Through comprehensive analysis and educational video content, I focus on regime identification, active investing strategies, trade execution, and risk management. The goal is to bridge the gap between institutional-level research and accessible, practical guidance—helping traders understand not just what&apos;s happening in markets, but why it&apos;s happening and how to position accordingly. My aim is to empower active market participants with the clarity, context, and analytical tools needed to make informed decisions and manage risk effectively in any market environment.
               </p>
             </div>
           </div>

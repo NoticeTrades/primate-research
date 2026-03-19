@@ -262,7 +262,7 @@ export default function DashboardPage() {
                     Dashboard
                   </div>
                   <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 tracking-tight">
-                    Live Indices Viewer
+                    Primate Dashboard
                   </h1>
                   <p className="text-zinc-400 text-sm mt-2">
                     Search and pin multiple indices. You’ll see live daily bar stats, market structure, published charts, and any live trades for the selected tickers.

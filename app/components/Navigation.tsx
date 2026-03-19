@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import Logo from './Logo';
 import { researchArticles, generateSlug } from '../../data/research';
 import { useChat } from '../contexts/ChatContext';
@@ -1593,7 +1594,7 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto pl-4 pr-6 py-4">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-8">
-            <a
+            <Link
               href="/"
               onClick={(e) => {
                 if (pathname === '/') {
@@ -1607,7 +1608,7 @@ export default function Navigation() {
               <span className="[&>div]:!w-10 [&>div]:!h-10">
                 <Logo />
               </span>
-            </a>
+            </Link>
             <div className="hidden md:flex items-center gap-8">
               <button
                 onClick={() => scrollToSection('about')}
@@ -1617,19 +1618,18 @@ export default function Navigation() {
                 About
               </button>
               <button
-                onClick={() => handleNavClick('/research')}
-                className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                suppressHydrationWarning
-              >
-                Research
-              </button>
-
-              <button
                 onClick={() => handleNavClick('/dashboard')}
                 className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
                 suppressHydrationWarning
               >
                 Dashboard
+              </button>
+              <button
+                onClick={() => handleNavClick('/research')}
+                className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                suppressHydrationWarning
+              >
+                Research
               </button>
               
               {/* Tools Dropdown */}

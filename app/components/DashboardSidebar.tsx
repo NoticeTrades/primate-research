@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { researchArticles, generateSlug, type ResearchArticle } from '../../data/research';
-import { videos, type VideoEntry } from '../../data/videos';
+import { videos, type VideoEntry, type VideoType } from '../../data/videos';
 
 type SidebarFilter = 'all' | 'research' | 'videos';
 
@@ -26,6 +26,10 @@ function parseResearchDate(dateStr?: string): number {
 
 function parseVideoDate(dateStr?: string): number {
   if (!dateStr) return 0;
+  // Support ISO-like dates and "Dec 2024" style.
+  const iso = new Date(dateStr);
+  if (Number.isFinite(iso.getTime())) return iso.getTime();
+
   // Expected format: "Dec 2024" etc.
   const parts = dateStr.trim().split(/\s+/);
   if (parts.length !== 2) return 0;
@@ -56,9 +60,71 @@ function getItemDescription(article: ResearchArticle): string {
   return article.description || 'View report';
 }
 
+function coerceVideoType(value: unknown): VideoType | undefined {
+  if (value === 'youtube' || value === 'exclusive' || value === 'external') return value;
+  return undefined;
+}
+
 export default function DashboardSidebar() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SidebarFilter>('all');
+  const [dbVideos, setDbVideos] = useState<VideoEntry[]>([]);
+
+  useEffect(() => {
+    const loadDbVideos = async () => {
+      try {
+        const res = await fetch('/api/videos', { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = (await res.json()) as { videos?: unknown[] };
+        const rawVideos = Array.isArray(json?.videos) ? json.videos : [];
+        const mapped: VideoEntry[] = rawVideos
+          .map((v) => {
+            const obj = v as {
+              title?: unknown;
+              description?: unknown;
+              videoUrl?: unknown;
+              videoType?: unknown;
+              category?: unknown;
+              thumbnailUrl?: unknown;
+              date?: unknown;
+              duration?: unknown;
+              isExclusive?: unknown;
+            };
+
+            const title = typeof obj.title === 'string' ? obj.title : '';
+            const description = typeof obj.description === 'string' ? obj.description : '';
+            const videoUrl = typeof obj.videoUrl === 'string' ? obj.videoUrl : '';
+            const videoType = coerceVideoType(obj.videoType) ?? 'exclusive';
+            const category = typeof obj.category === 'string' ? obj.category : undefined;
+            const thumbnailUrl = typeof obj.thumbnailUrl === 'string' ? obj.thumbnailUrl : undefined;
+            const date = typeof obj.date === 'string' ? obj.date : undefined;
+            const duration = typeof obj.duration === 'string' ? obj.duration : undefined;
+            const isExclusive = typeof obj.isExclusive === 'boolean' ? obj.isExclusive : undefined;
+
+            if (!title || !videoUrl) return null;
+
+            return {
+              title,
+              description,
+              videoUrl,
+              videoType,
+              category,
+              thumbnailUrl,
+              date,
+              duration,
+              isExclusive,
+            } satisfies VideoEntry;
+          })
+          .filter((x): x is VideoEntry => x != null);
+
+        setDbVideos(mapped);
+      } catch {
+        // ignore
+      }
+    };
+
+    loadDbVideos();
+  }, []);
 
   const items = useMemo<SidebarItem[]>(() => {
     const researchItems: SidebarItem[] = researchArticles.map((a) => {
@@ -74,18 +140,36 @@ export default function DashboardSidebar() {
       };
     });
 
-    const videoItems: SidebarItem[] = (videos as VideoEntry[]).map((v) => ({
-      type: 'videos',
-      title: v.title,
-      description: v.description || 'Watch video',
-      dateLabel: v.date,
-      tag: v.category,
-      href: '/videos',
-      sortTs: parseVideoDate(v.date),
-    }));
+    const allVideos: VideoEntry[] = (() => {
+      // Prefer DB uploads when there are duplicates.
+      const combined = [...dbVideos, ...(videos as VideoEntry[])];
+      const seen = new Set<string>();
+      const unique: VideoEntry[] = [];
+      for (const v of combined) {
+        const url = (v.videoUrl || '').toLowerCase().trim();
+        if (!url) continue;
+        if (seen.has(url)) continue;
+        seen.add(url);
+        unique.push(v);
+      }
+      return unique;
+    })();
+
+    const videoItems: SidebarItem[] = allVideos.map((v) => {
+      const dateLabel = v.date ?? '';
+      return {
+        type: 'videos',
+        title: v.title,
+        description: v.description || 'Watch video',
+        dateLabel,
+        tag: v.category,
+        href: '/videos',
+        sortTs: parseVideoDate(v.date),
+      };
+    });
 
     return [...researchItems, ...videoItems].sort((x, y) => y.sortTs - x.sortTs);
-  }, []);
+  }, [dbVideos]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -105,7 +189,7 @@ export default function DashboardSidebar() {
       <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 shadow-xl">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-200">Recent</h2>
+            <h2 className="text-sm font-semibold text-zinc-200">Research</h2>
             <p className="text-xs text-zinc-500 mt-1">Articles / reports and videos</p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 
 type Trade = {
@@ -54,6 +54,14 @@ type IndexChart = {
   created_at: string;
 };
 
+type StockMover = {
+  ticker: string;
+  price: number;
+  changePercent: number;
+  change: number;
+  volume: number;
+};
+
 function getStructureColor(structure: string | null | undefined): string {
   if (!structure) return 'text-zinc-400';
   const s = structure.toLowerCase();
@@ -104,6 +112,10 @@ export default function DashboardIndexCard({
   trades: Trade[];
 }) {
   const [chartsOpen, setChartsOpen] = useState(false);
+  const [moversOpen, setMoversOpen] = useState(false);
+  const [moversLoading, setMoversLoading] = useState(false);
+  const [moversError, setMoversError] = useState<string | null>(null);
+  const [movers, setMovers] = useState<{ gainers: StockMover[]; losers: StockMover[] } | null>(null);
 
   const hasCharts = charts.length > 0;
   const hasTrades = trades.length > 0;
@@ -116,6 +128,42 @@ export default function DashboardIndexCard({
         return { ...t, openQty };
       });
   }, [trades]);
+
+  useEffect(() => {
+    if (!moversOpen) return;
+    if (movers || moversLoading) return;
+
+    let cancelled = false;
+    const loadMovers = async () => {
+      setMoversLoading(true);
+      setMoversError(null);
+      try {
+        const res = await fetch(`/api/index-movers?index=${encodeURIComponent(symbol)}&limit=5`, { cache: 'no-store' });
+        if (!res.ok) {
+          const json = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(json?.error || 'Failed to load movers');
+        }
+        const json = (await res.json()) as { gainers: StockMover[]; losers: StockMover[] };
+        if (cancelled) return;
+        setMovers({
+          gainers: Array.isArray(json.gainers) ? json.gainers.slice(0, 5) : [],
+          losers: Array.isArray(json.losers) ? json.losers.slice(0, 5) : [],
+        });
+      } catch (e) {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : 'Failed to load movers';
+        setMoversError(msg);
+      } finally {
+        if (!cancelled) setMoversLoading(false);
+      }
+    };
+
+    loadMovers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moversOpen, movers, moversLoading, symbol]);
 
   return (
     <section
@@ -139,9 +187,16 @@ export default function DashboardIndexCard({
                 {data.name}
               </h3>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-md bg-zinc-800/80 border border-zinc-600 text-zinc-300 font-mono text-sm">
+                <button
+                  type="button"
+                  onClick={() => setMoversOpen((v) => !v)}
+                  aria-expanded={moversOpen}
+                  aria-controls={`movers-${symbol}`}
+                  className="px-2.5 py-0.5 rounded-md bg-zinc-800/80 border border-zinc-600 text-zinc-300 font-mono text-sm hover:border-zinc-500 transition-colors cursor-pointer"
+                  title="Show top stock movers"
+                >
                   {symbol}
-                </span>
+                </button>
                 {hasTrades && (
                   <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs font-semibold">
                     {trades.length} live trade{trades.length !== 1 ? 's' : ''}
@@ -352,6 +407,77 @@ export default function DashboardIndexCard({
               )}
             </div>
           </div>
+
+          {moversOpen && (
+            <div id={`movers-${symbol}`} className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Top movers</h4>
+                <span className="text-xs text-zinc-500">Up + down (top 5)</span>
+              </div>
+
+              {moversLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-8 bg-zinc-800/50 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : moversError ? (
+                <p className="text-sm text-red-400">{moversError}</p>
+              ) : movers ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-zinc-900/40 border border-zinc-800 p-3">
+                    <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-2">Gainers</p>
+                    <div className="space-y-2">
+                      {movers.gainers.length === 0 ? (
+                        <p className="text-sm text-zinc-500">No data.</p>
+                      ) : (
+                        movers.gainers.map((r) => (
+                          <a
+                            key={r.ticker}
+                            href={`https://finance.yahoo.com/quote/${encodeURIComponent(r.ticker)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-2 hover:text-emerald-200 transition-colors"
+                          >
+                            <span className="font-mono text-sm text-zinc-200">{r.ticker}</span>
+                            <span className="text-sm font-semibold text-emerald-400 tabular-nums">
+                              +{r.changePercent.toFixed(2)}%
+                            </span>
+                          </a>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-zinc-900/40 border border-zinc-800 p-3">
+                    <p className="text-xs font-semibold text-red-300 uppercase tracking-wider mb-2">Losers</p>
+                    <div className="space-y-2">
+                      {movers.losers.length === 0 ? (
+                        <p className="text-sm text-zinc-500">No data.</p>
+                      ) : (
+                        movers.losers.map((r) => (
+                          <a
+                            key={r.ticker}
+                            href={`https://finance.yahoo.com/quote/${encodeURIComponent(r.ticker)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-2 hover:text-red-200 transition-colors"
+                          >
+                            <span className="font-mono text-sm text-zinc-200">{r.ticker}</span>
+                            <span className="text-sm font-semibold text-red-400 tabular-nums">
+                              {r.changePercent.toFixed(2)}%
+                            </span>
+                          </a>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-500">No data.</p>
+              )}
+            </div>
+          )}
 
           <div>
             <div className="bg-zinc-950/30 border border-zinc-800 rounded-2xl overflow-hidden">
