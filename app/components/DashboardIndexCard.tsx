@@ -206,8 +206,8 @@ export default function DashboardIndexCard({
             </div>
           </header>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-            <div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+            <div className="lg:col-span-1 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
               <p className="text-xs uppercase tracking-wider text-zinc-500 mb-1">Current price</p>
               <p className="text-3xl sm:text-4xl font-bold text-zinc-50 tabular-nums">
                 {data.price > 0
@@ -216,23 +216,31 @@ export default function DashboardIndexCard({
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-zinc-500 mb-0.5">Prev close</p>
-                <p className="text-lg font-semibold text-zinc-200 tabular-nums">
-                  {data.previousClose > 0
-                    ? data.previousClose.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                    : '—'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500 mb-0.5">Volume</p>
-                <p className="text-lg font-semibold text-zinc-200 tabular-nums">
-                  {data.volume > 0 ? data.volume.toLocaleString('en-US') : '—'}
-                </p>
-              </div>
-              {data.ytdPercent !== undefined && (
-                <div className="col-span-2">
+            <div className="lg:col-span-2 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-zinc-500 mb-0.5">Open</p>
+                  <p className="text-lg font-semibold text-zinc-200 tabular-nums">
+                    {data.holc.open > 0
+                      ? data.holc.open.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500 mb-0.5">Prev close</p>
+                  <p className="text-lg font-semibold text-zinc-200 tabular-nums">
+                    {data.previousClose > 0
+                      ? data.previousClose.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500 mb-0.5">Volume</p>
+                  <p className="text-lg font-semibold text-zinc-200 tabular-nums">
+                    {data.volume > 0 ? data.volume.toLocaleString('en-US') : '—'}
+                  </p>
+                </div>
+                <div>
                   <p className="text-xs text-zinc-500 mb-0.5">YTD</p>
                   <p
                     className={`text-lg font-semibold tabular-nums ${
@@ -244,29 +252,34 @@ export default function DashboardIndexCard({
                       : '—'}
                   </p>
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-3">
-            <span
-              className={`text-lg font-semibold tabular-nums ${
-                data.change >= 0 ? 'text-emerald-400' : 'text-red-400'
-              }`}
-            >
-              {data.price > 0 && data.previousClose > 0
-                ? `${data.change >= 0 ? '+' : ''}${data.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pts`
-                : '—'}
-            </span>
-            <span
-              className={`text-sm font-medium ${
-                data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'
-              }`}
-            >
-              {data.price > 0 && data.previousClose > 0
-                ? `(${data.changePercent >= 0 ? '+' : ''}${data.changePercent.toFixed(2)}%)`
-                : '—'}
-            </span>
+          <div className="mb-5 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
+            <p className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Daily change</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className={`text-xl font-semibold tabular-nums ${
+                  data.change >= 0 ? 'text-emerald-400' : 'text-red-400'
+                }`}
+              >
+                {data.price > 0 && data.previousClose > 0
+                  ? `${data.change >= 0 ? '+' : ''}${data.change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pts`
+                  : '—'}
+              </span>
+              <span
+                className={`text-sm font-medium px-2.5 py-1 rounded-full border ${
+                  data.changePercent >= 0
+                    ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                    : 'text-red-300 border-red-500/30 bg-red-500/10'
+                }`}
+              >
+                {data.price > 0 && data.previousClose > 0
+                  ? `${data.changePercent >= 0 ? '+' : ''}${data.changePercent.toFixed(2)}%`
+                  : '—'}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
