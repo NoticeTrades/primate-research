@@ -670,6 +670,12 @@ export async function GET(
     const dayRangePoints = high > 0 && low > 0 ? high - low : 0;
     const dayRangePercent = previousClose > 0 && dayRangePoints > 0 ? (dayRangePoints / previousClose) * 100 : 0;
 
+    // Some providers omit open for futures/indices intraday; provide a sensible fallback.
+    if (!(open > 0)) {
+      if (previousClose > 0) open = previousClose;
+      else if (price > 0) open = price;
+    }
+
     const volumeAvg20 = typeof (globalThis as any)._indexVolumeAvg20 === 'number' ? (globalThis as any)._indexVolumeAvg20 : 0;
     const volumeVsAvg = volumeAvg20 > 0 && volume > 0 ? (volume / volumeAvg20) * 100 : 0;
     (globalThis as any)._indexVolumeAvg20 = undefined;

@@ -135,6 +135,7 @@ export default function DashboardIndexCard({
   const [socialLoading, setSocialLoading] = useState(false);
   const [socialError, setSocialError] = useState<string | null>(null);
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
+  const [socialSource, setSocialSource] = useState<string>('none');
 
   const hasCharts = charts.length > 0;
   const hasTrades = trades.length > 0;
@@ -188,11 +189,13 @@ export default function DashboardIndexCard({
       setSocialLoading(true);
       setSocialError(null);
       setSocialPosts([]);
+      setSocialSource('none');
       try {
-        const res = await fetch('/api/social-feed?limit=3', { cache: 'no-store' });
+        const res = await fetch('/api/social-feed?account=spectatorindex&limit=3', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load social feed');
-        const json = (await res.json()) as { posts?: SocialPost[] };
+        const json = (await res.json()) as { source?: string; posts?: SocialPost[] };
         if (cancelled) return;
+        setSocialSource(typeof json.source === 'string' ? json.source : 'none');
         setSocialPosts(Array.isArray(json.posts) ? json.posts.slice(0, 3) : []);
       } catch (e) {
         if (cancelled) return;
@@ -606,7 +609,7 @@ export default function DashboardIndexCard({
           <div className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Latest X posts</h4>
-              <span className="text-xs text-zinc-500">Auto-updated</span>
+              <span className="text-xs text-zinc-500">Source: {socialSource}</span>
             </div>
             {socialLoading ? (
               <div className="space-y-2">

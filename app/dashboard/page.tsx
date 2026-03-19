@@ -59,6 +59,19 @@ type IndexData = {
   } | null;
 };
 
+type SectorPerf = {
+  sector: string;
+  changePercent: number;
+};
+
+type OverviewItem = {
+  symbol: string;
+  name: string;
+  category: string;
+  price: number;
+  changePercent: number;
+};
+
 const INDEX_PICKS: { symbol: string; label: string }[] = [
   { symbol: 'NQ', label: 'E-mini NASDAQ-100' },
   { symbol: 'ES', label: 'E-mini S&P 500' },
@@ -86,6 +99,10 @@ export default function DashboardPage() {
 
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [tradesLastUpdated, setTradesLastUpdated] = useState<Date | null>(null);
+  const [sectorPerf, setSectorPerf] = useState<SectorPerf[]>([]);
+  const [overviewTf, setOverviewTf] = useState<'1D' | '1W' | '1M' | '1Y'>('1D');
+  const [overviewItems, setOverviewItems] = useState<OverviewItem[]>([]);
+  const [overviewLoading, setOverviewLoading] = useState(false);
 
   const selectedSet = useMemo(() => new Set([selectedSymbol]), [selectedSymbol]);
   const selectedTrades = useMemo(
@@ -178,6 +195,55 @@ export default function DashboardPage() {
     };
   }, [selectedSymbol, chartsBySymbol]);
 
+  // Poll sector performance panel.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSectorPerf = async () => {
+      try {
+        const res = await fetch('/api/sector-performance', { cache: 'no-store' });
+        if (!res.ok) return;
+        const body = (await res.json()) as { sectors?: SectorPerf[] };
+        if (cancelled) return;
+        setSectorPerf(Array.isArray(body.sectors) ? body.sectors.slice(0, 11) : []);
+      } catch {
+        if (!cancelled) setSectorPerf([]);
+      }
+    };
+
+    fetchSectorPerf();
+    const interval = setInterval(fetchSectorPerf, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Market overview panel with timeframe filters.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchOverview = async () => {
+      setOverviewLoading(true);
+      try {
+        const res = await fetch(`/api/market-overview?timeframe=${overviewTf}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const body = (await res.json()) as { items?: OverviewItem[] };
+        if (cancelled) return;
+        setOverviewItems(Array.isArray(body.items) ? body.items : []);
+      } catch {
+        if (!cancelled) setOverviewItems([]);
+      } finally {
+        if (!cancelled) setOverviewLoading(false);
+      }
+    };
+
+    fetchOverview();
+    const interval = setInterval(fetchOverview, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [overviewTf]);
+
   // Poll live trades.
   useEffect(() => {
     let cancelled = false;
@@ -224,8 +290,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="pt-44 pb-24 px-4 sm:px-6 relative z-10">
-        <div className="max-w-7xl mx-auto">
-          <main>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <main className="lg:col-span-9">
             <header className="mb-5">
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
@@ -317,6 +383,83 @@ export default function DashboardPage() {
               </div>
             </section>
 
+            <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Market overview</h2>
+                  <p className="text-xs text-zinc-500 mt-1">ES, NQ, YM, RTY, DXY, Metals, Total Market, International and Emerging Markets</p>
+                </div>
+                <div className="inline-flex rounded-xl border border-zinc-700 bg-zinc-950/30 p-1">
+                  {(['1D', '1W', '1M', '1Y'] as const).map((tf) => (
+                    <button
+                      key={tf}
+                      type="button"
+                      onClick={() => setOverviewTf(tf)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                        overviewTf === tf
+                          ? 'bg-blue-600 text-white'
+                          : 'text-zinc-300 hover:bg-zinc-800/70'
+                      }`}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {overviewLoading && overviewItems.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="h-14 rounded-lg bg-zinc-800/50 animate-pulse" />
+                  ))}
+                </div>
+              ) : overviewItems.length === 0 ? (
+                <p className="text-sm text-zinc-500">No market overview data available right now.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  {overviewItems.map((row) => (
+                    <div key={row.symbol} className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-zinc-200 truncate">{row.symbol}</p>
+                          <p className="text-[11px] text-zinc-500 truncate">{row.name} · {row.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-zinc-300 tabular-nums">{row.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}</p>
+                          <p className={`text-xs font-semibold tabular-nums ${row.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {row.changePercent >= 0 ? '+' : ''}
+                            {row.changePercent.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Sector performance</h2>
+                <span className="text-xs text-zinc-500">US sectors</span>
+              </div>
+              {sectorPerf.length === 0 ? (
+                <p className="text-sm text-zinc-500">No sector performance data available right now.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  {sectorPerf.map((s) => (
+                    <div key={s.sector} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
+                      <span className="text-sm text-zinc-200">{s.sector}</span>
+                      <span className={`text-sm font-semibold tabular-nums ${s.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {s.changePercent >= 0 ? '+' : ''}
+                        {s.changePercent.toFixed(2)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
             <DashboardIndexCard
               key={selectedSymbol}
               symbol={selectedSymbol}
@@ -326,7 +469,7 @@ export default function DashboardPage() {
             />
           </main>
 
-          <aside className="mt-6">
+          <aside className="lg:col-span-3">
             <DashboardSidebar />
           </aside>
         </div>

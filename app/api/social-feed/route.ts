@@ -11,6 +11,10 @@ type SocialPost = {
   account: string;
 };
 
+const ACCOUNT_ALIASES: Record<string, string> = {
+  spectaorindex: 'spectatorindex',
+};
+
 function parseRssDate(s: string): string {
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? '' : d.toISOString();
@@ -70,7 +74,8 @@ async function fetchViaNitterRss(account: string, limit: number): Promise<Social
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const account = (searchParams.get('account') || process.env.DASHBOARD_X_ACCOUNT || 'spectatorindex').replace(/^@/, '');
+  const raw = (searchParams.get('account') || process.env.DASHBOARD_X_ACCOUNT || 'spectatorindex').replace(/^@/, '').toLowerCase();
+  const account = ACCOUNT_ALIASES[raw] || raw;
   const limit = Math.min(6, Math.max(1, parseInt(searchParams.get('limit') || '3', 10) || 3));
   const bearer = process.env.X_BEARER_TOKEN ?? process.env.TWITTER_BEARER_TOKEN;
 
@@ -88,11 +93,11 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(
-      { account, source, posts },
+      { account, source, posts, hasToken: Boolean(bearer) },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     );
   } catch {
-    return NextResponse.json({ account, source: 'none', posts: [] as SocialPost[] }, { status: 200 });
+    return NextResponse.json({ account, source: 'none', hasToken: Boolean(bearer), posts: [] as SocialPost[] }, { status: 200 });
   }
 }
 

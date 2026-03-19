@@ -11,15 +11,14 @@ type StockMover = {
   volume: number;
 };
 
-const INDEX_CONSTITUENTS: Record<string, string[]> = {
-  NQ: ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'TSLA', 'AVGO', 'COST', 'AMD', 'NFLX', 'ADBE', 'QCOM', 'INTC', 'CSCO'],
-  ES: ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'BRK-B', 'JPM', 'XOM', 'LLY', 'AVGO', 'V', 'UNH', 'PG', 'MA'],
-  YM: ['AAPL', 'MSFT', 'JPM', 'UNH', 'V', 'HD', 'GS', 'MCD', 'CAT', 'IBM', 'MMM', 'DIS', 'WMT', 'NKE', 'KO'],
-  RTY: ['SMCI', 'FSLR', 'CELH', 'AFRM', 'SOFI', 'CROX', 'PLTR', 'RKLB', 'UPST', 'RIVN', 'APP', 'IOT', 'DUOL', 'ONON', 'SOUN'],
-  DAX: ['SAP.DE', 'SIE.DE', 'ALV.DE', 'BAS.DE', 'BMW.DE', 'MBG.DE', 'IFX.DE', 'BAYN.DE', 'DBK.DE', 'ADS.DE'],
-  GER40: ['SAP.DE', 'SIE.DE', 'ALV.DE', 'BAS.DE', 'BMW.DE', 'MBG.DE', 'IFX.DE', 'BAYN.DE', 'DBK.DE', 'ADS.DE'],
-  FTSE: ['SHEL.L', 'HSBA.L', 'BP.L', 'AZN.L', 'ULVR.L', 'GSK.L', 'RIO.L', 'BATS.L', 'LSEG.L', 'BARC.L'],
+const FMP_CONSTITUENT_ENDPOINT: Record<string, string> = {
+  NQ: 'nasdaq_constituent',
+  ES: 'sp500_constituent',
+  YM: 'dowjones_constituent',
 };
+
+const MOVERS_CACHE_MS = 30_000;
+const moversCache = new Map<string, { until: number; gainers: StockMover[]; losers: StockMover[]; source: string }>();
 
 function parseNumber(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -30,39 +29,52 @@ function parseNumber(value: unknown): number {
 }
 
 async function fetchYahooConstituentMovers(index: string, limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
-  const tickers = INDEX_CONSTITUENTS[index];
-  if (!tickers || tickers.length === 0) return null;
+  const apiKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || 'demo';
+  const endpoint = FMP_CONSTITUENT_ENDPOINT[index];
+  if (!endpoint) return null;
 
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(tickers.join(','))}`;
-  const res = await fetch(url, {
-    cache: 'no-store',
-    headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' },
-  });
-  if (!res.ok) return null;
+  const constituentsRes = await fetch(
+    `https://financialmodelingprep.com/api/v3/${endpoint}?apikey=${encodeURIComponent(apiKey)}`,
+    { cache: 'no-store' }
+  );
+  if (!constituentsRes.ok) return null;
+  const constituents = (await constituentsRes.json()) as Array<Record<string, unknown>>;
+  if (!Array.isArray(constituents) || constituents.length === 0) return null;
 
-  const data = (await res.json()) as { quoteResponse?: { result?: Array<Record<string, unknown>> } };
-  const rows = Array.isArray(data?.quoteResponse?.result) ? data.quoteResponse.result : [];
-  if (rows.length === 0) return null;
+  // Limit payload so URL and rate usage stay reasonable.
+  const symbols = constituents
+    .map((r) => String(r.symbol || '').trim())
+    .filter(Boolean)
+    .slice(0, 120);
+  if (symbols.length === 0) return null;
 
-  const movers: StockMover[] = rows
+  const quotesRes = await fetch(
+    `https://financialmodelingprep.com/api/v3/quote/${encodeURIComponent(symbols.join(','))}?apikey=${encodeURIComponent(apiKey)}`,
+    { cache: 'no-store' }
+  );
+  if (!quotesRes.ok) return null;
+  const quotes = (await quotesRes.json()) as Array<Record<string, unknown>>;
+  if (!Array.isArray(quotes) || quotes.length === 0) return null;
+
+  const movers: StockMover[] = quotes
     .map((r) => {
-      const ticker = String(r.symbol ?? '').trim();
+      const ticker = String(r.symbol || '').trim();
       if (!ticker) return null;
-      const price = parseNumber(r.regularMarketPrice);
-      const changePercent = parseNumber(r.regularMarketChangePercent);
-      const change = parseNumber(r.regularMarketChange);
-      const volume = parseNumber(r.regularMarketVolume);
+      const price = parseNumber(r.price);
+      const changePercent = parseNumber(r.changesPercentage);
+      const change = parseNumber(r.change);
+      const volume = parseNumber(r.volume);
       if (!Number.isFinite(changePercent)) return null;
       return { ticker, price, changePercent, change, volume };
     })
     .filter((x): x is StockMover => x !== null);
-
   if (movers.length === 0) return null;
 
   const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
-  const gainers = sorted.slice(0, limit);
-  const losers = [...sorted].reverse().slice(0, limit);
-  return { gainers, losers };
+  return {
+    gainers: sorted.slice(0, limit),
+    losers: [...sorted].reverse().slice(0, limit),
+  };
 }
 
 export async function GET(request: Request) {
@@ -71,10 +83,21 @@ export async function GET(request: Request) {
   const limit = Math.min(5, Math.max(1, parseInt(searchParams.get('limit') || '5', 10) || 5));
 
   try {
-    const yahooMovers = await fetchYahooConstituentMovers(index, limit);
-    if (yahooMovers) {
+    const cacheKey = `${index}:${limit}`;
+    const now = Date.now();
+    const cached = moversCache.get(cacheKey);
+    if (cached && cached.until > now) {
       return NextResponse.json(
-        { index, source: 'yahoo-constituents', gainers: yahooMovers.gainers, losers: yahooMovers.losers },
+        { index, source: cached.source, gainers: cached.gainers, losers: cached.losers },
+        { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+      );
+    }
+
+    const fmpMovers = await fetchYahooConstituentMovers(index, limit);
+    if (fmpMovers) {
+      moversCache.set(cacheKey, { until: now + MOVERS_CACHE_MS, gainers: fmpMovers.gainers, losers: fmpMovers.losers, source: 'fmp-constituents' });
+      return NextResponse.json(
+        { index, source: 'fmp-constituents', gainers: fmpMovers.gainers, losers: fmpMovers.losers },
         { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }
