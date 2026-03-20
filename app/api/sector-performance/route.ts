@@ -79,6 +79,38 @@ async function fetchStooqDailyAny(etfSymbol: string): Promise<{ price: number; p
   return null;
 }
 
+async function fetchYahooChartDailyChangePercent(etfSymbol: string): Promise<number | null> {
+  // Use Yahoo "chart" endpoint because it tends to contain the historical closes
+  // even when the quote endpoint omits/change-nulls the fields we need.
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+    etfSymbol
+  )}?range=5d&interval=1d&includePrePost=false&events=div|split`;
+
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return null;
+
+  const body = (await res.json()) as any;
+  const closeArr: unknown[] =
+    body?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ??
+    body?.chart?.result?.[0]?.indicators?.adjclose?.[0]?.adjclose ??
+    [];
+
+  if (!Array.isArray(closeArr)) return null;
+
+  const closes = closeArr
+    .map((v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null))
+    .filter((v: number | null): v is number => v !== null);
+
+  if (closes.length < 2) return null;
+
+  const prev = closes[closes.length - 2];
+  const close = closes[closes.length - 1];
+  if (!(prev > 0) || !(close > 0)) return null;
+
+  const changePercent = ((close - prev) / prev) * 100;
+  return Number.isFinite(changePercent) ? changePercent : null;
+}
+
 export async function GET() {
   const now = Date.now();
   if (cache && cache.until > now && cache.rows.length > 0) {
@@ -92,7 +124,8 @@ export async function GET() {
     const debug: {
       yahoo: { fetchedSymbols?: number; computedCount?: number; error?: string; status?: number; ok?: boolean };
       stooq?: { attempted?: number; successCount?: number; errors?: string[] };
-      usedProvider: 'yahoo' | 'stooq' | 'yahoo+stooq' | 'none';
+      chart?: { attempted?: number; successCount?: number };
+      usedProvider: 'yahoo' | 'stooq' | 'yahoo+stooq' | 'yahoo-chart' | 'none';
     } = {
       yahoo: { ok: false },
       usedProvider: 'none',
@@ -181,8 +214,6 @@ export async function GET() {
       debug.yahoo = { ok: false, status: res.status, error: 'yahoo quote fetch failed' };
     }
 
-    debug.yahoo = { fetchedSymbols: sectorEtfs.length, computedCount: computed.length, ok: true };
-
     // Yahoo quote can sometimes omit fields for these ETFs; fill any missing
     // sectors by recomputing % move from Stooq daily CSV.
     const missingSectors = sectorEtfs.filter((s) => !yahooMap.has(s.sector));
@@ -198,16 +229,39 @@ export async function GET() {
     );
 
     const stooqPerf = stooqRows.filter((x): x is SectorPerf => x !== null);
-    const finalRows = [
+    let finalRows: SectorPerf[] = [
       ...computed,
       ...stooqPerf.filter((x) => !yahooMap.has(x.sector)),
     ].sort((a, b) => b.changePercent - a.changePercent);
 
+    // If both Yahoo quote fields and Stooq CSV parsing failed, try Yahoo chart closes.
+    if (finalRows.length === 0) {
+      const attempted = sectorEtfs.length;
+      const chartRows = await Promise.all(
+        sectorEtfs.map(async (s) => {
+          const changePercent = await fetchYahooChartDailyChangePercent(s.symbol);
+          if (changePercent == null) return null;
+          return { sector: s.sector, changePercent } as SectorPerf;
+        })
+      );
+      const chartPerf = chartRows.filter((x): x is SectorPerf => x !== null);
+      debug.chart = { attempted, successCount: chartPerf.length };
+      finalRows = chartPerf.sort((a, b) => b.changePercent - a.changePercent);
+      debug.usedProvider = finalRows.length > 0 ? 'yahoo-chart' : 'none';
+    } else {
+      debug.usedProvider =
+        computed.length > 0 && stooqCount > 0
+          ? 'yahoo+stooq'
+          : computed.length > 0
+            ? 'yahoo'
+            : stooqCount > 0
+              ? 'stooq'
+              : 'none';
+    }
+
     if (missingSectors.length > 0) {
       debug.stooq = { attempted: missingSectors.length, successCount: stooqCount };
     }
-    debug.usedProvider =
-      computed.length > 0 && stooqCount > 0 ? 'yahoo+stooq' : computed.length > 0 ? 'yahoo' : stooqCount > 0 ? 'stooq' : 'none';
 
     // Avoid "getting stuck" caching an empty result.
     if (finalRows.length > 0) {
