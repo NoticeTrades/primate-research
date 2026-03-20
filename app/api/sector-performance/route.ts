@@ -60,8 +60,11 @@ async function fetchStooqDaily(stooqSymbol: string): Promise<{ price: number; pr
 
 export async function GET() {
   const now = Date.now();
-  if (cache && cache.until > now) {
-    return NextResponse.json({ sectors: cache.rows }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
+  if (cache && cache.until > now && cache.rows.length > 0) {
+    return NextResponse.json(
+      { sectors: cache.rows, debug: { cached: true } },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    );
   }
 
   try {
@@ -91,7 +94,7 @@ export async function GET() {
 
     const body = (await res.json()) as { quoteResponse?: { result?: Array<Record<string, unknown>> } };
     const rows = body?.quoteResponse?.result;
-    if (!Array.isArray(rows)) return NextResponse.json({ sectors: [] as SectorPerf[] }, { status: 200 });
+    if (!Array.isArray(rows)) return NextResponse.json({ sectors: [] as SectorPerf[], debug: { yahoo: 'no-rows' } }, { status: 200 });
 
     const bySymbol = new Map<string, Record<string, unknown>>();
     for (const r of rows) {
@@ -133,6 +136,16 @@ export async function GET() {
       .filter((x): x is SectorPerf => x !== null)
       .sort((a, b) => b.changePercent - a.changePercent);
 
+    const debug: {
+      yahoo: { fetchedSymbols: number; computedCount: number };
+      stooq?: { attempted: number; successCount: number };
+      usedProvider: 'yahoo' | 'stooq' | 'none';
+      cached?: boolean;
+    } = {
+      yahoo: { fetchedSymbols: sectorEtfs.length, computedCount: computed.length },
+      usedProvider: computed.length > 0 ? 'yahoo' : 'none',
+    };
+
     // Yahoo quote can sometimes omit fields for these ETFs; if that happens,
     // fall back to Stooq daily CSV for each ETF and recompute % move.
     let finalRows = computed;
@@ -147,11 +160,18 @@ export async function GET() {
         })
       );
 
-      finalRows = stooqRows.filter((x): x is SectorPerf => x !== null).sort((a, b) => b.changePercent - a.changePercent);
+      const stooqSuccess = stooqRows.filter((x): x is SectorPerf => x !== null);
+      finalRows = stooqSuccess.sort((a, b) => b.changePercent - a.changePercent);
+      debug.stooq = { attempted: sectorEtfs.length, successCount: stooqSuccess.length };
+      debug.usedProvider = finalRows.length > 0 ? 'stooq' : 'none';
     }
 
-    cache = { until: now + CACHE_MS, rows: finalRows };
-    return NextResponse.json({ sectors: finalRows }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
+    // Avoid "getting stuck" caching an empty result.
+    if (finalRows.length > 0) {
+      cache = { until: now + CACHE_MS, rows: finalRows };
+    }
+
+    return NextResponse.json({ sectors: finalRows, debug }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch {
     return NextResponse.json({ sectors: [] as SectorPerf[] }, { status: 200 });
   }
