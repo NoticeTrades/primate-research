@@ -51,7 +51,6 @@ const STQ_UNIVERSE: Record<string, string[]> = {
     'ma.us',
     'ko.us',
     'hd.us',
-    'll.y.us',
   ],
   YM: [
     'aapl.us',
@@ -257,18 +256,27 @@ async function fetchStooqDaily(stooqSymbol: string): Promise<StockMover | null> 
     .map((l) => l.trim())
     .filter(Boolean);
 
-  // Header: Date,Open,High,Low,Close,Volume
+  // Header: Date,Open,High,Low,Close,Volume (column order may vary)
   if (lines.length < 3) return null;
-  const dataLines = lines.slice(1);
-  const last = dataLines[dataLines.length - 1];
-  const prev = dataLines[dataLines.length - 2];
-  const lastCols = parseCsvLine(last);
-  const prevCols = parseCsvLine(prev);
-  if (lastCols.length < 6 || prevCols.length < 6) return null;
+  const headerCols = parseCsvLine(lines[0]).map((c) => c.trim());
+  const closeIdx = headerCols.findIndex((c) => c.toLowerCase() === 'close');
+  const volumeIdx = headerCols.findIndex((c) => c.toLowerCase() === 'volume');
+  if (closeIdx < 0) return null;
 
-  const close = parseFloat(lastCols[4]);
-  const prevClose = parseFloat(prevCols[4]);
-  const volume = parseFloat(lastCols[5] || '0');
+  const validRows: Array<{ close: number; volume: number }> = [];
+  for (const line of lines.slice(1)) {
+    const cols = parseCsvLine(line);
+    if (cols.length <= closeIdx) continue;
+    const close = parseFloat(cols[closeIdx] ?? '');
+    if (!Number.isFinite(close) || !(close > 0)) continue;
+    const volume = volumeIdx >= 0 ? parseFloat(cols[volumeIdx] ?? '0') : 0;
+    validRows.push({ close, volume: Number.isFinite(volume) ? volume : 0 });
+  }
+
+  if (validRows.length < 2) return null;
+  const prevClose = validRows[validRows.length - 2].close;
+  const close = validRows[validRows.length - 1].close;
+  const volume = validRows[validRows.length - 1].volume;
   if (!(close > 0) || !(prevClose > 0)) return null;
 
   const change = close - prevClose;
