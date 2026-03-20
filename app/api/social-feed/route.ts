@@ -28,14 +28,17 @@ function parseRssItems(xml: string, limit: number): SocialPost[] {
   const posts: SocialPost[] = [];
   // RSS item: title + link + optional pubDate.
   const itemRegex =
-    /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>(?:[\s\S]*?<pubDate>([^<]*)<\/pubDate>)?[\s\S]*?<\/item>/gi;
+    /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>(?:[\s\S]*?<description>([\s\S]*?)<\/description>)?[\s\S]*?(?:[\s\S]*?<pubDate>([^<]*)<\/pubDate>)?[\s\S]*?<\/item>/gi;
 
   let m: RegExpExecArray | null;
   while ((m = itemRegex.exec(xml)) !== null && posts.length < limit) {
     const titleRaw = typeof m[1] === 'string' ? m[1] : '';
     const linkRaw = typeof m[2] === 'string' ? m[2] : '';
-    const pubRaw = typeof m[3] === 'string' ? m[3] : '';
-    const text = stripXml(titleRaw);
+    const descRaw = typeof m[3] === 'string' ? m[3] : '';
+    const pubRaw = typeof m[4] === 'string' ? m[4] : '';
+    const titleText = stripXml(titleRaw);
+    const descText = stripXml(descRaw);
+    const text = titleText && titleText.length > 3 ? titleText : descText;
     const url = linkRaw.trim();
     if (!text || !url || !url.startsWith('http')) continue;
     const createdAt = pubRaw ? parseRssDate(pubRaw.trim()) : '';
@@ -128,9 +131,13 @@ async function fetchViaNitterRss(account: string, limit: number): Promise<Social
         const titleMatch = /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i.exec(block);
         const linkMatch = /<link>([^<]+)<\/link>/i.exec(block);
         const pubMatch = /<pubDate>([^<]+)<\/pubDate>/i.exec(block);
+        const descMatch = /<description>([\s\S]*?)<\/description>/i.exec(block);
 
         const titleRaw = titleMatch?.[1] || '';
-        const text = stripXml(titleRaw);
+        const descRaw = descMatch?.[1] || '';
+        const titleText = stripXml(titleRaw);
+        const descText = stripXml(descRaw);
+        const text = titleText && titleText.length > 3 ? titleText : descText;
         const url = (linkMatch?.[1] || '').trim();
         const createdAt = pubMatch?.[1] ? parseRssDate(pubMatch[1].trim()) : '';
 

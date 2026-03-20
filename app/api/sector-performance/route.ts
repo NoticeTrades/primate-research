@@ -63,9 +63,13 @@ export async function GET() {
         const q = bySymbol.get(s.symbol);
         const price = q ? toNum((q as any).regularMarketPrice) : null;
         const prevClose = q ? toNum((q as any).regularMarketPreviousClose) : null;
-        if (!price || !prevClose || prevClose <= 0) return null;
-        const changePercent = ((price - prevClose) / prevClose) * 100;
-        if (!Number.isFinite(changePercent)) return null;
+        const changePercentDirect = q ? toNum((q as any).regularMarketChangePercent) : null;
+
+        let changePercent: number | null = changePercentDirect;
+        if (changePercent == null && price != null && prevClose != null && prevClose > 0) {
+          changePercent = ((price - prevClose) / prevClose) * 100;
+        }
+        if (changePercent == null || !Number.isFinite(changePercent)) return null;
         return { sector: s.sector, changePercent };
       })
       .filter((x): x is SectorPerf => x !== null)

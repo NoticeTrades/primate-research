@@ -321,22 +321,54 @@ async function fetchYahooUniverseMovers(index: string, limit: number): Promise<{
   const rows = data?.quoteResponse?.result;
   if (!Array.isArray(rows) || rows.length === 0) return null;
 
+  const toNum = (v: unknown): number | null => {
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'string') {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
   const movers: StockMover[] = rows
     .map((r: any) => {
       const ticker = String(r?.symbol || '').trim().toUpperCase();
-      const price = typeof r?.regularMarketPrice === 'number' ? r.regularMarketPrice : 0;
-      const prevClose =
-        typeof r?.regularMarketPreviousClose === 'number'
-          ? r.regularMarketPreviousClose
-          : typeof r?.previousClose === 'number'
-            ? r.previousClose
-            : 0;
-      const volume = typeof r?.regularMarketVolume === 'number' ? r.regularMarketVolume : 0;
-      if (!(price > 0) || !(prevClose > 0)) return null;
-      const change = price - prevClose;
-      const changePercent = (change / prevClose) * 100;
-      if (!Number.isFinite(changePercent)) return null;
-      return { ticker, price, changePercent, change, volume };
+      if (!ticker) return null;
+
+      const price = toNum(r?.regularMarketPrice ?? r?.price);
+      if (price == null || price <= 0) return null;
+
+      const changePercent = toNum(r?.regularMarketChangePercent ?? r?.changePercent);
+      const volume = toNum(r?.regularMarketVolume ?? r?.volume) ?? 0;
+
+      // Prefer Yahoo's own change percent when present.
+      let computedChange = toNum(r?.regularMarketChange ?? r?.change) ?? 0;
+      if (changePercent == null) {
+        const prevClose = toNum(r?.regularMarketPreviousClose ?? r?.previousClose);
+        if (prevClose != null && prevClose > 0) {
+          computedChange = price - prevClose;
+        } else {
+          return null;
+        }
+      }
+
+      // If changePercent was missing, compute from computedChange.
+      const finalChangePercent =
+        changePercent != null
+          ? changePercent
+          : computedChange !== 0 && price > 0
+            ? (computedChange / price) * 100
+            : null;
+
+      if (finalChangePercent == null || !Number.isFinite(finalChangePercent)) return null;
+
+      return {
+        ticker,
+        price,
+        changePercent: finalChangePercent,
+        change: computedChange,
+        volume: Number.isFinite(volume) ? volume : 0,
+      };
     })
     .filter((x: StockMover | null): x is StockMover => x !== null);
 
