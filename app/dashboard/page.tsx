@@ -510,17 +510,18 @@ export default function DashboardPage() {
                           <td className="px-3 py-2 font-medium text-zinc-200">{s.sector}</td>
                           {SECTOR_TIMEFRAMES.map((tf) => {
                             const v = s.perf?.[tf];
+                            const vOk = typeof v === 'number' && Number.isFinite(v);
                             const isActive = tf === sectorSortTf;
                             const classes = [
                               'px-3 py-2 whitespace-nowrap text-right tabular-nums',
-                              v == null ? 'text-zinc-500' : v >= 0 ? 'text-emerald-300' : 'text-red-300',
+                              !vOk ? 'text-zinc-500' : v! >= 0 ? 'text-emerald-300' : 'text-red-300',
                               isActive ? 'bg-blue-600/10 font-semibold' : '',
                             ].filter(Boolean).join(' ');
                             return (
                               <td key={`${s.sector}:${tf}`} className={classes}>
-                                {v == null
+                                {!vOk
                                   ? '—'
-                                  : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`}
+                                  : `${v! >= 0 ? '+' : ''}${v!.toFixed(2)}%`}
                               </td>
                             );
                           })}
