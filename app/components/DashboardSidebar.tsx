@@ -91,6 +91,18 @@ export default function DashboardSidebar() {
   const [xPosts, setXPosts] = useState<Array<{ id: string; text: string; createdAt: string; url: string; account: string }>>([]);
 
   useEffect(() => {
+    // Always try to load X widgets.js so the timeline embed can render even
+    // when our server-side RSS/Twitter API fetch is blocked.
+    const existing = document.getElementById('twitter-widgets-js');
+    if (existing) return;
+    const s = document.createElement('script');
+    s.id = 'twitter-widgets-js';
+    s.src = 'https://platform.twitter.com/widgets.js';
+    s.async = true;
+    document.body.appendChild(s);
+  }, []);
+
+  useEffect(() => {
     const loadDbVideos = async () => {
       try {
         const res = await fetch('/api/videos', { cache: 'no-store' });
@@ -363,9 +375,20 @@ export default function DashboardSidebar() {
           ) : xError ? (
             <p className="text-sm text-red-400">{xError}</p>
           ) : xPosts.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              {xHasToken ? 'No recent X posts found right now.' : 'No X posts (set `X_BEARER_TOKEN` to enable the X API feed).'}
-            </p>
+            <div>
+              <p className="text-sm text-zinc-500 mb-3">
+                {xHasToken ? 'No recent X posts found right now.' : 'Server feed blocked; showing X timeline embed.'}
+              </p>
+              <a
+                className="twitter-timeline"
+                data-height="260"
+                data-theme="dark"
+                data-tweet-limit="1"
+                href="https://x.com/spectatorindex"
+              >
+                Tweets by spectatorindex
+              </a>
+            </div>
           ) : (
             <a
               href={xPosts[0].url}

@@ -98,6 +98,98 @@ const STQ_UNIVERSE: Record<string, string[]> = {
   DAX: [],
 };
 
+// Fallback/no-key provider: Yahoo quote endpoint.
+// We approximate "index movers" by selecting liquid index-representative tickers.
+const YH_UNIVERSE: Record<string, string[]> = {
+  NQ: [
+    'MSFT',
+    'AAPL',
+    'NVDA',
+    'AMZN',
+    'META',
+    'GOOGL',
+    'GOOG',
+    'TSLA',
+    'AVGO',
+    'ADBE',
+    'AMD',
+    'CSCO',
+    'QCOM',
+    'INTC',
+    'NFLX',
+    'ORCL',
+    'MU',
+    'PLTR',
+  ],
+  ES: [
+    'MSFT',
+    'AAPL',
+    'NVDA',
+    'AMZN',
+    'META',
+    'GOOGL',
+    'JPM',
+    'XOM',
+    'LLY',
+    'V',
+    'UNH',
+    'PG',
+    'MA',
+    'HD',
+    'KO',
+    'LLY',
+    'NKE',
+    'CRM',
+    'CAT',
+  ],
+  YM: [
+    'IBM',
+    'HD',
+    'CAT',
+    'JNJ',
+    'JPM',
+    'KO',
+    'MCD',
+    'DIS',
+    'V',
+    'WMT',
+    'PG',
+    'MRK',
+    'NKE',
+    'INTC',
+    'BA',
+    'AXP',
+    'GS',
+    'MMM',
+  ],
+  RTY: [
+    'PLTR',
+    'SOFI',
+    'UPST',
+    'AFRM',
+    'RIVN',
+    'CROX',
+    'CELH',
+    'DKNG',
+    'SEDG',
+    'DOCN',
+    'FSLR',
+    'SOUN',
+    'DUOL',
+    'ONON',
+    'APP',
+    'IOT',
+    'GTLB',
+  ],
+  DAX: ['SAP.DE', 'SIE.DE', 'ALV.DE', 'BAS.DE', 'BMW.DE', 'IFX.DE', 'BAYN.DE', 'DBK.DE', 'ADS.DE'],
+  GER40: ['SAP.DE', 'SIE.DE', 'ALV.DE', 'BAS.DE', 'BMW.DE', 'IFX.DE', 'BAYN.DE', 'DBK.DE', 'ADS.DE'],
+  FTSE: ['AZN.L', 'HSBA.L', 'SHEL.L', 'BP.L', 'GSK.L', 'ULVR.L', 'RIO.L', 'LSEG.L', 'BARC.L'],
+  DXY: [],
+  GC: [],
+  SI: [],
+  CL: [],
+};
+
 function parseNumber(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value !== 'string') return 0;
@@ -212,6 +304,47 @@ async function fetchStooqMovers(index: string, limit: number): Promise<{ gainers
   };
 }
 
+async function fetchYahooUniverseMovers(index: string, limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
+  const universe = YH_UNIVERSE[index] || [];
+  if (universe.length === 0) return null;
+
+  // Keep request length reasonable.
+  const symbols = universe.slice(0, 60);
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(','))}`;
+  const res = await fetch(url, {
+    cache: 'no-store',
+    headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' },
+  });
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  const rows = data?.quoteResponse?.result;
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+
+  const movers: StockMover[] = rows
+    .map((r: any) => {
+      const ticker = String(r?.symbol || '').trim().toUpperCase();
+      const price = typeof r?.regularMarketPrice === 'number' ? r.regularMarketPrice : 0;
+      const prevClose =
+        typeof r?.regularMarketPreviousClose === 'number'
+          ? r.regularMarketPreviousClose
+          : typeof r?.previousClose === 'number'
+            ? r.previousClose
+            : 0;
+      const volume = typeof r?.regularMarketVolume === 'number' ? r.regularMarketVolume : 0;
+      if (!(price > 0) || !(prevClose > 0)) return null;
+      const change = price - prevClose;
+      const changePercent = (change / prevClose) * 100;
+      if (!Number.isFinite(changePercent)) return null;
+      return { ticker, price, changePercent, change, volume };
+    })
+    .filter((x: StockMover | null): x is StockMover => x !== null);
+
+  if (movers.length === 0) return null;
+  const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
+  return { gainers: sorted.slice(0, limit), losers: [...sorted].reverse().slice(0, limit) };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const index = (searchParams.get('index') || 'index').toUpperCase();
@@ -224,6 +357,21 @@ export async function GET(request: Request) {
     if (cached && cached.until > now) {
       return NextResponse.json(
         { index, source: cached.source, gainers: cached.gainers, losers: cached.losers },
+        { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+      );
+    }
+
+    // First attempt: no-key Yahoo quote-based universe movers.
+    const yahooMovers = await fetchYahooUniverseMovers(index, limit);
+    if (yahooMovers) {
+      moversCache.set(cacheKey, {
+        until: now + MOVERS_CACHE_MS,
+        gainers: yahooMovers.gainers,
+        losers: yahooMovers.losers,
+        source: 'yahoo-universe',
+      });
+      return NextResponse.json(
+        { index, source: 'yahoo-universe', gainers: yahooMovers.gainers, losers: yahooMovers.losers },
         { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }
