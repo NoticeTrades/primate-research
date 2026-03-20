@@ -160,7 +160,7 @@ export async function GET() {
     const debug: {
       yahoo: { fetchedSymbols: number; computedCount: number };
       stooq?: { attempted: number; successCount: number };
-      usedProvider: 'yahoo' | 'stooq' | 'none';
+      usedProvider: 'yahoo' | 'stooq' | 'yahoo+stooq' | 'none';
       cached?: boolean;
     } = {
       yahoo: { fetchedSymbols: sectorEtfs.length, computedCount: computed.length },
