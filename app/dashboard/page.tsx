@@ -91,6 +91,11 @@ const INDEX_PICKS: { symbol: string; label: string }[] = [
 
 const DEFAULT_SELECTED = 'NQ';
 
+type DashboardModuleId = 'overview' | 'sector' | 'index';
+
+const DASHBOARD_MODULES: DashboardModuleId[] = ['overview', 'sector', 'index'];
+const DASHBOARD_LAYOUT_STORAGE_KEY = 'primateDashboardLayout_v1';
+
 export default function DashboardPage() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>(DEFAULT_SELECTED);
   const [indexSearch, setIndexSearch] = useState('');
@@ -110,6 +115,82 @@ export default function DashboardPage() {
   const [overviewTf, setOverviewTf] = useState<'1D' | '1W' | '1M' | '1Y' | 'YTD'>('1D');
   const [overviewItems, setOverviewItems] = useState<OverviewItem[]>([]);
   const [overviewLoading, setOverviewLoading] = useState(false);
+
+  const [layoutPanelOpen, setLayoutPanelOpen] = useState(false);
+  const [layoutLocked, setLayoutLocked] = useState(true);
+  const [moduleOrder, setModuleOrder] = useState<DashboardModuleId[]>(DASHBOARD_MODULES);
+  const [visibleModules, setVisibleModules] = useState<Record<DashboardModuleId, boolean>>({
+    overview: true,
+    sector: true,
+    index: true,
+  });
+
+  const draggingModuleIdRef = useRef<DashboardModuleId | null>(null);
+
+  // Load saved layout (local-only).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DASHBOARD_LAYOUT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        layoutLocked?: boolean;
+        moduleOrder?: DashboardModuleId[];
+        visibleModules?: Partial<Record<DashboardModuleId, boolean>>;
+      };
+
+      if (typeof parsed.layoutLocked === 'boolean') setLayoutLocked(parsed.layoutLocked);
+
+      if (Array.isArray(parsed.moduleOrder)) {
+        const cleaned = parsed.moduleOrder.filter((id) => DASHBOARD_MODULES.includes(id));
+        if (cleaned.length > 0) {
+          // Ensure we keep any missing modules.
+          const finalOrder = [
+            ...cleaned,
+            ...DASHBOARD_MODULES.filter((id) => !cleaned.includes(id)),
+          ].slice(0, DASHBOARD_MODULES.length);
+          setModuleOrder(finalOrder);
+        }
+      }
+
+      if (parsed.visibleModules) {
+        setVisibleModules((prev) => ({
+          ...prev,
+          ...parsed.visibleModules,
+        }));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Persist layout changes.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        DASHBOARD_LAYOUT_STORAGE_KEY,
+        JSON.stringify({
+          layoutLocked,
+          moduleOrder,
+          visibleModules,
+        })
+      );
+    } catch {
+      // ignore
+    }
+  }, [layoutLocked, moduleOrder, visibleModules]);
+
+  const moveModule = (fromId: DashboardModuleId, toId: DashboardModuleId) => {
+    if (fromId === toId) return;
+    setModuleOrder((prev) => {
+      const fromIdx = prev.indexOf(fromId);
+      const toIdx = prev.indexOf(toId);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const next = [...prev];
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, fromId);
+      return next;
+    });
+  };
 
   const selectedSet = useMemo(() => new Set([selectedSymbol]), [selectedSymbol]);
   const selectedTrades = useMemo(
@@ -396,141 +477,238 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Market overview</h2>
-                  <p className="text-xs text-zinc-500 mt-1">ES, NQ, YM, RTY, DXY, Metals, Total Market, International and Emerging Markets</p>
-                </div>
-                <div className="inline-flex rounded-xl border border-zinc-700 bg-zinc-950/30 p-1">
-                  {(['1D', '1W', '1M', '1Y', 'YTD'] as const).map((tf) => (
-                    <button
-                      key={tf}
-                      type="button"
-                      onClick={() => setOverviewTf(tf)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                        overviewTf === tf
-                          ? 'bg-blue-600 text-white'
-                          : 'text-zinc-300 hover:bg-zinc-800/70'
-                      }`}
-                    >
-                      {tf}
-                    </button>
-                  ))}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div className="text-sm font-semibold text-zinc-300">Dashboard layout</div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  {layoutLocked ? 'Locked. Unlock to drag modules.' : 'Drag modules to reorder.'}
                 </div>
               </div>
 
-              {overviewLoading && overviewItems.length === 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="h-14 rounded-lg bg-zinc-800/50 animate-pulse" />
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center gap-2 text-xs text-zinc-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={layoutLocked}
+                    onChange={(e) => setLayoutLocked(e.target.checked)}
+                    className="accent-blue-500"
+                  />
+                  Lock layout
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setLayoutPanelOpen((v) => !v)}
+                  className="px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-950/20 hover:bg-zinc-950/40 text-xs font-semibold text-zinc-200 transition-colors"
+                >
+                  {layoutPanelOpen ? 'Close' : 'Modules'}
+                </button>
+              </div>
+            </div>
+
+            {layoutPanelOpen && (
+              <div className="mb-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
+                <div className="text-xs text-zinc-500 mb-3">Choose what to show</div>
+                <div className="flex flex-wrap gap-3">
+                  {DASHBOARD_MODULES.map((id) => (
+                    <label
+                      key={id}
+                      className="inline-flex items-center gap-2 text-xs text-zinc-300 cursor-pointer select-none"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={visibleModules[id]}
+                        onChange={(e) =>
+                          setVisibleModules((prev) => ({
+                            ...prev,
+                            [id]: e.target.checked,
+                          }))
+                        }
+                        className="accent-blue-500"
+                      />
+                      {id === 'overview' ? 'Market Overview' : id === 'sector' ? 'Sector Performance' : 'Index Card'}
+                    </label>
                   ))}
                 </div>
-              ) : overviewItems.length === 0 ? (
-                <p className="text-sm text-zinc-500">No market overview data available right now.</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                  {overviewItems.map((row) => (
-                    <div key={row.symbol} className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-zinc-200 truncate">{row.symbol}</p>
-                          <p className="text-[11px] text-zinc-500 truncate">{row.name} · {row.category}</p>
+                <div className="text-[11px] text-zinc-600 mt-3">
+                  Tip: unlock layout to drag these modules into a new order.
+                </div>
+              </div>
+            )}
+
+            {moduleOrder.map((id) => {
+              if (!visibleModules[id]) return null;
+
+              const dragProps = layoutLocked
+                ? {}
+                : {
+                    draggable: true,
+                    onDragStart: (e: React.DragEvent) => {
+                      draggingModuleIdRef.current = id;
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', id);
+                    },
+                    onDragOver: (e: React.DragEvent) => {
+                      if (layoutLocked) return;
+                      e.preventDefault();
+                    },
+                    onDrop: (e: React.DragEvent) => {
+                      if (layoutLocked) return;
+                      e.preventDefault();
+                      const fromIdRaw = draggingModuleIdRef.current || (e.dataTransfer.getData('text/plain') as DashboardModuleId);
+                      if (!fromIdRaw || fromIdRaw === id) return;
+                      moveModule(fromIdRaw, id);
+                      draggingModuleIdRef.current = null;
+                    },
+                  };
+
+              const wrapperClass = id === 'index' ? 'mb-6' : '';
+              return (
+                <div key={id} className={wrapperClass} {...dragProps}>
+                  {id === 'overview' && (
+                    <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                        <div>
+                          <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Market overview</h2>
+                          <p className="text-xs text-zinc-500 mt-1">ES, NQ, YM, RTY, DXY, Metals, Total Market, International and Emerging Markets</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-zinc-300 tabular-nums">{row.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}</p>
-                          <p className={`text-xs font-semibold tabular-nums ${row.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {row.changePercent >= 0 ? '+' : ''}
-                            {row.changePercent.toFixed(2)}%
+                        <div className="inline-flex rounded-xl border border-zinc-700 bg-zinc-950/30 p-1">
+                          {(['1D', '1W', '1M', '1Y', 'YTD'] as const).map((tf) => (
+                            <button
+                              key={tf}
+                              type="button"
+                              onClick={() => setOverviewTf(tf)}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                                overviewTf === tf
+                                  ? 'bg-blue-600 text-white'
+                                  : 'text-zinc-300 hover:bg-zinc-800/70'
+                              }`}
+                            >
+                              {tf}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {overviewLoading && overviewItems.length === 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                          {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="h-14 rounded-lg bg-zinc-800/50 animate-pulse" />
+                          ))}
+                        </div>
+                      ) : overviewItems.length === 0 ? (
+                        <p className="text-sm text-zinc-500">No market overview data available right now.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                          {overviewItems.map((row) => (
+                            <div key={row.symbol} className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-zinc-200 truncate">{row.symbol}</p>
+                                  <p className="text-[11px] text-zinc-500 truncate">{row.name} · {row.category}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm text-zinc-300 tabular-nums">{row.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}</p>
+                                  <p className={`text-xs font-semibold tabular-nums ${row.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {row.changePercent >= 0 ? '+' : ''}
+                                    {row.changePercent.toFixed(2)}%
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  )}
+
+                  {id === 'sector' && (
+                    <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                        <div>
+                          <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+                            Sector performance
+                          </h2>
+                          <p className="text-xs text-zinc-500 mt-1">
+                            US sectors · sorted by {sectorSortTf}
                           </p>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
 
-            <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
-                    Sector performance
-                  </h2>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    US sectors · sorted by {sectorSortTf}
-                  </p>
-                </div>
-              </div>
+                      {sectorLoading ? (
+                        <div className="overflow-x-auto">
+                          <div className="min-w-[680px]">
+                            <div className="h-12 bg-zinc-800/50 rounded-lg mb-2 animate-pulse" />
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => (
+                              <div key={i} className="h-10 bg-zinc-800/40 rounded-lg mb-2 animate-pulse" />
+                            ))}
+                          </div>
+                        </div>
+                      ) : sectorPerf.length === 0 ? (
+                        <p className="text-sm text-zinc-500">No sector performance data available right now.</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-[680px] w-full text-left text-sm">
+                            <thead>
+                              <tr className="border-b border-zinc-800">
+                                <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Sector</th>
+                                {SECTOR_TIMEFRAMES.map((tf) => (
+                                  <th
+                                    key={tf}
+                                    scope="col"
+                                    className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right cursor-pointer select-none ${
+                                      sectorSortTf === tf ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                                    }`}
+                                    onClick={() => setSectorSortTf(tf)}
+                                    aria-label={`Sort sectors by ${tf}`}
+                                  >
+                                    {tf}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sectorPerf.map((s) => (
+                                <tr key={s.sector} className="border-t border-zinc-800/60 hover:bg-zinc-900/40">
+                                  <td className="px-3 py-2 font-medium text-zinc-200">{s.sector}</td>
+                                  {SECTOR_TIMEFRAMES.map((tf) => {
+                                    const v = s.perf?.[tf];
+                                    const vOk = typeof v === 'number' && Number.isFinite(v);
+                                    const isActive = tf === sectorSortTf;
+                                    const classes = [
+                                      'px-3 py-2 whitespace-nowrap text-right tabular-nums',
+                                      !vOk ? 'text-zinc-500' : v! >= 0 ? 'text-emerald-300' : 'text-red-300',
+                                      isActive ? 'bg-blue-600/10 font-semibold' : '',
+                                    ].filter(Boolean).join(' ');
+                                    return (
+                                      <td key={`${s.sector}:${tf}`} className={classes}>
+                                        {!vOk
+                                          ? '—'
+                                          : `${v! >= 0 ? '+' : ''}${v!.toFixed(2)}%`}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </section>
+                  )}
 
-              {sectorLoading ? (
-                <div className="overflow-x-auto">
-                  <div className="min-w-[680px]">
-                    <div className="h-12 bg-zinc-800/50 rounded-lg mb-2 animate-pulse" />
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => (
-                      <div key={i} className="h-10 bg-zinc-800/40 rounded-lg mb-2 animate-pulse" />
-                    ))}
-                  </div>
+                  {id === 'index' && (
+                    <DashboardIndexCard
+                      key={selectedSymbol}
+                      symbol={selectedSymbol}
+                      data={indexDataBySymbol[selectedSymbol] ?? null}
+                      charts={chartsBySymbol[selectedSymbol] ?? []}
+                      trades={selectedTrades as Trade[]}
+                    />
+                  )}
                 </div>
-              ) : sectorPerf.length === 0 ? (
-                <p className="text-sm text-zinc-500">No sector performance data available right now.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-[680px] w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-zinc-800">
-                        <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Sector</th>
-                        {SECTOR_TIMEFRAMES.map((tf) => (
-                          <th
-                            key={tf}
-                            scope="col"
-                            className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right cursor-pointer select-none ${
-                              sectorSortTf === tf ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
-                            onClick={() => setSectorSortTf(tf)}
-                            aria-label={`Sort sectors by ${tf}`}
-                          >
-                            {tf}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sectorPerf.map((s) => (
-                        <tr key={s.sector} className="border-t border-zinc-800/60 hover:bg-zinc-900/40">
-                          <td className="px-3 py-2 font-medium text-zinc-200">{s.sector}</td>
-                          {SECTOR_TIMEFRAMES.map((tf) => {
-                            const v = s.perf?.[tf];
-                            const vOk = typeof v === 'number' && Number.isFinite(v);
-                            const isActive = tf === sectorSortTf;
-                            const classes = [
-                              'px-3 py-2 whitespace-nowrap text-right tabular-nums',
-                              !vOk ? 'text-zinc-500' : v! >= 0 ? 'text-emerald-300' : 'text-red-300',
-                              isActive ? 'bg-blue-600/10 font-semibold' : '',
-                            ].filter(Boolean).join(' ');
-                            return (
-                              <td key={`${s.sector}:${tf}`} className={classes}>
-                                {!vOk
-                                  ? '—'
-                                  : `${v! >= 0 ? '+' : ''}${v!.toFixed(2)}%`}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-
-            <DashboardIndexCard
-              key={selectedSymbol}
-              symbol={selectedSymbol}
-              data={indexDataBySymbol[selectedSymbol] ?? null}
-              charts={chartsBySymbol[selectedSymbol] ?? []}
-              trades={selectedTrades as Trade[]}
-            />
+              );
+            })}
           </main>
 
           <aside className="lg:col-span-3">
