@@ -36,26 +36,47 @@ async function fetchStooqDaily(stooqSymbol: string): Promise<{ price: number; pr
     .map((l) => l.trim())
     .filter(Boolean);
 
-  // Header: Date,Open,High,Low,Close,Volume
+  // Header: Date,Open,High,Low,Close,Volume (sometimes other columns can appear)
   if (lines.length < 3) return null;
-  const dataLines = lines.slice(1);
+  const headerCols = parseCsvLine(lines[0]).map((c) => c.trim());
+  const closeIdx = headerCols.findIndex((c) => c.toLowerCase() === 'close');
+  if (closeIdx < 0) return null;
 
-  const last = dataLines[dataLines.length - 1];
-  const prev = dataLines[dataLines.length - 2];
+  const validRows: number[] = [];
+  for (const line of lines.slice(1)) {
+    const cols = parseCsvLine(line);
+    if (cols.length <= closeIdx) continue;
+    const close = parseFloat(cols[closeIdx] ?? '');
+    if (Number.isFinite(close) && close > 0) validRows.push(close);
+  }
 
-  const lastCols = parseCsvLine(last);
-  const prevCols = parseCsvLine(prev);
-  if (lastCols.length < 6 || prevCols.length < 6) return null;
-
-  const close = parseFloat(lastCols[4]);
-  const prevClose = parseFloat(prevCols[4]);
-  if (!(close > 0) || !(prevClose > 0)) return null;
-
+  if (validRows.length < 2) return null;
+  const prevClose = validRows[validRows.length - 2];
+  const close = validRows[validRows.length - 1];
   const change = close - prevClose;
   const changePercent = (change / prevClose) * 100;
   if (!Number.isFinite(changePercent)) return null;
 
   return { price: close, prevClose, changePercent };
+}
+
+function stooqCandidatesFor(etfSymbol: string): string[] {
+  const lower = etfSymbol.toLowerCase();
+  const upper = etfSymbol.toUpperCase();
+  // Try common stooq formats.
+  return Array.from(new Set([`${lower}.us`, `${upper}.US`, lower, upper]));
+}
+
+async function fetchStooqDailyAny(etfSymbol: string): Promise<{ price: number; prevClose: number; changePercent: number } | null> {
+  for (const candidate of stooqCandidatesFor(etfSymbol)) {
+    try {
+      const daily = await fetchStooqDaily(candidate);
+      if (daily) return daily;
+    } catch {
+      // continue to next candidate
+    }
+  }
+  return null;
 }
 
 export async function GET() {
@@ -146,32 +167,42 @@ export async function GET() {
       usedProvider: computed.length > 0 ? 'yahoo' : 'none',
     };
 
-    // Yahoo quote can sometimes omit fields for these ETFs; if that happens,
-    // fall back to Stooq daily CSV for each ETF and recompute % move.
-    let finalRows = computed;
-    if (finalRows.length === 0) {
-      const stooqRows = await Promise.all(
-        sectorEtfs.map(async (s) => {
-          // Stooq uses lowercase tickers with .us suffix for US-listed ETFs.
-          const stooqSymbol = `${s.symbol.toLowerCase()}.us`;
-          const daily = await fetchStooqDaily(stooqSymbol);
-          if (!daily) return null;
-          return { sector: s.sector, changePercent: daily.changePercent } as SectorPerf;
-        })
-      );
+    // Yahoo quote can sometimes omit fields for these ETFs; fill any missing
+    // sectors by recomputing % move from Stooq daily CSV.
+    const yahooMap = new Map<string, number>(computed.map((x) => [x.sector, x.changePercent]));
+    const missingSectors = sectorEtfs.filter((s) => !yahooMap.has(s.sector));
 
-      const stooqSuccess = stooqRows.filter((x): x is SectorPerf => x !== null);
-      finalRows = stooqSuccess.sort((a, b) => b.changePercent - a.changePercent);
-      debug.stooq = { attempted: sectorEtfs.length, successCount: stooqSuccess.length };
-      debug.usedProvider = finalRows.length > 0 ? 'stooq' : 'none';
+    let stooqCount = 0;
+    const stooqRows = await Promise.all(
+      missingSectors.map(async (s) => {
+        const daily = await fetchStooqDailyAny(s.symbol);
+        if (!daily) return null;
+        stooqCount += 1;
+        return { sector: s.sector, changePercent: daily.changePercent } as SectorPerf;
+      })
+    );
+
+    const stooqPerf = stooqRows.filter((x): x is SectorPerf => x !== null);
+    const finalRows = [
+      ...computed,
+      ...stooqPerf.filter((x) => !yahooMap.has(x.sector)),
+    ].sort((a, b) => b.changePercent - a.changePercent);
+
+    if (missingSectors.length > 0) {
+      debug.stooq = { attempted: missingSectors.length, successCount: stooqCount };
     }
+    debug.usedProvider =
+      computed.length > 0 && stooqCount > 0 ? 'yahoo+stooq' : computed.length > 0 ? 'yahoo' : stooqCount > 0 ? 'stooq' : 'none';
 
     // Avoid "getting stuck" caching an empty result.
     if (finalRows.length > 0) {
       cache = { until: now + CACHE_MS, rows: finalRows };
     }
 
-    return NextResponse.json({ sectors: finalRows, debug }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
+    return NextResponse.json(
+      { sectors: finalRows, debug },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    );
   } catch {
     return NextResponse.json({ sectors: [] as SectorPerf[] }, { status: 200 });
   }
