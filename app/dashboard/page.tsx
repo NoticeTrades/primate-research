@@ -302,8 +302,8 @@ export default function DashboardPage() {
         <MarketTicker />
       </div>
 
-      <div className="pt-44 pb-24 px-4 sm:px-6 relative z-10">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="pt-44 pb-24 px-3 sm:px-4 relative z-10">
+        <div className="max-w-8xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           <main className="lg:col-span-9">
             <header className="mb-5">
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -452,7 +452,7 @@ export default function DashboardPage() {
             </section>
 
             <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                 <div>
                   <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
                     Sector performance
@@ -460,23 +460,6 @@ export default function DashboardPage() {
                   <p className="text-xs text-zinc-500 mt-1">
                     US sectors · sorted by {sectorSortTf}
                   </p>
-                </div>
-
-                <div className="inline-flex rounded-xl border border-zinc-700 bg-zinc-950/30 p-1">
-                  {SECTOR_TIMEFRAMES.map((tf) => (
-                    <button
-                      key={tf}
-                      type="button"
-                      onClick={() => setSectorSortTf(tf)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                        sectorSortTf === tf
-                          ? 'bg-blue-600 text-white'
-                          : 'text-zinc-300 hover:bg-zinc-800/70'
-                      }`}
-                    >
-                      {tf}
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -498,7 +481,15 @@ export default function DashboardPage() {
                       <tr className="border-b border-zinc-800">
                         <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Sector</th>
                         {SECTOR_TIMEFRAMES.map((tf) => (
-                          <th key={tf} className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 text-right">
+                          <th
+                            key={tf}
+                            scope="col"
+                            className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right cursor-pointer select-none ${
+                              sectorSortTf === tf ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                            onClick={() => setSectorSortTf(tf)}
+                            aria-label={`Sort sectors by ${tf}`}
+                          >
                             {tf}
                           </th>
                         ))}
