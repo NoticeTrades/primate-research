@@ -542,9 +542,17 @@ export default function DashboardIndexCard({
                             className="flex items-center justify-between gap-2 hover:text-emerald-200 transition-colors"
                           >
                             <span className="font-mono text-sm text-zinc-200">{r.ticker}</span>
-                            <span className="text-sm font-semibold text-emerald-400 tabular-nums">
-                              +{r.changePercent.toFixed(2)}%
-                            </span>
+                            {(() => {
+                              const isGain = r.changePercent >= 0;
+                              return (
+                                <span
+                                  className={`text-sm font-semibold tabular-nums ${isGain ? 'text-emerald-400' : 'text-red-400'}`}
+                                >
+                                  {isGain ? '+' : ''}
+                                  {r.changePercent.toFixed(2)}%
+                                </span>
+                              );
+                            })()}
                           </a>
                         ))
                       )}
@@ -566,9 +574,17 @@ export default function DashboardIndexCard({
                             className="flex items-center justify-between gap-2 hover:text-red-200 transition-colors"
                           >
                             <span className="font-mono text-sm text-zinc-200">{r.ticker}</span>
-                            <span className="text-sm font-semibold text-red-400 tabular-nums">
-                              {r.changePercent.toFixed(2)}%
-                            </span>
+                            {(() => {
+                              const isLoss = r.changePercent < 0;
+                              return (
+                                <span
+                                  className={`text-sm font-semibold tabular-nums ${isLoss ? 'text-red-400' : 'text-emerald-400'}`}
+                                >
+                                  {r.changePercent >= 0 ? '+' : ''}
+                                  {r.changePercent.toFixed(2)}%
+                                </span>
+                              );
+                            })()}
                           </a>
                         ))
                       )}

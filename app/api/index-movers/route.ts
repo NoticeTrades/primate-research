@@ -208,6 +208,24 @@ function parseCsvLine(line: string): string[] {
   return line.split(',');
 }
 
+function splitGainersLosers(
+  movers: StockMover[],
+  limit: number
+): { gainers: StockMover[]; losers: StockMover[] } | null {
+  const gainers = movers
+    .filter((m) => m.changePercent >= 0)
+    .sort((a, b) => b.changePercent - a.changePercent)
+    .slice(0, limit);
+
+  const losers = movers
+    .filter((m) => m.changePercent < 0)
+    .sort((a, b) => a.changePercent - b.changePercent)
+    .slice(0, limit);
+
+  if (gainers.length === 0 && losers.length === 0) return null;
+  return { gainers, losers };
+}
+
 async function fetchFmpUniverseMovers(universe: string[], limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
   const apiKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || 'demo';
   const symbols = universe
@@ -237,11 +255,7 @@ async function fetchFmpUniverseMovers(universe: string[], limit: number): Promis
     .filter((x): x is StockMover => x !== null);
 
   if (movers.length === 0) return null;
-  const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
-  return {
-    gainers: sorted.slice(0, limit),
-    losers: [...sorted].reverse().slice(0, limit),
-  };
+  return splitGainersLosers(movers, limit);
 }
 
 async function fetchStooqDaily(stooqSymbol: string): Promise<StockMover | null> {
@@ -305,11 +319,7 @@ async function fetchStooqMovers(index: string, limit: number): Promise<{ gainers
   }
 
   if (movers.length === 0) return null;
-  const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
-  return {
-    gainers: sorted.slice(0, limit),
-    losers: [...sorted].reverse().slice(0, limit),
-  };
+  return splitGainersLosers(movers, limit);
 }
 
 async function fetchYahooUniverseMovers(index: string, limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
@@ -378,8 +388,7 @@ async function fetchYahooUniverseMovers(index: string, limit: number): Promise<{
     .filter((x: StockMover | null): x is StockMover => x !== null);
 
   if (movers.length === 0) return null;
-  const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
-  return { gainers: sorted.slice(0, limit), losers: [...sorted].reverse().slice(0, limit) };
+  return splitGainersLosers(movers, limit);
 }
 
 async function fetchYahooChartDailyMover(ticker: string): Promise<StockMover | null> {
@@ -436,11 +445,7 @@ async function fetchYahooChartUniverseMovers(
   const movers = results.filter((x): x is StockMover => x !== null);
   if (movers.length === 0) return null;
 
-  const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
-  return {
-    gainers: sorted.slice(0, limit),
-    losers: [...sorted].reverse().slice(0, limit),
-  };
+  return splitGainersLosers(movers, limit);
 }
 
 export async function GET(request: Request) {
