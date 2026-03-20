@@ -212,17 +212,14 @@ function splitGainersLosers(
   movers: StockMover[],
   limit: number
 ): { gainers: StockMover[]; losers: StockMover[] } | null {
-  const gainers = movers
-    .filter((m) => m.changePercent >= 0)
-    .sort((a, b) => b.changePercent - a.changePercent)
-    .slice(0, limit);
+  if (movers.length === 0) return null;
 
-  const losers = movers
-    .filter((m) => m.changePercent < 0)
-    .sort((a, b) => a.changePercent - b.changePercent)
-    .slice(0, limit);
+  // "Top gainers" means highest changePercent values, even if they are all negative.
+  const gainers = [...movers].sort((a, b) => b.changePercent - a.changePercent).slice(0, limit);
 
-  if (gainers.length === 0 && losers.length === 0) return null;
+  // "Top losers" means lowest changePercent values.
+  const losers = [...movers].sort((a, b) => a.changePercent - b.changePercent).slice(0, limit);
+
   return { gainers, losers };
 }
 
