@@ -3,12 +3,17 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+type TimeframeKey = '1D' | '1W' | '1M' | '3M' | 'YTD';
+
 type SectorPerf = {
   sector: string;
+  // 1D percent move (kept for backwards compatibility / sorting fallback).
   changePercent: number;
+  // Full timeframe moves for the table (computed from Yahoo chart).
+  perf?: Record<TimeframeKey, number>;
 };
 
-const CACHE_MS = 60_000;
+const CACHE_MS = 300_000; // ~5 minutes
 let cache: { until: number; rows: SectorPerf[] } | null = null;
 
 function fmtStooqDate(d: Date): string {
@@ -111,11 +116,89 @@ async function fetchYahooChartDailyChangePercent(etfSymbol: string): Promise<num
   return Number.isFinite(changePercent) ? changePercent : null;
 }
 
-export async function GET() {
+async function fetchYahooChartTimeframeChangePercents(
+  etfSymbol: string
+): Promise<Record<TimeframeKey, number> | null> {
+  // Pull 1Y daily closes and derive % moves for each requested timeframe.
+  // This avoids relying on Yahoo quote fields (which are blocked/empty in prod).
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+    etfSymbol
+  )}?range=1y&interval=1d&includePrePost=false&events=div|split`;
+
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return null;
+
+  const body = (await res.json()) as any;
+  const result = body?.chart?.result?.[0];
+  const timestamps: unknown[] = result?.timestamp ?? [];
+  const closeArr: unknown[] =
+    result?.indicators?.quote?.[0]?.close ??
+    result?.indicators?.adjclose?.[0]?.adjclose ??
+    [];
+
+  if (!Array.isArray(timestamps) || !Array.isArray(closeArr)) return null;
+  if (timestamps.length !== closeArr.length || timestamps.length < 3) return null;
+
+  const points: Array<{ tsMs: number; close: number }> = [];
+  for (let i = 0; i < timestamps.length; i += 1) {
+    const t = timestamps[i];
+    const c = closeArr[i];
+    if (typeof t !== 'number' || !Number.isFinite(t)) continue;
+    if (typeof c !== 'number' || !Number.isFinite(c) || c <= 0) continue;
+    points.push({ tsMs: t * 1000, close: c });
+  }
+
+  if (points.length < 2) return null;
+
+  const nowMs = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const lastClose = points[points.length - 1].close;
+  const prevClose = points[points.length - 2].close;
+  if (!(lastClose > 0) || !(prevClose > 0)) return null;
+
+  const findBaselineClose = (targetMs: number): number => {
+    for (let i = points.length - 1; i >= 0; i -= 1) {
+      if (points[i].tsMs <= targetMs) return points[i].close;
+    }
+    return points[0].close;
+  };
+
+  const oneWBase = findBaselineClose(nowMs - 7 * dayMs);
+  const oneMBase = findBaselineClose(nowMs - 30 * dayMs);
+  const threeMBase = findBaselineClose(nowMs - 90 * dayMs);
+
+  const ytdStartMs = Date.UTC(new Date().getUTCFullYear(), 0, 1);
+  const ytdBase = findBaselineClose(ytdStartMs);
+
+  const calc = (base: number): number => {
+    if (!(base > 0)) return 0;
+    return ((lastClose - base) / base) * 100;
+  };
+
+  return {
+    '1D': ((lastClose - prevClose) / prevClose) * 100,
+    '1W': calc(oneWBase),
+    '1M': calc(oneMBase),
+    '3M': calc(threeMBase),
+    YTD: calc(ytdBase),
+  };
+}
+
+export async function GET(request: Request) {
   const now = Date.now();
+  const { searchParams } = new URL(request.url);
+  const sortTfRaw = (searchParams.get('sort') || '1D').toUpperCase();
+  const allowedSort: TimeframeKey[] = ['1D', '1W', '1M', '3M', 'YTD'];
+  const sortTf: TimeframeKey = allowedSort.includes(sortTfRaw as TimeframeKey) ? (sortTfRaw as TimeframeKey) : '1D';
   if (cache && cache.until > now && cache.rows.length > 0) {
+    const sectors = [...cache.rows].sort((a, b) => {
+      const av = a.perf?.[sortTf] ?? a.changePercent;
+      const bv = b.perf?.[sortTf] ?? b.changePercent;
+      return bv - av;
+    });
     return NextResponse.json(
-      { sectors: cache.rows, debug: { cached: true } },
+      { sectors, debug: { cached: true, sortTf, usedProvider: 'cache' } },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     );
   }
@@ -239,14 +322,18 @@ export async function GET() {
       const attempted = sectorEtfs.length;
       const chartRows = await Promise.all(
         sectorEtfs.map(async (s) => {
-          const changePercent = await fetchYahooChartDailyChangePercent(s.symbol);
-          if (changePercent == null) return null;
-          return { sector: s.sector, changePercent } as SectorPerf;
+          const perf = await fetchYahooChartTimeframeChangePercents(s.symbol);
+          if (!perf) return null;
+          return { sector: s.sector, changePercent: perf['1D'], perf } as SectorPerf;
         })
       );
       const chartPerf = chartRows.filter((x): x is SectorPerf => x !== null);
       debug.chart = { attempted, successCount: chartPerf.length };
-      finalRows = chartPerf.sort((a, b) => b.changePercent - a.changePercent);
+      finalRows = chartPerf.sort((a, b) => {
+        const av = a.perf?.[sortTf] ?? a.changePercent;
+        const bv = b.perf?.[sortTf] ?? b.changePercent;
+        return bv - av;
+      });
       debug.usedProvider = finalRows.length > 0 ? 'yahoo-chart' : 'none';
     } else {
       debug.usedProvider =

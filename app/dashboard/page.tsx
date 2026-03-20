@@ -59,10 +59,15 @@ type IndexData = {
   } | null;
 };
 
+type TimeframeKey = '1D' | '1W' | '1M' | '3M' | 'YTD';
+
 type SectorPerf = {
   sector: string;
-  changePercent: number;
+  changePercent: number; // 1D (fallback)
+  perf?: Record<TimeframeKey, number>;
 };
+
+const SECTOR_TIMEFRAMES: TimeframeKey[] = ['1D', '1W', '1M', '3M', 'YTD'];
 
 type OverviewItem = {
   symbol: string;
@@ -101,6 +106,7 @@ export default function DashboardPage() {
   const [tradesLastUpdated, setTradesLastUpdated] = useState<Date | null>(null);
   const [sectorPerf, setSectorPerf] = useState<SectorPerf[]>([]);
   const [sectorLoading, setSectorLoading] = useState(false);
+  const [sectorSortTf, setSectorSortTf] = useState<TimeframeKey>('1D');
   const [overviewTf, setOverviewTf] = useState<'1D' | '1W' | '1M' | '1Y' | 'YTD'>('1D');
   const [overviewItems, setOverviewItems] = useState<OverviewItem[]>([]);
   const [overviewLoading, setOverviewLoading] = useState(false);
@@ -202,7 +208,10 @@ export default function DashboardPage() {
     const fetchSectorPerf = async () => {
       try {
         setSectorLoading(true);
-        const res = await fetch(`/api/sector-performance?ts=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetch(
+          `/api/sector-performance?ts=${Date.now()}&sort=${encodeURIComponent(sectorSortTf)}`,
+          { cache: 'no-store' }
+        );
         if (!res.ok) return;
         const body = (await res.json()) as { sectors?: SectorPerf[] };
         if (cancelled) return;
@@ -215,12 +224,12 @@ export default function DashboardPage() {
     };
 
     fetchSectorPerf();
-    const interval = setInterval(fetchSectorPerf, 60000);
+    const interval = setInterval(fetchSectorPerf, 180000);
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [sectorSortTf]);
 
   // Market overview panel with timeframe filters.
   useEffect(() => {
@@ -443,29 +452,82 @@ export default function DashboardPage() {
             </section>
 
             <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Sector performance</h2>
-                <span className="text-xs text-zinc-500">US sectors</span>
-              </div>
-              {sectorLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="h-14 rounded-lg bg-zinc-800/50 animate-pulse" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+                    Sector performance
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    US sectors · sorted by {sectorSortTf}
+                  </p>
+                </div>
+
+                <div className="inline-flex rounded-xl border border-zinc-700 bg-zinc-950/30 p-1">
+                  {SECTOR_TIMEFRAMES.map((tf) => (
+                    <button
+                      key={tf}
+                      type="button"
+                      onClick={() => setSectorSortTf(tf)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                        sectorSortTf === tf
+                          ? 'bg-blue-600 text-white'
+                          : 'text-zinc-300 hover:bg-zinc-800/70'
+                      }`}
+                    >
+                      {tf}
+                    </button>
                   ))}
+                </div>
+              </div>
+
+              {sectorLoading ? (
+                <div className="overflow-x-auto">
+                  <div className="min-w-[680px]">
+                    <div className="h-12 bg-zinc-800/50 rounded-lg mb-2 animate-pulse" />
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => (
+                      <div key={i} className="h-10 bg-zinc-800/40 rounded-lg mb-2 animate-pulse" />
+                    ))}
+                  </div>
                 </div>
               ) : sectorPerf.length === 0 ? (
                 <p className="text-sm text-zinc-500">No sector performance data available right now.</p>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                  {sectorPerf.map((s) => (
-                    <div key={s.sector} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
-                      <span className="text-sm text-zinc-200">{s.sector}</span>
-                      <span className={`text-sm font-semibold tabular-nums ${s.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {s.changePercent >= 0 ? '+' : ''}
-                        {s.changePercent.toFixed(2)}%
-                      </span>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="min-w-[680px] w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-800">
+                        <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Sector</th>
+                        {SECTOR_TIMEFRAMES.map((tf) => (
+                          <th key={tf} className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 text-right">
+                            {tf}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sectorPerf.map((s) => (
+                        <tr key={s.sector} className="border-t border-zinc-800/60 hover:bg-zinc-900/40">
+                          <td className="px-3 py-2 font-medium text-zinc-200">{s.sector}</td>
+                          {SECTOR_TIMEFRAMES.map((tf) => {
+                            const v = s.perf?.[tf];
+                            const isActive = tf === sectorSortTf;
+                            const classes = [
+                              'px-3 py-2 whitespace-nowrap text-right tabular-nums',
+                              v == null ? 'text-zinc-500' : v >= 0 ? 'text-emerald-300' : 'text-red-300',
+                              isActive ? 'bg-blue-600/10 font-semibold' : '',
+                            ].filter(Boolean).join(' ');
+                            return (
+                              <td key={`${s.sector}:${tf}`} className={classes}>
+                                {v == null
+                                  ? '—'
+                                  : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </section>
