@@ -49,27 +49,44 @@ async function fetchViaXApi(account: string, bearerToken: string, limit: number)
 }
 
 async function fetchViaNitterRss(account: string, limit: number): Promise<SocialPost[]> {
-  const rssUrl = `https://nitter.net/${encodeURIComponent(account)}/rss`;
-  const res = await fetch(rssUrl, {
-    cache: 'no-store',
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' },
-  });
-  if (!res.ok) return [];
-  const xml = await res.text();
-  const posts: SocialPost[] = [];
-  const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*?<pubDate>([^<]*)<\/pubDate>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = itemRegex.exec(xml)) !== null && posts.length < limit) {
-    const text = m[1].replace(/<[^>]+>/g, '').trim();
-    const url = m[2].trim();
-    const createdAt = parseRssDate(m[3].trim());
-    const idMatch = /status\/(\d+)/.exec(url);
-    const id = idMatch?.[1] || `${account}-${posts.length}`;
-    if (text && url.startsWith('http')) {
-      posts.push({ id, text, createdAt, url, account });
+  const bases = [
+    'https://nitter.net',
+    'https://nitter.poast.org',
+    'https://nitter.privacydev.net',
+    'https://nitter.1d4.us',
+    'https://nitter.switchblade.xyz',
+  ];
+
+  for (const base of bases) {
+    try {
+      const rssUrl = `${base}/${encodeURIComponent(account)}/rss`;
+      const res = await fetch(rssUrl, {
+        cache: 'no-store',
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' },
+      });
+      if (!res.ok) continue;
+      const xml = await res.text();
+      const posts: SocialPost[] = [];
+      const itemRegex =
+        /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>(?:[\s\S]*?<pubDate>([^<]*)<\/pubDate>)?/gi;
+      let m: RegExpExecArray | null;
+      while ((m = itemRegex.exec(xml)) !== null && posts.length < limit) {
+        const text = m[1].replace(/<[^>]+>/g, '').trim();
+        const url = m[2].trim();
+        const createdAt = m[3] ? parseRssDate(m[3].trim()) : '';
+        const idMatch = /status\/(\d+)/.exec(url);
+        const id = idMatch?.[1] || `${account}-${posts.length}`;
+        if (text && url.startsWith('http')) {
+          posts.push({ id, text, createdAt, url, account });
+        }
+      }
+      if (posts.length > 0) return posts;
+    } catch {
+      continue;
     }
   }
-  return posts;
+
+  return [];
 }
 
 export async function GET(request: Request) {

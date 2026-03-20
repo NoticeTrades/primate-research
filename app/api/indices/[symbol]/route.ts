@@ -680,6 +680,8 @@ export async function GET(
     const volumeVsAvg = volumeAvg20 > 0 && volume > 0 ? (volume / volumeAvg20) * 100 : 0;
     (globalThis as any)._indexVolumeAvg20 = undefined;
 
+    const safeOpen = open > 0 ? open : previousClose > 0 ? previousClose : price > 0 ? price : 0;
+
     const body = {
       symbol,
       name: INDEX_NAMES[symbol] || symbol,
@@ -690,7 +692,7 @@ export async function GET(
       ytdPercent: ytdPercent ?? undefined,
       holc: {
         high,
-        open,
+        open: safeOpen,
         low,
         close: price,
       },

@@ -29,6 +29,7 @@ const RANGE_FOR_TIMEFRAME: Record<string, string> = {
   '1W': '1mo',
   '1M': '3mo',
   '1Y': '2y',
+  YTD: 'ytd',
 };
 
 const LOOKBACK_DAYS: Record<string, number> = {
@@ -36,6 +37,7 @@ const LOOKBACK_DAYS: Record<string, number> = {
   '1W': 5,
   '1M': 21,
   '1Y': 252,
+  YTD: 400, // unused (YTD uses first datapoint as baseline)
 };
 
 function asNumberArray(v: unknown): number[] {
@@ -57,8 +59,13 @@ async function fetchItem(item: { symbol: string; yahoo: string; name: string; ca
   if (closes.length < 2) return null;
 
   const current = closes[closes.length - 1];
-  const refIndex = Math.max(0, closes.length - 1 - lookback);
-  const ref = closes[refIndex];
+  const ref =
+    timeframe === 'YTD'
+      ? closes[0]
+      : (() => {
+          const refIndex = Math.max(0, closes.length - 1 - lookback);
+          return closes[refIndex];
+        })();
   if (!(current > 0) || !(ref > 0)) return null;
 
   return {

@@ -17,7 +17,7 @@ const FMP_CONSTITUENT_ENDPOINT: Record<string, string> = {
   YM: 'dowjones_constituent',
 };
 
-const MOVERS_CACHE_MS = 30_000;
+const MOVERS_CACHE_MS = 120_000;
 const moversCache = new Map<string, { until: number; gainers: StockMover[]; losers: StockMover[]; source: string }>();
 
 function parseNumber(value: unknown): number {
@@ -29,9 +29,9 @@ function parseNumber(value: unknown): number {
 }
 
 async function fetchYahooConstituentMovers(index: string, limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
-  const apiKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || 'demo';
+  const apiKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY;
   const endpoint = FMP_CONSTITUENT_ENDPOINT[index];
-  if (!endpoint) return null;
+  if (!apiKey || !endpoint) return null;
 
   const constituentsRes = await fetch(
     `https://financialmodelingprep.com/api/v3/${endpoint}?apikey=${encodeURIComponent(apiKey)}`,
@@ -93,19 +93,19 @@ export async function GET(request: Request) {
       );
     }
 
-    const fmpMovers = await fetchYahooConstituentMovers(index, limit);
-    if (fmpMovers) {
-      moversCache.set(cacheKey, { until: now + MOVERS_CACHE_MS, gainers: fmpMovers.gainers, losers: fmpMovers.losers, source: 'fmp-constituents' });
-      return NextResponse.json(
-        { index, source: 'fmp-constituents', gainers: fmpMovers.gainers, losers: fmpMovers.losers },
-        { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
-      );
-    }
-
     const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
     if (!apiKey) {
+      const fmpMovers = await fetchYahooConstituentMovers(index, limit);
+      if (fmpMovers) {
+        moversCache.set(cacheKey, { until: now + MOVERS_CACHE_MS, gainers: fmpMovers.gainers, losers: fmpMovers.losers, source: 'fmp-constituents' });
+        return NextResponse.json(
+          { index, source: 'fmp-constituents', gainers: fmpMovers.gainers, losers: fmpMovers.losers },
+          { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+        );
+      }
+
       return NextResponse.json(
-        { index, source: 'unavailable', gainers: [], losers: [], error: 'No free constituent data mapping for this symbol yet.' },
+        { index, source: 'unavailable', gainers: [], losers: [], error: 'No movers provider configured.' },
         { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }

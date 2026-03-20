@@ -100,7 +100,7 @@ export default function DashboardPage() {
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [tradesLastUpdated, setTradesLastUpdated] = useState<Date | null>(null);
   const [sectorPerf, setSectorPerf] = useState<SectorPerf[]>([]);
-  const [overviewTf, setOverviewTf] = useState<'1D' | '1W' | '1M' | '1Y'>('1D');
+  const [overviewTf, setOverviewTf] = useState<'1D' | '1W' | '1M' | '1Y' | 'YTD'>('1D');
   const [overviewItems, setOverviewItems] = useState<OverviewItem[]>([]);
   const [overviewLoading, setOverviewLoading] = useState(false);
 
@@ -390,7 +390,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-zinc-500 mt-1">ES, NQ, YM, RTY, DXY, Metals, Total Market, International and Emerging Markets</p>
                 </div>
                 <div className="inline-flex rounded-xl border border-zinc-700 bg-zinc-950/30 p-1">
-                  {(['1D', '1W', '1M', '1Y'] as const).map((tf) => (
+                  {(['1D', '1W', '1M', '1Y', 'YTD'] as const).map((tf) => (
                     <button
                       key={tf}
                       type="button"

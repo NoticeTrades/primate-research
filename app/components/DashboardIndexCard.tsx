@@ -128,7 +128,7 @@ export default function DashboardIndexCard({
   const [chartsOpen, setChartsOpen] = useState(false);
   const [moversLoading, setMoversLoading] = useState(false);
   const [moversError, setMoversError] = useState<string | null>(null);
-  const [movers, setMovers] = useState<{ gainers: StockMover[]; losers: StockMover[] } | null>(null);
+  const [movers, setMovers] = useState<{ gainers: StockMover[]; losers: StockMover[]; source?: string } | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState<string | null>(null);
   const [newsItems, setNewsItems] = useState<IndexNewsItem[]>([]);
@@ -161,11 +161,12 @@ export default function DashboardIndexCard({
           const json = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(json?.error || 'Failed to load movers');
         }
-        const json = (await res.json()) as { gainers: StockMover[]; losers: StockMover[] };
+        const json = (await res.json()) as { gainers: StockMover[]; losers: StockMover[]; source?: string };
         if (cancelled) return;
         setMovers({
           gainers: Array.isArray(json.gainers) ? json.gainers.slice(0, 5) : [],
           losers: Array.isArray(json.losers) ? json.losers.slice(0, 5) : [],
+          source: typeof json.source === 'string' ? json.source : undefined,
         });
       } catch (e) {
         if (cancelled) return;
@@ -507,7 +508,9 @@ export default function DashboardIndexCard({
           <div className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Top movers</h4>
-                <span className="text-xs text-zinc-500">For {symbol} (top 5 up/down)</span>
+              <span className="text-xs text-zinc-500">
+                {movers?.source === 'alpha-marketwide' ? 'Market-wide (Alpha Vantage)' : 'Top up/down'}
+              </span>
               </div>
 
               {moversLoading ? (
