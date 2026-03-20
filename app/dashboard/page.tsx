@@ -100,6 +100,7 @@ export default function DashboardPage() {
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [tradesLastUpdated, setTradesLastUpdated] = useState<Date | null>(null);
   const [sectorPerf, setSectorPerf] = useState<SectorPerf[]>([]);
+  const [sectorLoading, setSectorLoading] = useState(false);
   const [overviewTf, setOverviewTf] = useState<'1D' | '1W' | '1M' | '1Y' | 'YTD'>('1D');
   const [overviewItems, setOverviewItems] = useState<OverviewItem[]>([]);
   const [overviewLoading, setOverviewLoading] = useState(false);
@@ -200,13 +201,16 @@ export default function DashboardPage() {
     let cancelled = false;
     const fetchSectorPerf = async () => {
       try {
-        const res = await fetch('/api/sector-performance', { cache: 'no-store' });
+        setSectorLoading(true);
+        const res = await fetch(`/api/sector-performance?ts=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
         const body = (await res.json()) as { sectors?: SectorPerf[] };
         if (cancelled) return;
         setSectorPerf(Array.isArray(body.sectors) ? body.sectors.slice(0, 11) : []);
       } catch {
         if (!cancelled) setSectorPerf([]);
+      } finally {
+        if (!cancelled) setSectorLoading(false);
       }
     };
 
@@ -443,7 +447,13 @@ export default function DashboardPage() {
                 <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Sector performance</h2>
                 <span className="text-xs text-zinc-500">US sectors</span>
               </div>
-              {sectorPerf.length === 0 ? (
+              {sectorLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="h-14 rounded-lg bg-zinc-800/50 animate-pulse" />
+                  ))}
+                </div>
+              ) : sectorPerf.length === 0 ? (
                 <p className="text-sm text-zinc-500">No sector performance data available right now.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
