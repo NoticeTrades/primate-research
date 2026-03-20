@@ -11,6 +11,53 @@ type SectorPerf = {
 const CACHE_MS = 60_000;
 let cache: { until: number; rows: SectorPerf[] } | null = null;
 
+function fmtStooqDate(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
+}
+
+function parseCsvLine(line: string): string[] {
+  return line.split(',');
+}
+
+async function fetchStooqDaily(stooqSymbol: string): Promise<{ price: number; prevClose: number; changePercent: number } | null> {
+  const d2 = new Date();
+  const d1 = new Date(Date.now() - 1000 * 60 * 60 * 24 * 35);
+  const url = `https://stooq.com/q/l/?s=${encodeURIComponent(stooqSymbol)}&i=d&d1=${fmtStooqDate(d1)}&d2=${fmtStooqDate(d2)}`;
+
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return null;
+
+  const csv = await res.text();
+  const lines = csv
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  // Header: Date,Open,High,Low,Close,Volume
+  if (lines.length < 3) return null;
+  const dataLines = lines.slice(1);
+
+  const last = dataLines[dataLines.length - 1];
+  const prev = dataLines[dataLines.length - 2];
+
+  const lastCols = parseCsvLine(last);
+  const prevCols = parseCsvLine(prev);
+  if (lastCols.length < 6 || prevCols.length < 6) return null;
+
+  const close = parseFloat(lastCols[4]);
+  const prevClose = parseFloat(prevCols[4]);
+  if (!(close > 0) || !(prevClose > 0)) return null;
+
+  const change = close - prevClose;
+  const changePercent = (change / prevClose) * 100;
+  if (!Number.isFinite(changePercent)) return null;
+
+  return { price: close, prevClose, changePercent };
+}
+
 export async function GET() {
   const now = Date.now();
   if (cache && cache.until > now) {
@@ -86,8 +133,25 @@ export async function GET() {
       .filter((x): x is SectorPerf => x !== null)
       .sort((a, b) => b.changePercent - a.changePercent);
 
-    cache = { until: now + CACHE_MS, rows: computed };
-    return NextResponse.json({ sectors: computed }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
+    // Yahoo quote can sometimes omit fields for these ETFs; if that happens,
+    // fall back to Stooq daily CSV for each ETF and recompute % move.
+    let finalRows = computed;
+    if (finalRows.length === 0) {
+      const stooqRows = await Promise.all(
+        sectorEtfs.map(async (s) => {
+          // Stooq uses lowercase tickers with .us suffix for US-listed ETFs.
+          const stooqSymbol = `${s.symbol.toLowerCase()}.us`;
+          const daily = await fetchStooqDaily(stooqSymbol);
+          if (!daily) return null;
+          return { sector: s.sector, changePercent: daily.changePercent } as SectorPerf;
+        })
+      );
+
+      finalRows = stooqRows.filter((x): x is SectorPerf => x !== null).sort((a, b) => b.changePercent - a.changePercent);
+    }
+
+    cache = { until: now + CACHE_MS, rows: finalRows };
+    return NextResponse.json({ sectors: finalRows }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
   } catch {
     return NextResponse.json({ sectors: [] as SectorPerf[] }, { status: 200 });
   }
