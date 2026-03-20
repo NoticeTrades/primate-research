@@ -64,11 +64,22 @@ export async function GET() {
         const price = q ? toNum((q as any).regularMarketPrice) : null;
         const prevClose = q ? toNum((q as any).regularMarketPreviousClose) : null;
         const changePercentDirect = q ? toNum((q as any).regularMarketChangePercent) : null;
+        const change = q ? toNum((q as any).regularMarketChange ?? (q as any).change) : null;
 
+        // Prefer Yahoo's percent when present.
         let changePercent: number | null = changePercentDirect;
+
+        // If percent isn't present, derive previous close from change when possible.
+        if (changePercent == null && price != null && change != null) {
+          const derivedPrev = price - change;
+          if (derivedPrev > 0) changePercent = (change / derivedPrev) * 100;
+        }
+
+        // Last fallback: if we do have prevClose, compute from price + prevClose.
         if (changePercent == null && price != null && prevClose != null && prevClose > 0) {
           changePercent = ((price - prevClose) / prevClose) * 100;
         }
+
         if (changePercent == null || !Number.isFinite(changePercent)) return null;
         return { sector: s.sector, changePercent };
       })

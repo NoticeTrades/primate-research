@@ -341,24 +341,21 @@ async function fetchYahooUniverseMovers(index: string, limit: number): Promise<{
       const changePercent = toNum(r?.regularMarketChangePercent ?? r?.changePercent);
       const volume = toNum(r?.regularMarketVolume ?? r?.volume) ?? 0;
 
-      // Prefer Yahoo's own change percent when present.
-      let computedChange = toNum(r?.regularMarketChange ?? r?.change) ?? 0;
-      if (changePercent == null) {
-        const prevClose = toNum(r?.regularMarketPreviousClose ?? r?.previousClose);
-        if (prevClose != null && prevClose > 0) {
-          computedChange = price - prevClose;
-        } else {
-          return null;
-        }
+      const prevCloseMaybe = toNum(r?.regularMarketPreviousClose ?? r?.previousClose);
+      const changeMaybe = toNum(r?.regularMarketChange ?? r?.change);
+
+      let computedChange: number | null = changeMaybe;
+      // Derive change from prevClose if percent is missing and change is missing.
+      if (computedChange == null) {
+        if (prevCloseMaybe != null && prevCloseMaybe > 0) computedChange = price - prevCloseMaybe;
+        else return null;
       }
 
-      // If changePercent was missing, compute from computedChange.
-      const finalChangePercent =
-        changePercent != null
-          ? changePercent
-          : computedChange !== 0 && price > 0
-            ? (computedChange / price) * 100
-            : null;
+      let finalChangePercent: number | null = changePercent;
+      if (finalChangePercent == null) {
+        const derivedPrev = prevCloseMaybe != null && prevCloseMaybe > 0 ? prevCloseMaybe : price - computedChange;
+        if (derivedPrev > 0) finalChangePercent = (computedChange / derivedPrev) * 100;
+      }
 
       if (finalChangePercent == null || !Number.isFinite(finalChangePercent)) return null;
 
