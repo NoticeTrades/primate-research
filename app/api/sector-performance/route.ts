@@ -89,6 +89,15 @@ export async function GET() {
   }
 
   try {
+    const debug: {
+      yahoo: { fetchedSymbols?: number; computedCount?: number; error?: string; status?: number; ok?: boolean };
+      stooq?: { attempted?: number; successCount?: number; errors?: string[] };
+      usedProvider: 'yahoo' | 'stooq' | 'yahoo+stooq' | 'none';
+    } = {
+      yahoo: { ok: false },
+      usedProvider: 'none',
+    };
+
     // No API keys: use sector ETFs as proxies, compute change vs previous close from Yahoo quote.
     // (Works much more reliably than the free FMP sectors endpoint.)
     const sectorEtfs: Array<{ sector: string; symbol: string }> = [
@@ -111,11 +120,19 @@ export async function GET() {
       cache: 'no-store',
       headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' },
     });
-    if (!res.ok) return NextResponse.json({ sectors: [] as SectorPerf[] }, { status: 200 });
+    if (!res.ok) {
+      debug.yahoo = { ok: false, status: res.status, error: 'yahoo quote fetch failed' };
+      debug.usedProvider = 'none';
+      return NextResponse.json({ sectors: [] as SectorPerf[], debug }, { status: 200 });
+    }
 
     const body = (await res.json()) as { quoteResponse?: { result?: Array<Record<string, unknown>> } };
     const rows = body?.quoteResponse?.result;
-    if (!Array.isArray(rows)) return NextResponse.json({ sectors: [] as SectorPerf[], debug: { yahoo: 'no-rows' } }, { status: 200 });
+    if (!Array.isArray(rows)) {
+      debug.yahoo = { ok: false, error: 'yahoo quote missing quoteResponse.result' };
+      debug.usedProvider = 'none';
+      return NextResponse.json({ sectors: [] as SectorPerf[], debug }, { status: 200 });
+    }
 
     const bySymbol = new Map<string, Record<string, unknown>>();
     for (const r of rows) {
@@ -157,15 +174,7 @@ export async function GET() {
       .filter((x): x is SectorPerf => x !== null)
       .sort((a, b) => b.changePercent - a.changePercent);
 
-    const debug: {
-      yahoo: { fetchedSymbols: number; computedCount: number };
-      stooq?: { attempted: number; successCount: number };
-      usedProvider: 'yahoo' | 'stooq' | 'yahoo+stooq' | 'none';
-      cached?: boolean;
-    } = {
-      yahoo: { fetchedSymbols: sectorEtfs.length, computedCount: computed.length },
-      usedProvider: computed.length > 0 ? 'yahoo' : 'none',
-    };
+    debug.yahoo = { fetchedSymbols: sectorEtfs.length, computedCount: computed.length, ok: true };
 
     // Yahoo quote can sometimes omit fields for these ETFs; fill any missing
     // sectors by recomputing % move from Stooq daily CSV.
@@ -203,8 +212,12 @@ export async function GET() {
       { sectors: finalRows, debug },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     );
-  } catch {
-    return NextResponse.json({ sectors: [] as SectorPerf[] }, { status: 200 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { sectors: [] as SectorPerf[], debug: { usedProvider: 'none', error: msg } },
+      { status: 200 }
+    );
   }
 }
 
