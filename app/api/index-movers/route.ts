@@ -382,6 +382,67 @@ async function fetchYahooUniverseMovers(index: string, limit: number): Promise<{
   return { gainers: sorted.slice(0, limit), losers: [...sorted].reverse().slice(0, limit) };
 }
 
+async function fetchYahooChartDailyMover(ticker: string): Promise<StockMover | null> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+    ticker
+  )}?range=5d&interval=1d&includePrePost=false&events=div|split`;
+
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return null;
+
+  const body = (await res.json()) as any;
+  const closeArr: unknown[] =
+    body?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ??
+    body?.chart?.result?.[0]?.indicators?.adjclose?.[0]?.adjclose ??
+    [];
+
+  if (!Array.isArray(closeArr)) return null;
+
+  const closes = closeArr
+    .map((v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null))
+    .filter((v: number | null): v is number => v !== null);
+
+  if (closes.length < 2) return null;
+
+  const prevClose = closes[closes.length - 2];
+  const close = closes[closes.length - 1];
+  if (!(prevClose > 0) || !(close > 0)) return null;
+
+  const change = close - prevClose;
+  const changePercent = (change / prevClose) * 100;
+
+  if (!Number.isFinite(changePercent)) return null;
+
+  return {
+    ticker: ticker.toUpperCase(),
+    price: close,
+    changePercent,
+    change,
+    volume: 0,
+  };
+}
+
+async function fetchYahooChartUniverseMovers(
+  index: string,
+  limit: number
+): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
+  const universe = YH_UNIVERSE[index] || [];
+  if (universe.length === 0) return null;
+
+  // Limit request length.
+  const symbols = universe.slice(0, 40);
+
+  const results = await Promise.all(symbols.map((t) => fetchYahooChartDailyMover(t)));
+  const movers = results.filter((x): x is StockMover => x !== null);
+  if (movers.length === 0) return null;
+
+  const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
+  return {
+    gainers: sorted.slice(0, limit),
+    losers: [...sorted].reverse().slice(0, limit),
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const index = (searchParams.get('index') || 'index').toUpperCase();
@@ -398,9 +459,12 @@ export async function GET(request: Request) {
       );
     }
 
+    const debug: { providers: string[] } = { providers: [] };
+
     // First attempt: no-key Yahoo quote-based universe movers.
     const yahooMovers = await fetchYahooUniverseMovers(index, limit);
     if (yahooMovers) {
+      debug.providers.push('yahoo-universe');
       moversCache.set(cacheKey, {
         until: now + MOVERS_CACHE_MS,
         gainers: yahooMovers.gainers,
@@ -408,13 +472,15 @@ export async function GET(request: Request) {
         source: 'yahoo-universe',
       });
       return NextResponse.json(
-        { index, source: 'yahoo-universe', gainers: yahooMovers.gainers, losers: yahooMovers.losers },
+        { index, source: 'yahoo-universe', gainers: yahooMovers.gainers, losers: yahooMovers.losers, debug },
         { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }
 
+    debug.providers.push('yahoo-universe-failed');
     const stooqMovers = await fetchStooqMovers(index, limit);
     if (stooqMovers) {
+      debug.providers.push('stooq-universe');
       moversCache.set(cacheKey, {
         until: now + MOVERS_CACHE_MS,
         gainers: stooqMovers.gainers,
@@ -422,7 +488,24 @@ export async function GET(request: Request) {
         source: 'stooq-universe',
       });
       return NextResponse.json(
-        { index, source: 'stooq-universe', gainers: stooqMovers.gainers, losers: stooqMovers.losers },
+        { index, source: 'stooq-universe', gainers: stooqMovers.gainers, losers: stooqMovers.losers, debug },
+        { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+      );
+    }
+
+    debug.providers.push('stooq-universe-failed');
+    // Third attempt: Yahoo chart (historical close-to-close % move).
+    const chartMovers = await fetchYahooChartUniverseMovers(index, limit);
+    if (chartMovers) {
+      debug.providers.push('yahoo-chart-universe');
+      moversCache.set(cacheKey, {
+        until: now + MOVERS_CACHE_MS,
+        gainers: chartMovers.gainers,
+        losers: chartMovers.losers,
+        source: 'yahoo-chart-universe',
+      });
+      return NextResponse.json(
+        { index, source: 'yahoo-chart-universe', gainers: chartMovers.gainers, losers: chartMovers.losers, debug },
         { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }
@@ -430,6 +513,7 @@ export async function GET(request: Request) {
     // Fallback: try FMP quote-based universe if Stooq returned empty.
     const fmpFallback = await fetchFmpUniverseMovers(STQ_UNIVERSE[index] || [], limit);
     if (fmpFallback) {
+      debug.providers.push('fmp-universe-fallback');
       moversCache.set(cacheKey, {
         until: now + MOVERS_CACHE_MS,
         gainers: fmpFallback.gainers,
@@ -437,13 +521,14 @@ export async function GET(request: Request) {
         source: 'fmp-universe-fallback',
       });
       return NextResponse.json(
-        { index, source: 'fmp-universe-fallback', gainers: fmpFallback.gainers, losers: fmpFallback.losers },
+        { index, source: 'fmp-universe-fallback', gainers: fmpFallback.gainers, losers: fmpFallback.losers, debug },
         { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }
 
+    debug.providers.push('all-failed');
     return NextResponse.json(
-      { index, source: 'unavailable', gainers: [], losers: [] },
+      { index, source: 'unavailable', gainers: [], losers: [], debug },
       { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     );
   } catch {
