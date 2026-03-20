@@ -117,6 +117,42 @@ function parseCsvLine(line: string): string[] {
   return line.split(',');
 }
 
+async function fetchFmpUniverseMovers(universe: string[], limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
+  const apiKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || 'demo';
+  const symbols = universe
+    .map((s) => s.replace(/\.[a-z]+$/i, '').toUpperCase())
+    .filter(Boolean)
+    .slice(0, 60);
+  if (symbols.length === 0) return null;
+
+  const url = `https://financialmodelingprep.com/api/v3/quote/${encodeURIComponent(symbols.join(','))}?apikey=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return null;
+  const data = (await res.json()) as Array<Record<string, unknown>> | Record<string, unknown>;
+  const rows = Array.isArray(data) ? data : Array.isArray((data as any)?.quoteResponse?.result) ? (data as any).quoteResponse.result : [];
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+
+  const movers: StockMover[] = rows
+    .map((r) => {
+      const ticker = String((r as any).symbol || (r as any).name || '').trim().toUpperCase();
+      if (!ticker) return null;
+      const price = parseNumber((r as any).price);
+      const changePercent = parseNumber((r as any).changesPercentage ?? (r as any).changePercentage);
+      const change = parseNumber((r as any).change);
+      const volume = parseNumber((r as any).volume);
+      if (!Number.isFinite(changePercent)) return null;
+      return { ticker, price, changePercent, change, volume };
+    })
+    .filter((x): x is StockMover => x !== null);
+
+  if (movers.length === 0) return null;
+  const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
+  return {
+    gainers: sorted.slice(0, limit),
+    losers: [...sorted].reverse().slice(0, limit),
+  };
+}
+
 async function fetchStooqDaily(stooqSymbol: string): Promise<StockMover | null> {
   const d2 = new Date();
   const d1 = new Date(Date.now() - 1000 * 60 * 60 * 24 * 35);
@@ -202,6 +238,21 @@ export async function GET(request: Request) {
       });
       return NextResponse.json(
         { index, source: 'stooq-universe', gainers: stooqMovers.gainers, losers: stooqMovers.losers },
+        { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+      );
+    }
+
+    // Fallback: try FMP quote-based universe if Stooq returned empty.
+    const fmpFallback = await fetchFmpUniverseMovers(STQ_UNIVERSE[index] || [], limit);
+    if (fmpFallback) {
+      moversCache.set(cacheKey, {
+        until: now + MOVERS_CACHE_MS,
+        gainers: fmpFallback.gainers,
+        losers: fmpFallback.losers,
+        source: 'fmp-universe-fallback',
+      });
+      return NextResponse.json(
+        { index, source: 'fmp-universe-fallback', gainers: fmpFallback.gainers, losers: fmpFallback.losers },
         { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }

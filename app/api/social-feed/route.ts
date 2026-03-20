@@ -120,19 +120,26 @@ async function fetchViaNitterRss(account: string, limit: number): Promise<Social
       if (!res.ok) continue;
       const xml = await res.text();
       const posts: SocialPost[] = [];
-      const itemRegex =
-        /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>(?:[\s\S]*?<pubDate>([^<]*)<\/pubDate>)?/gi;
-      let m: RegExpExecArray | null;
-      while ((m = itemRegex.exec(xml)) !== null && posts.length < limit) {
-        const text = m[1].replace(/<[^>]+>/g, '').trim();
-        const url = m[2].trim();
-        const createdAt = m[3] ? parseRssDate(m[3].trim()) : '';
+
+      const itemBlocks = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
+      for (const block of itemBlocks) {
+        if (posts.length >= limit) break;
+
+        const titleMatch = /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i.exec(block);
+        const linkMatch = /<link>([^<]+)<\/link>/i.exec(block);
+        const pubMatch = /<pubDate>([^<]+)<\/pubDate>/i.exec(block);
+
+        const titleRaw = titleMatch?.[1] || '';
+        const text = stripXml(titleRaw);
+        const url = (linkMatch?.[1] || '').trim();
+        const createdAt = pubMatch?.[1] ? parseRssDate(pubMatch[1].trim()) : '';
+
+        if (!text || !url || !url.startsWith('http')) continue;
         const idMatch = /status\/(\d+)/.exec(url);
         const id = idMatch?.[1] || `${account}-${posts.length}`;
-        if (text && url.startsWith('http')) {
-          posts.push({ id, text, createdAt, url, account });
-        }
+        posts.push({ id, text, createdAt, url, account });
       }
+
       if (posts.length > 0) return posts;
     } catch {
       continue;
