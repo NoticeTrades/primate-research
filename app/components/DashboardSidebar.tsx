@@ -99,6 +99,12 @@ export default function DashboardSidebar() {
     s.id = 'twitter-widgets-js';
     s.src = 'https://platform.twitter.com/widgets.js';
     s.async = true;
+    s.onload = () => {
+      // Ensure the timeline embed renders after widgets.js loads.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = window as any;
+      if (w?.twttr?.widgets?.load) w.twttr.widgets.load();
+    };
     document.body.appendChild(s);
   }, []);
 
