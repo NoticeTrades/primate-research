@@ -20,6 +20,59 @@ function parseRssDate(s: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toISOString();
 }
 
+function stripXml(s: string): string {
+  return s.replace(/<[^>]+>/g, '').trim();
+}
+
+function parseRssItems(xml: string, limit: number): SocialPost[] {
+  const posts: SocialPost[] = [];
+  // RSS item: title + link + optional pubDate.
+  const itemRegex =
+    /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>[\s\S]*?<link>([^<]+)<\/link>(?:[\s\S]*?<pubDate>([^<]*)<\/pubDate>)?[\s\S]*?<\/item>/gi;
+
+  let m: RegExpExecArray | null;
+  while ((m = itemRegex.exec(xml)) !== null && posts.length < limit) {
+    const titleRaw = typeof m[1] === 'string' ? m[1] : '';
+    const linkRaw = typeof m[2] === 'string' ? m[2] : '';
+    const pubRaw = typeof m[3] === 'string' ? m[3] : '';
+    const text = stripXml(titleRaw);
+    const url = linkRaw.trim();
+    if (!text || !url || !url.startsWith('http')) continue;
+    const createdAt = pubRaw ? parseRssDate(pubRaw.trim()) : '';
+    const idMatch = /status\/(\d+)/.exec(url);
+    const id = idMatch?.[1] || `${url}-${posts.length}`;
+    posts.push({ id, text, createdAt, url, account: '' });
+  }
+
+  return posts;
+}
+
+async function fetchViaRssHub(account: string, limit: number): Promise<SocialPost[]> {
+  const candidates = [
+    `https://rsshub.app/twitter/user/${encodeURIComponent(account)}`,
+    `https://rsshub.app/twitter/user/${encodeURIComponent(account)}?limit=${limit}`,
+  ];
+
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, {
+        cache: 'no-store',
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' },
+      });
+      if (!res.ok) continue;
+      const xml = await res.text();
+      const parsed = parseRssItems(xml, limit);
+      if (parsed.length === 0) continue;
+      // Patch account field since parseRssItems does not know it.
+      return parsed.map((p) => ({ ...p, account }));
+    } catch {
+      continue;
+    }
+  }
+
+  return [];
+}
+
 async function fetchViaXApi(account: string, bearerToken: string, limit: number): Promise<SocialPost[]> {
   const token = decodeURIComponent(bearerToken.trim());
   const authHeader = { Authorization: `Bearer ${token}` };
@@ -98,7 +151,7 @@ export async function GET(request: Request) {
 
   try {
     let posts: SocialPost[] = [];
-    let source: 'x-api' | 'nitter-rss' | 'none' = 'none';
+    let source: 'x-api' | 'nitter-rss' | 'rsshub-rss' | 'none' = 'none';
 
     if (bearer) {
       posts = await fetchViaXApi(account, bearer, limit);
@@ -107,6 +160,10 @@ export async function GET(request: Request) {
     if (posts.length === 0) {
       posts = await fetchViaNitterRss(account, limit);
       if (posts.length > 0) source = 'nitter-rss';
+    }
+    if (posts.length === 0) {
+      posts = await fetchViaRssHub(account, limit);
+      if (posts.length > 0) source = 'rsshub-rss';
     }
 
     return NextResponse.json(

@@ -136,6 +136,7 @@ export default function DashboardIndexCard({
   const [socialError, setSocialError] = useState<string | null>(null);
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
   const [socialSource, setSocialSource] = useState<string>('none');
+  const [socialHasToken, setSocialHasToken] = useState(false);
 
   const hasCharts = charts.length > 0;
   const hasTrades = trades.length > 0;
@@ -194,9 +195,10 @@ export default function DashboardIndexCard({
       try {
         const res = await fetch('/api/social-feed?account=spectatorindex&limit=3', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load social feed');
-        const json = (await res.json()) as { source?: string; posts?: SocialPost[] };
+        const json = (await res.json()) as { source?: string; posts?: SocialPost[]; hasToken?: boolean };
         if (cancelled) return;
         setSocialSource(typeof json.source === 'string' ? json.source : 'none');
+        setSocialHasToken(Boolean(json.hasToken));
         setSocialPosts(Array.isArray(json.posts) ? json.posts.slice(0, 3) : []);
       } catch (e) {
         if (cancelled) return;
@@ -623,7 +625,9 @@ export default function DashboardIndexCard({
             ) : socialError ? (
               <p className="text-sm text-red-400">{socialError}</p>
             ) : socialPosts.length === 0 ? (
-              <p className="text-sm text-zinc-500">No recent posts available.</p>
+              <p className="text-sm text-zinc-500">
+                {socialHasToken ? 'No recent posts available.' : 'No X posts (set `X_BEARER_TOKEN` to enable the X API feed).'}
+              </p>
             ) : (
               <div className="space-y-2">
                 {socialPosts.map((p) => (

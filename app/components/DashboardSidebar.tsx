@@ -87,6 +87,7 @@ export default function DashboardSidebar() {
   const [xLoading, setXLoading] = useState(false);
   const [xError, setXError] = useState<string | null>(null);
   const [xSource, setXSource] = useState<string>('none');
+  const [xHasToken, setXHasToken] = useState(false);
   const [xPosts, setXPosts] = useState<Array<{ id: string; text: string; createdAt: string; url: string; account: string }>>([]);
 
   useEffect(() => {
@@ -155,9 +156,10 @@ export default function DashboardSidebar() {
       try {
         const res = await fetch('/api/social-feed?account=spectatorindex&limit=1', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load X feed');
-        const json = (await res.json()) as { source?: string; posts?: Array<any> };
+        const json = (await res.json()) as { source?: string; posts?: Array<any>; hasToken?: boolean };
         if (cancelled) return;
         setXSource(typeof json.source === 'string' ? json.source : 'none');
+        setXHasToken(Boolean(json.hasToken));
         const posts = Array.isArray(json.posts) ? json.posts : [];
         const mapped = posts
           .map((p) => {
@@ -361,7 +363,9 @@ export default function DashboardSidebar() {
           ) : xError ? (
             <p className="text-sm text-red-400">{xError}</p>
           ) : xPosts.length === 0 ? (
-            <p className="text-sm text-zinc-500">No X post found right now.</p>
+            <p className="text-sm text-zinc-500">
+              {xHasToken ? 'No recent X posts found right now.' : 'No X posts (set `X_BEARER_TOKEN` to enable the X API feed).'}
+            </p>
           ) : (
             <a
               href={xPosts[0].url}

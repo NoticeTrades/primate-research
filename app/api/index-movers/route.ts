@@ -11,14 +11,92 @@ type StockMover = {
   volume: number;
 };
 
-const FMP_CONSTITUENT_ENDPOINT: Record<string, string> = {
-  NQ: 'nasdaq_constituent',
-  ES: 'sp500_constituent',
-  YM: 'dowjones_constituent',
-};
-
-const MOVERS_CACHE_MS = 120_000;
+// Free provider: Stooq (no API key). We approximate "index movers" by using a small
+// universe of liquid, index-representative tickers and computing daily % moves.
+const MOVERS_CACHE_MS = 30_000;
 const moversCache = new Map<string, { until: number; gainers: StockMover[]; losers: StockMover[]; source: string }>();
+
+const STQ_UNIVERSE: Record<string, string[]> = {
+  NQ: [
+    'aapl.us',
+    'msft.us',
+    'nvda.us',
+    'amzn.us',
+    'meta.us',
+    'goog.us',
+    'tsla.us',
+    'avgo.us',
+    'cost.us',
+    'amd.us',
+    'adbe.us',
+    'qcom.us',
+    'intc.us',
+    'csco.us',
+    'orcl.us',
+    'mu.us',
+  ],
+  ES: [
+    'aapl.us',
+    'msft.us',
+    'nvda.us',
+    'amzn.us',
+    'meta.us',
+    'goog.us',
+    'jpm.us',
+    'xom.us',
+    'lly.us',
+    'pg.us',
+    'v.us',
+    'unh.us',
+    'ma.us',
+    'ko.us',
+    'hd.us',
+    'll.y.us',
+  ],
+  YM: [
+    'aapl.us',
+    'msft.us',
+    'jpm.us',
+    'unh.us',
+    'v.us',
+    'hd.us',
+    'gs.us',
+    'mcd.us',
+    'cat.us',
+    'ibm.us',
+    'mmm.us',
+    'dis.us',
+    'wmt.us',
+    'nke.us',
+    'ko.us',
+    'pg.us',
+  ],
+  RTY: [
+    'smci.us',
+    'fslr.us',
+    'celh.us',
+    'afrm.us',
+    'sofi.us',
+    'crox.us',
+    'pltr.us',
+    'rkbl.us',
+    'upst.us',
+    'rivn.us',
+    'app.us',
+    'iot.us',
+    'duol.us',
+    'onon.us',
+    'sound.us',
+  ],
+  // Metals / FX / others aren't supported by this approximate approach yet.
+  DXY: [],
+  GC: [],
+  SI: [],
+  CL: [],
+  FTSE: [],
+  GER40: [],
+  DAX: [],
+};
 
 function parseNumber(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -28,48 +106,69 @@ function parseNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-async function fetchYahooConstituentMovers(index: string, limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
-  const apiKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY;
-  const endpoint = FMP_CONSTITUENT_ENDPOINT[index];
-  if (!apiKey || !endpoint) return null;
+function fmtStooqDate(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
+}
 
-  const constituentsRes = await fetch(
-    `https://financialmodelingprep.com/api/v3/${endpoint}?apikey=${encodeURIComponent(apiKey)}`,
-    { cache: 'no-store' }
-  );
-  if (!constituentsRes.ok) return null;
-  const constituents = (await constituentsRes.json()) as Array<Record<string, unknown>>;
-  if (!Array.isArray(constituents) || constituents.length === 0) return null;
+function parseCsvLine(line: string): string[] {
+  return line.split(',');
+}
 
-  // Limit payload so URL and rate usage stay reasonable.
-  const symbols = constituents
-    .map((r) => String(r.symbol || '').trim())
-    .filter(Boolean)
-    .slice(0, 120);
-  if (symbols.length === 0) return null;
+async function fetchStooqDaily(stooqSymbol: string): Promise<StockMover | null> {
+  const d2 = new Date();
+  const d1 = new Date(Date.now() - 1000 * 60 * 60 * 24 * 35);
+  const url = `https://stooq.com/q/l/?s=${encodeURIComponent(stooqSymbol)}&i=d&d1=${fmtStooqDate(d1)}&d2=${fmtStooqDate(d2)}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return null;
+  const csv = await res.text();
+  const lines = csv
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
 
-  const quotesRes = await fetch(
-    `https://financialmodelingprep.com/api/v3/quote/${encodeURIComponent(symbols.join(','))}?apikey=${encodeURIComponent(apiKey)}`,
-    { cache: 'no-store' }
-  );
-  if (!quotesRes.ok) return null;
-  const quotes = (await quotesRes.json()) as Array<Record<string, unknown>>;
-  if (!Array.isArray(quotes) || quotes.length === 0) return null;
+  // Header: Date,Open,High,Low,Close,Volume
+  if (lines.length < 3) return null;
+  const dataLines = lines.slice(1);
+  const last = dataLines[dataLines.length - 1];
+  const prev = dataLines[dataLines.length - 2];
+  const lastCols = parseCsvLine(last);
+  const prevCols = parseCsvLine(prev);
+  if (lastCols.length < 6 || prevCols.length < 6) return null;
 
-  const movers: StockMover[] = quotes
-    .map((r) => {
-      const ticker = String(r.symbol || '').trim();
-      if (!ticker) return null;
-      const price = parseNumber(r.price);
-      const changePercent = parseNumber(r.changesPercentage);
-      const change = parseNumber(r.change);
-      const volume = parseNumber(r.volume);
-      if (!Number.isFinite(changePercent)) return null;
-      return { ticker, price, changePercent, change, volume };
-    })
-    .filter((x): x is StockMover => x !== null);
+  const close = parseFloat(lastCols[4]);
+  const prevClose = parseFloat(prevCols[4]);
+  const volume = parseFloat(lastCols[5] || '0');
+  if (!(close > 0) || !(prevClose > 0)) return null;
+
+  const change = close - prevClose;
+  const changePercent = (change / prevClose) * 100;
+  const ticker = stooqSymbol.replace(/\.[a-z]+$/i, '').toUpperCase();
+
+  return {
+    ticker,
+    price: close,
+    changePercent,
+    change,
+    volume: Number.isFinite(volume) ? volume : 0,
+  };
+}
+
+async function fetchStooqMovers(index: string, limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
+  const universe = STQ_UNIVERSE[index] || [];
+  if (universe.length === 0) return null;
+
+  const movers: StockMover[] = [];
+  const chunkSize = 6;
+  for (let i = 0; i < universe.length; i += chunkSize) {
+    const slice = universe.slice(i, i + chunkSize);
+    const results = await Promise.all(slice.map((s) => fetchStooqDaily(s)));
+    for (const r of results) if (r) movers.push(r);
+  }
+
   if (movers.length === 0) return null;
-
   const sorted = [...movers].sort((a, b) => b.changePercent - a.changePercent);
   return {
     gainers: sorted.slice(0, limit),
@@ -93,64 +192,23 @@ export async function GET(request: Request) {
       );
     }
 
-    const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
-    if (!apiKey) {
-      const fmpMovers = await fetchYahooConstituentMovers(index, limit);
-      if (fmpMovers) {
-        moversCache.set(cacheKey, { until: now + MOVERS_CACHE_MS, gainers: fmpMovers.gainers, losers: fmpMovers.losers, source: 'fmp-constituents' });
-        return NextResponse.json(
-          { index, source: 'fmp-constituents', gainers: fmpMovers.gainers, losers: fmpMovers.losers },
-          { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
-        );
-      }
-
+    const stooqMovers = await fetchStooqMovers(index, limit);
+    if (stooqMovers) {
+      moversCache.set(cacheKey, {
+        until: now + MOVERS_CACHE_MS,
+        gainers: stooqMovers.gainers,
+        losers: stooqMovers.losers,
+        source: 'stooq-universe',
+      });
       return NextResponse.json(
-        { index, source: 'unavailable', gainers: [], losers: [], error: 'No movers provider configured.' },
-        { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+        { index, source: 'stooq-universe', gainers: stooqMovers.gainers, losers: stooqMovers.losers },
+        { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       );
     }
-
-    const res = await fetch(
-      `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${encodeURIComponent(apiKey)}`,
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return NextResponse.json({ error: 'Failed to fetch movers' }, { status: 500 });
-
-    const data = (await res.json()) as Record<string, unknown>;
-
-    if (typeof data?.['Note'] === 'string' || typeof data?.['Information'] === 'string') {
-      return NextResponse.json(
-        {
-          error: 'Alpha Vantage rate limit reached',
-          hint: typeof data?.['Note'] === 'string' ? data?.['Note'] : data?.['Information'],
-        },
-        { status: 429 }
-      );
-    }
-
-    const rawGainers = Array.isArray(data.top_gainers) ? data.top_gainers : [];
-    const rawLosers = Array.isArray(data.top_losers) ? data.top_losers : [];
-
-    const mapRow = (r: unknown): StockMover | null => {
-      if (!r || typeof r !== 'object') return null;
-      const obj = r as Record<string, unknown>;
-      const ticker = String(obj.ticker || '').trim();
-      if (!ticker) return null;
-      return {
-        ticker,
-        price: parseNumber(obj.price),
-        changePercent: parseNumber(obj.change_percentage),
-        change: parseNumber(obj.change_amount),
-        volume: parseNumber(obj.volume),
-      };
-    };
-
-    const gainers = rawGainers.map(mapRow).filter((x): x is StockMover => x != null).slice(0, limit);
-    const losers = rawLosers.map(mapRow).filter((x): x is StockMover => x != null).slice(0, limit);
 
     return NextResponse.json(
-      { index, source: 'alpha-marketwide', gainers, losers },
-      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+      { index, source: 'unavailable', gainers: [], losers: [] },
+      { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     );
   } catch {
     return NextResponse.json({ error: 'Failed to fetch movers' }, { status: 500 });
