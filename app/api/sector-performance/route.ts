@@ -120,65 +120,71 @@ export async function GET() {
       cache: 'no-store',
       headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)' },
     });
-    if (!res.ok) {
+    // If Yahoo is blocked (401/403/etc), we still want to show sector performance via Stooq.
+    let computed: SectorPerf[] = [];
+    let yahooMap = new Map<string, number>();
+
+    if (res.ok) {
+      const body = (await res.json()) as { quoteResponse?: { result?: Array<Record<string, unknown>> } };
+      const rows = body?.quoteResponse?.result;
+      if (Array.isArray(rows)) {
+        const bySymbol = new Map<string, Record<string, unknown>>();
+        for (const r of rows) {
+          const sym = String((r as any)?.symbol || '').toUpperCase();
+          if (!sym) continue;
+          bySymbol.set(sym, r as Record<string, unknown>);
+        }
+
+        const toNum = (v: unknown): number | null => {
+          const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v) : NaN;
+          return Number.isFinite(n) ? n : null;
+        };
+
+        computed = sectorEtfs
+          .map((s) => {
+            const q = bySymbol.get(s.symbol);
+            const price = q ? toNum((q as any).regularMarketPrice) : null;
+            const prevClose = q ? toNum((q as any).regularMarketPreviousClose) : null;
+            const changePercentDirect = q ? toNum((q as any).regularMarketChangePercent) : null;
+            const change = q ? toNum((q as any).regularMarketChange ?? (q as any).change) : null;
+
+            // Prefer Yahoo's percent when present.
+            let changePercent: number | null = changePercentDirect;
+
+            // If percent isn't present, derive previous close from change when possible.
+            if (changePercent == null && price != null && change != null) {
+              const derivedPrev = price - change;
+              if (derivedPrev > 0) changePercent = (change / derivedPrev) * 100;
+            }
+
+            // Last fallback: if we do have prevClose, compute from price + prevClose.
+            if (changePercent == null && price != null && prevClose != null && prevClose > 0) {
+              changePercent = ((price - prevClose) / prevClose) * 100;
+            }
+
+            if (changePercent == null || !Number.isFinite(changePercent)) return null;
+            return { sector: s.sector, changePercent };
+          })
+          .filter((x): x is SectorPerf => x !== null)
+          .sort((a, b) => b.changePercent - a.changePercent);
+
+        yahooMap = new Map<string, number>(computed.map((x) => [x.sector, x.changePercent]));
+        debug.yahoo = {
+          ok: true,
+          fetchedSymbols: sectorEtfs.length,
+          computedCount: computed.length,
+        };
+      } else {
+        debug.yahoo = { ok: false, error: 'yahoo quote missing quoteResponse.result' };
+      }
+    } else {
       debug.yahoo = { ok: false, status: res.status, error: 'yahoo quote fetch failed' };
-      debug.usedProvider = 'none';
-      return NextResponse.json({ sectors: [] as SectorPerf[], debug }, { status: 200 });
     }
-
-    const body = (await res.json()) as { quoteResponse?: { result?: Array<Record<string, unknown>> } };
-    const rows = body?.quoteResponse?.result;
-    if (!Array.isArray(rows)) {
-      debug.yahoo = { ok: false, error: 'yahoo quote missing quoteResponse.result' };
-      debug.usedProvider = 'none';
-      return NextResponse.json({ sectors: [] as SectorPerf[], debug }, { status: 200 });
-    }
-
-    const bySymbol = new Map<string, Record<string, unknown>>();
-    for (const r of rows) {
-      const sym = String((r as any)?.symbol || '').toUpperCase();
-      if (!sym) continue;
-      bySymbol.set(sym, r as Record<string, unknown>);
-    }
-
-    const toNum = (v: unknown): number | null => {
-      const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v) : NaN;
-      return Number.isFinite(n) ? n : null;
-    };
-
-    const computed: SectorPerf[] = sectorEtfs
-      .map((s) => {
-        const q = bySymbol.get(s.symbol);
-        const price = q ? toNum((q as any).regularMarketPrice) : null;
-        const prevClose = q ? toNum((q as any).regularMarketPreviousClose) : null;
-        const changePercentDirect = q ? toNum((q as any).regularMarketChangePercent) : null;
-        const change = q ? toNum((q as any).regularMarketChange ?? (q as any).change) : null;
-
-        // Prefer Yahoo's percent when present.
-        let changePercent: number | null = changePercentDirect;
-
-        // If percent isn't present, derive previous close from change when possible.
-        if (changePercent == null && price != null && change != null) {
-          const derivedPrev = price - change;
-          if (derivedPrev > 0) changePercent = (change / derivedPrev) * 100;
-        }
-
-        // Last fallback: if we do have prevClose, compute from price + prevClose.
-        if (changePercent == null && price != null && prevClose != null && prevClose > 0) {
-          changePercent = ((price - prevClose) / prevClose) * 100;
-        }
-
-        if (changePercent == null || !Number.isFinite(changePercent)) return null;
-        return { sector: s.sector, changePercent };
-      })
-      .filter((x): x is SectorPerf => x !== null)
-      .sort((a, b) => b.changePercent - a.changePercent);
 
     debug.yahoo = { fetchedSymbols: sectorEtfs.length, computedCount: computed.length, ok: true };
 
     // Yahoo quote can sometimes omit fields for these ETFs; fill any missing
     // sectors by recomputing % move from Stooq daily CSV.
-    const yahooMap = new Map<string, number>(computed.map((x) => [x.sector, x.changePercent]));
     const missingSectors = sectorEtfs.filter((s) => !yahooMap.has(s.sector));
 
     let stooqCount = 0;
