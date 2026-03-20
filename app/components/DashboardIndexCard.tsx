@@ -510,9 +510,11 @@ export default function DashboardIndexCard({
           <div className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Top movers</h4>
-              <span className="text-xs text-zinc-500">
-                {movers?.source === 'alpha-marketwide' ? 'Market-wide (Alpha Vantage)' : 'Top up/down'}
-              </span>
+                <span className="text-xs text-zinc-500">
+                  {movers
+                    ? `Source: ${movers.source ?? 'unknown'} • G:${movers.gainers.length} L:${movers.losers.length}`
+                    : 'Top up/down'}
+                </span>
               </div>
 
               {moversLoading ? (
