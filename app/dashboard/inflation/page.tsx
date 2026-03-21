@@ -550,9 +550,11 @@ export default function InflationPage() {
           {/* Release history table */}
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:p-6">
             <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-1">Recent prints</h2>
-            <p className="text-xs text-zinc-500 mb-4">
-              MoM / YoY computed from the CPI index. Consensus columns use optional entries in{' '}
-              <code className="text-zinc-400">data/cpi-macros.ts</code>.
+            <p className="text-xs text-zinc-500 mb-4 max-w-3xl">
+              Actual MoM / YoY from the index. Manual consensus in{' '}
+              <code className="text-zinc-400">data/cpi-macros.ts</code> overrides when present; otherwise MoM/YoY
+              “forecasts” use a <span className="text-zinc-400">3-month rolling average of prior prints</span> as a trend
+              proxy (not a survey). Surprise = actual MoM minus forecast MoM.
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm min-w-[800px]">

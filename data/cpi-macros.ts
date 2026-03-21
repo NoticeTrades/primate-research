@@ -116,4 +116,4 @@ export const CPI_INDEX_IMPACTS: Array<{
 ];
 
 export const CPI_DATA_DISCLAIMER =
-  'Consensus figures are optional placeholders you can edit in data/cpi-macros.ts. Actual MoM/YoY are computed from the CPI index series. This is not investment advice.';
+  'Optional manual consensus per month in data/cpi-macros.ts overrides expectations when set. If unset, the API fills MoM/YoY “forecast” using a 3-month rolling average of prior actual prints (trend proxy only—not Bloomberg/median). Actuals are from FRED. Not investment advice.';

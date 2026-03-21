@@ -141,6 +141,16 @@ function attachMomPct(
   });
 }
 
+const PROXY_MOM_SOURCE = 'Prior 3m MoM avg (trend proxy — not a survey consensus)';
+const PROXY_YOY_SOURCE = 'Prior 3m YoY avg (trend proxy — not a survey consensus)';
+
+function meanFinite(nums: (number | null | undefined)[]): number | null {
+  const ok = nums.filter((n): n is number => n != null && Number.isFinite(n));
+  if (ok.length === 0) return null;
+  return ok.reduce((a, b) => a + b, 0) / ok.length;
+}
+
+/** When no manual entry in cpi-macros, use rolling averages of prior actuals so fcst / surprise columns still populate. */
 function buildReleaseRows(
   withMom: Array<CpiObservation & { momPct: number | null }>
 ): CpiReleaseRow[] {
@@ -151,12 +161,40 @@ function buildReleaseRows(
     const cons = CPI_CONSENSUS_FORECASTS[key];
     const actualMom = row.momPct;
     const prevMom = i > 0 ? withMom[i - 1].momPct : null;
-    const fMom = cons?.momPct ?? null;
-    const fYoy = cons?.yoyPct ?? null;
+
+    let fMom = cons?.momPct ?? null;
+    let fYoy = cons?.yoyPct ?? null;
+    let source = cons?.source ?? null;
+
+    if (fMom == null && i >= 3) {
+      const proxy = meanFinite([
+        withMom[i - 1].momPct,
+        withMom[i - 2].momPct,
+        withMom[i - 3].momPct,
+      ]);
+      if (proxy != null) {
+        fMom = Number(proxy.toFixed(3));
+        source = source ? `${source}; ${PROXY_MOM_SOURCE}` : PROXY_MOM_SOURCE;
+      }
+    }
+
+    if (fYoy == null && i >= 3) {
+      const proxyY = meanFinite([
+        withMom[i - 1].yoyPct,
+        withMom[i - 2].yoyPct,
+        withMom[i - 3].yoyPct,
+      ]);
+      if (proxyY != null) {
+        fYoy = Number(proxyY.toFixed(2));
+        source = source ? `${source}; ${PROXY_YOY_SOURCE}` : PROXY_YOY_SOURCE;
+      }
+    }
+
     let surprise: number | null = null;
     if (actualMom != null && fMom != null && Number.isFinite(actualMom) && Number.isFinite(fMom)) {
       surprise = actualMom - fMom;
     }
+
     rows.push({
       reportMonthKey: key,
       reportMonthLabel: formatMonthLabel(row.date),
@@ -165,7 +203,7 @@ function buildReleaseRows(
       actualYoyPct: row.yoyPct,
       forecastMomPct: fMom,
       forecastYoyPct: fYoy,
-      forecastSource: cons?.source ?? null,
+      forecastSource: source,
       surpriseMomPct: surprise,
     });
   }
