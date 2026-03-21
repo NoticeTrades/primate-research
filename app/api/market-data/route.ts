@@ -20,6 +20,8 @@ const YAHOO_JUNE_2026: Record<string, string> = {
   YM: 'YMM26.CBT',   // E-mini Dow = CBOT
   RTY: 'RTYM26.CME',
   CL: 'CLM26.NYM',   // WTI Crude = NYMEX (not .CME)
+  GC: 'GCM26.CMX',   // Gold = COMEX
+  SI: 'SIM26.CMX',   // Silver = COMEX
 };
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +35,13 @@ const NO_CACHE_HEADERS = {
 function isWeekendEt(): boolean {
   const day = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
   return day === 'Sat' || day === 'Sun';
+}
+
+function getPreferredYahooSymbolsForSession(symbol: string, fallbackYahooSymbol: string): string[] {
+  const contract = YAHOO_JUNE_2026[symbol];
+  const frontMonth = YAHOO_SYMBOLS[symbol];
+  const ordered = [contract, frontMonth, fallbackYahooSymbol].filter((s): s is string => !!s);
+  return [...new Set(ordered)];
 }
 
 /** Fetch today's session open from Yahoo chart when quote API doesn't provide it. */
@@ -272,7 +281,11 @@ export async function GET(request: Request) {
     // Metals futures: on weekends use last completed session from daily chart,
     // because quote endpoints can report stale/derived % that does not match settle.
     if ((symbol === 'GC' || symbol === 'SI') && isWeekendEt()) {
-      const chart5d = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
+      let chart5d: { price: number; change: number; changePercent: number; previousClose: number } | null = null;
+      for (const candidate of getPreferredYahooSymbolsForSession(symbol, yahooSymbol)) {
+        chart5d = await fetchPriceAndChangeFrom5dChart(candidate);
+        if (chart5d && chart5d.price > 0) break;
+      }
       if (chart5d && chart5d.price > 0) {
         const ytdPercent = await fetchYtdFromYahoo(yahooSymbol);
         return NextResponse.json({
