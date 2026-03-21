@@ -26,46 +26,50 @@ export default function DashboardNavDrawer() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
+  /* Align with DashboardShell content: pt-44 = nav (72px) + ticker — menu lives below both */
+  const belowHeaderClass = 'top-44';
+
   return (
     <>
-      {/* Left rail button — fixed below site nav + ticker */}
-      <div className="fixed left-3 top-[120px] z-[45] sm:left-4 sm:top-[124px]">
+      {/* Icon-only trigger — fixed left, below main nav + scrolling ticker (same offset as main content) */}
+      <div className={`fixed left-3 ${belowHeaderClass} z-[45] sm:left-4`}>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/95 px-3 py-2.5 text-sm font-semibold text-zinc-100 shadow-lg shadow-black/40 backdrop-blur-sm transition hover:border-blue-500/50 hover:bg-zinc-800/90 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900/95 shadow-lg shadow-black/40 backdrop-blur-sm transition hover:border-blue-500/50 hover:bg-zinc-800/90 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
           aria-expanded={open}
           aria-controls="dashboard-nav-panel"
           aria-label="Open dashboard pages menu"
         >
-          <span className="flex flex-col gap-0.5" aria-hidden>
-            <span className="block h-0.5 w-5 rounded-full bg-zinc-300" />
-            <span className="block h-0.5 w-5 rounded-full bg-zinc-300" />
-            <span className="block h-0.5 w-5 rounded-full bg-zinc-300" />
+          <span className="flex flex-col gap-1" aria-hidden>
+            <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
+            <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
+            <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
           </span>
-          <span className="hidden sm:inline">Pages</span>
         </button>
       </div>
 
-      {/* Overlay */}
+      {/* Overlay — only covers area below header + ticker so top nav stays visible */}
       <button
         type="button"
         aria-label="Close menu"
-        className={`fixed inset-0 z-[46] bg-black/60 backdrop-blur-[2px] transition-opacity ${
+        className={`fixed left-0 right-0 bottom-0 ${belowHeaderClass} z-[46] bg-black/60 backdrop-blur-[2px] transition-opacity ${
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setOpen(false)}
       />
 
-      {/* Slide panel */}
+      {/* Slide panel — starts below main site header + ticker */}
       <aside
         id="dashboard-nav-panel"
-        className={`fixed left-0 top-0 z-[47] flex h-full w-[min(100vw-3rem,18rem)] flex-col border-r border-zinc-800 bg-zinc-950/98 shadow-2xl backdrop-blur-md transition-transform duration-300 ease-out ${
+        className={`fixed left-0 bottom-0 ${belowHeaderClass} z-[47] flex w-[min(100vw-3rem,18rem)] flex-col border-r border-zinc-800 bg-zinc-950/98 shadow-2xl backdrop-blur-md transition-transform duration-300 ease-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-hidden={!open}
+        aria-modal="true"
+        role="dialog"
       >
-        <div className="border-b border-zinc-800 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="border-b border-zinc-800 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-blue-400/90">Primate</p>

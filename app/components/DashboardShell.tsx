@@ -23,7 +23,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       <DashboardNavDrawer />
 
-      <div className="pt-44 pb-24 pl-12 pr-3 sm:pl-14 sm:pr-4 relative z-10">{children}</div>
+      {/* pl-14: room for icon-only menu (40px) + left-3 inset */}
+      <div className="pt-44 pb-24 pl-14 pr-3 sm:pr-4 relative z-10">{children}</div>
     </div>
   );
 }
