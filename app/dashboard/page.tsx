@@ -443,16 +443,16 @@ export default function DashboardPage() {
                               setSelectedSymbol(p.symbol);
                               setIndexSearch('');
                             }}
-                            className="group relative overflow-hidden rounded-xl border-2 border-cyan-400/45 bg-gradient-to-br from-cyan-500/20 via-blue-600/15 to-violet-600/10 px-3.5 py-2 text-left text-sm font-medium text-zinc-50 shadow-md shadow-cyan-950/50 transition hover:border-cyan-300/70 hover:from-cyan-400/35 hover:via-blue-500/25 hover:to-violet-500/20 hover:shadow-lg hover:shadow-cyan-500/25 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 active:scale-[0.98] sm:hover:scale-[1.02]"
+                            className="group relative overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950/50 px-3.5 py-2 text-left text-sm font-medium text-zinc-200 shadow-sm transition hover:border-blue-500/40 hover:bg-zinc-900/80 hover:shadow-md hover:shadow-blue-950/20 focus:outline-none focus:ring-2 focus:ring-blue-500/35 active:scale-[0.98] sm:hover:scale-[1.02]"
                           >
                             <span className="relative z-10 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-                              <span className="font-mono text-base font-bold tracking-tight text-white drop-shadow-sm">
+                              <span className="font-mono text-base font-bold tracking-tight text-zinc-50">
                                 {p.symbol}
                               </span>
-                              <span className="text-xs font-normal text-cyan-100/90 sm:text-sm">{p.label}</span>
+                              <span className="text-xs font-normal text-zinc-400 sm:text-sm">{p.label}</span>
                             </span>
                             <span
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-cyan-300/0 transition group-hover:text-cyan-200/90 sm:right-2.5"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400/0 transition group-hover:text-blue-300/90 sm:right-2.5"
                               aria-hidden
                             >
                               →
@@ -466,8 +466,8 @@ export default function DashboardPage() {
 
                 <div className="lg:w-[320px]">
                   <div className="mb-2 text-xs text-zinc-500">Current index</div>
-                  <div className="inline-flex items-center rounded-xl border-2 border-emerald-400/40 bg-gradient-to-r from-emerald-500/15 to-cyan-500/10 px-4 py-2 shadow-md shadow-emerald-950/40 ring-1 ring-emerald-400/25">
-                    <span className="font-mono text-lg font-bold tracking-tight text-white">{selectedSymbol}</span>
+                  <div className="inline-flex items-center rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 shadow-sm ring-1 ring-blue-500/15">
+                    <span className="font-mono text-lg font-bold tracking-tight text-blue-100">{selectedSymbol}</span>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <button

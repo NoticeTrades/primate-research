@@ -208,6 +208,18 @@ function parseCsvLine(line: string): string[] {
   return line.split(',');
 }
 
+/** Yahoo often repeats the last daily close on weekends → last === second-to-last → 0% change. Walk back to previous distinct close. */
+function getLastTwoDistinctCloses(closes: number[]): { current: number; ref: number } | null {
+  const valid = closes.filter((n) => typeof n === 'number' && n > 0);
+  if (valid.length < 2) return null;
+  let i = valid.length - 1;
+  const current = valid[i];
+  let j = i - 1;
+  while (j >= 0 && valid[j] === current) j--;
+  if (j < 0) return null;
+  return { current, ref: valid[j] };
+}
+
 function splitGainersLosers(
   movers: StockMover[],
   limit: number
@@ -252,7 +264,16 @@ async function fetchFmpUniverseMovers(universe: string[], limit: number): Promis
     .filter((x): x is StockMover => x !== null);
 
   if (movers.length === 0) return null;
-  return splitGainersLosers(movers, limit);
+
+  const moversWithChartFallback = await Promise.all(
+    movers.map(async (m) => {
+      if (Math.abs(m.changePercent) > 1e-6 || Math.abs(m.change) > 1e-6) return m;
+      const chart = await fetchYahooChartDailyMover(m.ticker);
+      return chart ?? m;
+    })
+  );
+
+  return splitGainersLosers(moversWithChartFallback, limit);
 }
 
 async function fetchStooqDaily(stooqSymbol: string): Promise<StockMover | null> {
@@ -285,9 +306,13 @@ async function fetchStooqDaily(stooqSymbol: string): Promise<StockMover | null> 
   }
 
   if (validRows.length < 2) return null;
-  const prevClose = validRows[validRows.length - 2].close;
-  const close = validRows[validRows.length - 1].close;
-  const volume = validRows[validRows.length - 1].volume;
+  const i = validRows.length - 1;
+  const close = validRows[i].close;
+  let j = i - 1;
+  while (j >= 0 && validRows[j].close === close) j--;
+  if (j < 0) return null;
+  const prevClose = validRows[j].close;
+  const volume = validRows[i].volume;
   if (!(close > 0) || !(prevClose > 0)) return null;
 
   const change = close - prevClose;
@@ -385,47 +410,61 @@ async function fetchYahooUniverseMovers(index: string, limit: number): Promise<{
     .filter((x: StockMover | null): x is StockMover => x !== null);
 
   if (movers.length === 0) return null;
-  return splitGainersLosers(movers, limit);
+
+  // Weekend / closed market: Yahoo quotes often return 0% / 0 change; use last session from daily chart.
+  const moversWithChartFallback = await Promise.all(
+    movers.map(async (m) => {
+      if (Math.abs(m.changePercent) > 1e-6 || Math.abs(m.change) > 1e-6) return m;
+      const chart = await fetchYahooChartDailyMover(m.ticker);
+      return chart ?? m;
+    })
+  );
+
+  return splitGainersLosers(moversWithChartFallback, limit);
 }
 
 async function fetchYahooChartDailyMover(ticker: string): Promise<StockMover | null> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    ticker
-  )}?range=5d&interval=1d&includePrePost=false&events=div|split`;
+  for (const range of ['5d', '1mo'] as const) {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+      ticker
+    )}?range=${range}&interval=1d&includePrePost=false&events=div|split`;
 
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) return null;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) continue;
 
-  const body = (await res.json()) as any;
-  const closeArr: unknown[] =
-    body?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ??
-    body?.chart?.result?.[0]?.indicators?.adjclose?.[0]?.adjclose ??
-    [];
+    const body = (await res.json()) as any;
+    const closeArr: unknown[] =
+      body?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ??
+      body?.chart?.result?.[0]?.indicators?.adjclose?.[0]?.adjclose ??
+      [];
 
-  if (!Array.isArray(closeArr)) return null;
+    if (!Array.isArray(closeArr)) continue;
 
-  const closes = closeArr
-    .map((v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null))
-    .filter((v: number | null): v is number => v !== null);
+    const closes = closeArr
+      .map((v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null))
+      .filter((v: number | null): v is number => v !== null);
 
-  if (closes.length < 2) return null;
+    const pair = getLastTwoDistinctCloses(closes);
+    if (!pair) continue;
 
-  const prevClose = closes[closes.length - 2];
-  const close = closes[closes.length - 1];
-  if (!(prevClose > 0) || !(close > 0)) return null;
+    const close = pair.current;
+    const prevClose = pair.ref;
+    if (!(prevClose > 0) || !(close > 0)) continue;
 
-  const change = close - prevClose;
-  const changePercent = (change / prevClose) * 100;
+    const change = close - prevClose;
+    const changePercent = (change / prevClose) * 100;
 
-  if (!Number.isFinite(changePercent)) return null;
+    if (!Number.isFinite(changePercent)) continue;
 
-  return {
-    ticker: ticker.toUpperCase(),
-    price: close,
-    changePercent,
-    change,
-    volume: 0,
-  };
+    return {
+      ticker: ticker.toUpperCase(),
+      price: close,
+      changePercent,
+      change,
+      volume: 0,
+    };
+  }
+  return null;
 }
 
 async function fetchYahooChartUniverseMovers(
