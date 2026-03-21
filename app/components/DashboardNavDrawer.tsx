@@ -66,25 +66,31 @@ export function DashboardMenuProvider({
 }
 
 /**
- * Compact menu control — place in the page header row to the left of the blue “Dashboard” / section pill
- * (below the main nav + ticker, not on the ticker bar).
+ * Fixed left rail — tall vertical control so it reads clearly as a menu (same spot on all dashboard routes).
+ * `contentTopPx` is the top of the main content area (below nav + ticker + gap).
  */
 export function DashboardMenuTrigger() {
-  const { open, setOpen } = useDashboardMenu();
+  const { open, setOpen, contentTopPx } = useDashboardMenu();
+
+  const topStyle = useMemo(() => ({ top: `${contentTopPx}px` }), [contentTopPx]);
 
   return (
     <button
       type="button"
       onClick={() => setOpen(true)}
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900/90 text-zinc-200 shadow-sm transition hover:border-blue-500/40 hover:bg-zinc-800/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+      style={topStyle}
+      className="fixed left-2 sm:left-3 z-[45] flex w-10 flex-col items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/95 py-3 shadow-lg shadow-black/30 backdrop-blur-sm transition hover:border-blue-500/45 hover:bg-zinc-800/95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 min-h-[5.5rem]"
       aria-expanded={open}
       aria-controls="dashboard-nav-panel"
       aria-label="Open dashboard pages menu"
     >
-      <span className="flex flex-col gap-[3px]" aria-hidden>
-        <span className="block h-px w-3 rounded-full bg-zinc-300" />
-        <span className="block h-px w-3 rounded-full bg-zinc-300" />
-        <span className="block h-px w-3 rounded-full bg-zinc-300" />
+      <span className="flex flex-col gap-1" aria-hidden>
+        <span className="block h-0.5 w-[14px] rounded-full bg-zinc-200" />
+        <span className="block h-0.5 w-[14px] rounded-full bg-zinc-200" />
+        <span className="block h-0.5 w-[14px] rounded-full bg-zinc-200" />
+      </span>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 [writing-mode:vertical-rl] rotate-180 leading-none select-none">
+        Menu
       </span>
     </button>
   );
