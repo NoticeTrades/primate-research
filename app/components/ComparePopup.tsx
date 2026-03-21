@@ -67,7 +67,7 @@ function getDefaultPosition() {
 }
 
 export default function ComparePopup() {
-  const { isCompareOpen, closeCompare } = useCompare();
+  const { isCompareOpen, closeCompare, initialSymbols } = useCompare();
   const [position, setPosition] = useState(getDefaultPosition);
   const [size, setSize] = useState({ width: COMP_DEFAULT_W, height: COMP_DEFAULT_H });
   const [isDragging, setIsDragging] = useState(false);
@@ -135,6 +135,18 @@ export default function ComparePopup() {
     if (!isCompareOpen) return;
     fetchChart(symbols, range);
   }, [isCompareOpen, symbols.join(','), range]);
+
+  useEffect(() => {
+    if (!isCompareOpen) return;
+    if (!initialSymbols.length) return;
+    const seeded = initialSymbols
+      .map((s) => String(s || '').trim().toUpperCase())
+      .filter(Boolean);
+    if (seeded.length === 0) return;
+    setSymbols(seeded);
+    setHiddenSymbols(new Set());
+    setInputValue('');
+  }, [isCompareOpen, initialSymbols.join(',')]);
 
   const handleDownload = useCallback(async () => {
     const el = chartContainerRef.current;

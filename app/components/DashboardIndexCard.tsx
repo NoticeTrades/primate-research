@@ -239,7 +239,7 @@ export default function DashboardIndexCard({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={openCompare}
+                onClick={() => openCompare(symbol)}
                 className="rounded-lg border border-blue-500/35 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-200 transition-colors hover:bg-blue-500/20"
                 title="Open index compare panel"
               >
