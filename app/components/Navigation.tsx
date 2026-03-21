@@ -1701,7 +1701,7 @@ export default function Navigation() {
                 href="https://x.com/primatetrading"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-2 inline-flex items-center p-1.5 rounded-lg hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 transition-colors group align-middle"
+                className="ml-1 inline-flex items-center p-1.5 rounded-lg hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 transition-colors group align-middle"
                 aria-label="Follow Primate Trading on X"
                 title="Follow us on X"
               >
