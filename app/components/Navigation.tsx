@@ -1591,9 +1591,9 @@ export default function Navigation() {
         )}
       </div>
 
-      <div className="max-w-7xl mx-auto pl-4 pr-6 py-4">
+      <div className="mx-auto w-full max-w-[92rem] px-2 pr-6 py-4 sm:px-3 lg:px-4">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6 lg:gap-7">
             <Link
               href="/"
               onClick={(e) => {
@@ -1609,7 +1609,7 @@ export default function Navigation() {
                 <Logo />
               </span>
             </Link>
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6 lg:gap-7">
               <button
                 onClick={() => scrollToSection('about')}
                 className="nav-link text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
