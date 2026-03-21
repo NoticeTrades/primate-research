@@ -11,7 +11,12 @@ interface TickerData {
   isLoading: boolean;
 }
 
-export default function MarketTicker() {
+type MarketTickerProps = {
+  /** When true, omit outer bottom border — parent chrome row supplies the divider */
+  embedded?: boolean;
+};
+
+export default function MarketTicker({ embedded = false }: MarketTickerProps) {
   const [tickers, setTickers] = useState<TickerData[]>([
     { symbol: 'NQ', name: 'Nasdaq 100', price: null, change: null, changePercent: null, isLoading: true },
     { symbol: 'ES', name: 'S&P 500 E-mini', price: null, change: null, changePercent: null, isLoading: true },
@@ -404,7 +409,11 @@ export default function MarketTicker() {
   const duplicatedTickers = [...tickers, ...tickers];
 
   return (
-    <div className="bg-zinc-900 dark:bg-black text-white border-b border-zinc-800 overflow-hidden relative z-40">
+    <div
+      className={`bg-zinc-900 dark:bg-black text-white overflow-hidden relative z-40 ${
+        embedded ? '' : 'border-b border-zinc-800'
+      }`}
+    >
       <div className="relative py-3">
         <div className="flex items-center animate-scroll">
           {duplicatedTickers.map((ticker, index) => (

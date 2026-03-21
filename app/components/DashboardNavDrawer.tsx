@@ -1,6 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type RefObject,
+} from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -9,9 +18,31 @@ const NAV_ITEMS = [
   { href: '/dashboard/inflation', label: 'Inflation (CPI)', description: 'CPI history & YoY trend' },
 ] as const;
 
-export default function DashboardNavDrawer() {
-  const pathname = usePathname();
+type DashboardMenuContextValue = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  contentTopPx: number;
+};
+
+const DashboardMenuContext = createContext<DashboardMenuContextValue | null>(null);
+
+export function useDashboardMenu() {
+  const ctx = useContext(DashboardMenuContext);
+  if (!ctx) {
+    throw new Error('useDashboardMenu must be used within DashboardMenuProvider');
+  }
+  return ctx;
+}
+
+export function DashboardMenuProvider({
+  children,
+  contentTopPx,
+}: {
+  children: React.ReactNode;
+  contentTopPx: number;
+}) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setOpen(false);
@@ -26,43 +57,58 @@ export default function DashboardNavDrawer() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  /* Align with DashboardShell content: pt-44 = nav (72px) + ticker — menu lives below both */
-  const belowHeaderClass = 'top-44';
+  const value = useMemo(
+    () => ({ open, setOpen, contentTopPx }),
+    [open, contentTopPx]
+  );
+
+  return <DashboardMenuContext.Provider value={value}>{children}</DashboardMenuContext.Provider>;
+}
+
+/** Sits in the left rail of the ticker bar — flush to the viewport edge */
+export function DashboardMenuTrigger() {
+  const { open, setOpen } = useDashboardMenu();
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="flex h-full min-h-[48px] w-full items-center justify-center bg-zinc-950 transition hover:bg-zinc-900/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500/50"
+      aria-expanded={open}
+      aria-controls="dashboard-nav-panel"
+      aria-label="Open dashboard pages menu"
+    >
+      <span className="flex flex-col gap-[5px]" aria-hidden>
+        <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
+        <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
+        <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
+      </span>
+    </button>
+  );
+}
+
+export function DashboardNavPanel() {
+  const pathname = usePathname();
+  const { open, setOpen, contentTopPx } = useDashboardMenu();
+
+  const topStyle = useMemo(() => ({ top: `${contentTopPx}px` }), [contentTopPx]);
 
   return (
     <>
-      {/* Icon-only trigger — fixed left, below main nav + scrolling ticker (same offset as main content) */}
-      <div className={`fixed left-3 ${belowHeaderClass} z-[45] sm:left-4`}>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900/95 shadow-lg shadow-black/40 backdrop-blur-sm transition hover:border-blue-500/50 hover:bg-zinc-800/90 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-          aria-expanded={open}
-          aria-controls="dashboard-nav-panel"
-          aria-label="Open dashboard pages menu"
-        >
-          <span className="flex flex-col gap-1" aria-hidden>
-            <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
-            <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
-            <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
-          </span>
-        </button>
-      </div>
-
-      {/* Overlay — only covers area below header + ticker so top nav stays visible */}
       <button
         type="button"
         aria-label="Close menu"
-        className={`fixed left-0 right-0 bottom-0 ${belowHeaderClass} z-[46] bg-black/60 backdrop-blur-[2px] transition-opacity ${
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        style={topStyle}
+        className={`fixed left-0 right-0 bottom-0 z-[46] bg-black/60 backdrop-blur-[2px] transition-opacity ${
+          open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setOpen(false)}
       />
 
-      {/* Slide panel — starts below main site header + ticker */}
       <aside
         id="dashboard-nav-panel"
-        className={`fixed left-0 bottom-0 ${belowHeaderClass} z-[47] flex w-[min(100vw-3rem,18rem)] flex-col border-r border-zinc-800 bg-zinc-950/98 shadow-2xl backdrop-blur-md transition-transform duration-300 ease-out ${
+        style={topStyle}
+        className={`fixed left-0 bottom-0 z-[47] flex w-[min(100vw-2.5rem,18rem)] flex-col border-r border-zinc-800 border-t-0 bg-zinc-950/98 shadow-2xl backdrop-blur-md transition-transform duration-300 ease-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-hidden={!open}
@@ -85,7 +131,7 @@ export default function DashboardNavDrawer() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
           <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Navigate</p>
           <ul className="space-y-1">
             {NAV_ITEMS.map((item) => {
@@ -115,4 +161,31 @@ export default function DashboardNavDrawer() {
       </aside>
     </>
   );
+}
+
+/** Measure chrome row (nav + ticker strip) bottom for drawer alignment */
+export function useDashboardChromeTop(chromeRef: RefObject<HTMLDivElement | null>): number {
+  const [topPx, setTopPx] = useState(176);
+
+  const measure = useCallback(() => {
+    const el = chromeRef.current;
+    if (!el) return;
+    const bottom = el.getBoundingClientRect().bottom;
+    setTopPx(bottom);
+  }, [chromeRef]);
+
+  useLayoutEffect(() => {
+    measure();
+    const el = chromeRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [measure, chromeRef]);
+
+  return topPx;
 }

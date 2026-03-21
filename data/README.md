@@ -49,3 +49,19 @@ To show view counts and sort by "Most views" / "Least views", set **`YOUTUBE_API
    `YOUTUBE_API_KEY=your_key_here`
 
 If the key is not set, the videos page still works; view counts are simply not shown and sort-by-views uses the order of the list.
+
+---
+
+# CPI dashboard (`cpi-macros.ts`)
+
+Edit **`cpi-macros.ts`** to tune the [Inflation (CPI)](/dashboard/inflation) page:
+
+- **`CPI_CONSENSUS_FORECASTS`** — optional MoM / YoY consensus by report month (`YYYY-MM-01`). Used for “forecast vs actual” and surprises.
+- **`CPI_UPCOMING_RELEASE_WINDOWS`** — next BLS release windows (update from [BLS schedule](https://www.bls.gov/schedule/news_release/cpi.htm)).
+- **`CPI_INDEX_IMPACTS`** — educational copy for how hot vs soft CPI often maps to ES, NQ, etc. (not trading advice).
+
+Actual index levels and MoM/YoY are computed from FRED in `/api/cpi`.
+
+Set **`FRED_API_KEY`** in `.env` to use the [FRED API](https://fred.stlouisfed.org/docs/api/fred/series_observations.html); without it, the app uses the same series via the public CSV graph export.
+
+Allowed series IDs are listed in **`cpi-series.ts`** (e.g. headline `CPIAUCSL`, core `CPILFESL`). The inflation page passes `?series=&from=&to=` for custom windows.
