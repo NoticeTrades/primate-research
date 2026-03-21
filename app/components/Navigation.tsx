@@ -596,20 +596,6 @@ export default function Navigation() {
     >
       {/* Search bar + Auth — fixed row to the left of the Discord sign */}
       <div className="hidden md:flex items-center gap-3 fixed top-5 right-28 z-[55]">
-        {/* X (Twitter) Link */}
-        <a
-          href="https://x.com/primatetrading"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-lg hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 transition-colors group"
-          aria-label="Follow Primate Trading on X"
-          title="Follow us on X"
-        >
-          <svg className="w-5 h-5 text-zinc-400 group-hover:text-[#1DA1F2] transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-          </svg>
-        </a>
-
         {/* Search Bar — only visible when logged in */}
         {isAuthenticated && <form onSubmit={handleSearchSubmit} className="relative">
           <input
@@ -1591,7 +1577,7 @@ export default function Navigation() {
         )}
       </div>
 
-      <div className="mx-auto w-full max-w-[92rem] px-2 pr-6 py-4 sm:px-3 lg:px-4">
+      <div className="mx-auto w-full max-w-[96rem] px-1 pr-6 py-4 sm:px-2 lg:px-3">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-6 lg:gap-7">
             <Link
@@ -1654,6 +1640,18 @@ export default function Navigation() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
+                <a
+                  href="https://x.com/primatetrading"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 inline-flex items-center p-1.5 rounded-lg hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 transition-colors group align-middle"
+                  aria-label="Follow Primate Trading on X"
+                  title="Follow us on X"
+                >
+                  <svg className="w-4 h-4 text-zinc-400 group-hover:text-[#1DA1F2] transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </a>
 
                 {showToolsDropdown && (
                   <div className="absolute top-full left-0 pt-2 w-56 z-50">

@@ -8,6 +8,7 @@ type MarketNewsItem = {
   url: string;
   source: string;
   publishedAt: string;
+  publishedTs: number;
 };
 
 const DEFAULT_QUERY =
@@ -35,7 +36,13 @@ function scoreTitle(title: string): number {
   return score;
 }
 
-function parseRss(xml: string, limit: number): MarketNewsItem[] {
+function toTimestamp(value: string): number {
+  if (!value) return 0;
+  const ts = new Date(value).getTime();
+  return Number.isFinite(ts) ? ts : 0;
+}
+
+function parseRss(xml: string, limit: number, preferRelevant: boolean): MarketNewsItem[] {
   const items: MarketNewsItem[] = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
   let m: RegExpExecArray | null;
@@ -51,9 +58,10 @@ function parseRss(xml: string, limit: number): MarketNewsItem[] {
     const url = linkMatch ? cleanTag(linkMatch[1]) : '';
     const source = sourceMatch ? cleanTag(sourceMatch[1]) || 'Google News' : 'Google News';
     const publishedAt = pubDateMatch ? cleanTag(pubDateMatch[1]) : '';
+    const publishedTs = toTimestamp(publishedAt);
 
     if (!title || !url || !url.startsWith('http')) continue;
-    items.push({ title, url, source, publishedAt });
+    items.push({ title, url, source, publishedAt, publishedTs });
   }
 
   const byTitle = new Map<string, MarketNewsItem>();
@@ -61,14 +69,26 @@ function parseRss(xml: string, limit: number): MarketNewsItem[] {
     if (!byTitle.has(item.title)) byTitle.set(item.title, item);
   }
   const unique = [...byTitle.values()];
-  unique.sort((a, b) => scoreTitle(b.title) - scoreTitle(a.title));
-  return unique.slice(0, limit);
+  // Always keep newest first; default feed also lightly boosts market/geopolitical relevance.
+  unique.sort((a, b) => {
+    if (b.publishedTs !== a.publishedTs) return b.publishedTs - a.publishedTs;
+    if (preferRelevant) return scoreTitle(b.title) - scoreTitle(a.title);
+    return 0;
+  });
+
+  let filtered = unique;
+  if (preferRelevant) {
+    const relevant = unique.filter((item) => scoreTitle(item.title) >= 2);
+    if (relevant.length >= Math.min(6, limit)) filtered = relevant;
+  }
+  return filtered.slice(0, limit);
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawQuery = (searchParams.get('q') || '').trim();
-  const q = rawQuery.length > 0 ? rawQuery : DEFAULT_QUERY;
+  const isDefaultFeed = rawQuery.length === 0;
+  const q = rawQuery.length > 0 ? `${rawQuery} when:7d` : `${DEFAULT_QUERY} when:3d`;
   const limit = Math.min(25, Math.max(5, parseInt(searchParams.get('limit') || '12', 10) || 12));
 
   try {
@@ -79,7 +99,7 @@ export async function GET(request: Request) {
     });
     if (!res.ok) return NextResponse.json({ items: [] as MarketNewsItem[] }, { status: 200 });
     const xml = await res.text();
-    const items = parseRss(xml, limit);
+    const items = parseRss(xml, limit, isDefaultFeed).map(({ publishedTs, ...item }) => item);
     return NextResponse.json(
       { items, query: rawQuery },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
