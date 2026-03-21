@@ -415,38 +415,26 @@ export default function DashboardPage() {
               </div>
             </header>
 
-            <section className="relative overflow-hidden rounded-2xl border border-cyan-500/35 bg-gradient-to-br from-cyan-950/50 via-zinc-900/90 to-blue-950/60 p-4 sm:p-6 mb-6 shadow-xl shadow-cyan-950/40 ring-1 ring-cyan-400/20">
-              <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-cyan-500/15 blur-3xl" aria-hidden />
-              <div className="pointer-events-none absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-blue-600/10 blur-3xl" aria-hidden />
-              <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <section className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 shadow-xl sm:p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex-1">
                   <label className="block">
-                    <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-cyan-200/90">
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-cyan-500/25 text-cyan-200 ring-1 ring-cyan-400/40" aria-hidden>
-                        ⌕
-                      </span>
-                      Search index
-                    </span>
+                    <span className="text-xs text-zinc-500">Search index</span>
                     <input
                       type="search"
                       value={indexSearch}
                       onChange={(e) => setIndexSearch(e.target.value)}
                       placeholder={`Type a symbol or index name… (e.g. NQ, DXY, FTSE)`}
-                      className="mt-2 w-full rounded-xl border-2 border-cyan-500/35 bg-zinc-950/60 px-3 py-2.5 text-zinc-100 placeholder-zinc-500 shadow-inner shadow-black/20 transition focus:border-cyan-400/70 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                      className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-800/40 px-3 py-2 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                     />
                   </label>
 
-                  <div className="mt-4">
-                    <p className="mb-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-zinc-100">
-                      <span className="inline-flex items-center rounded-full bg-gradient-to-r from-cyan-500/25 to-blue-600/30 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-cyan-100 ring-1 ring-cyan-400/35">
-                        Choose an index
-                      </span>
-                      <span className="text-xs font-normal text-cyan-200/80">Tap a button below — or search above</span>
-                    </p>
+                  <div className="mt-3">
+                    <p className="mb-2 text-xs text-zinc-500">Select index</p>
                     {availableSuggestions.length === 0 ? (
                       <p className="text-sm text-zinc-500">No matches.</p>
                     ) : (
-                      <div className="flex flex-wrap gap-2.5">
+                      <div className="flex flex-wrap gap-2">
                         {availableSuggestions.map((p) => (
                           <button
                             key={p.symbol}
@@ -477,16 +465,15 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="lg:w-[320px]">
-                  <div className="text-xs font-medium text-cyan-200/80 mb-2">Current index</div>
-                  <div className="inline-flex items-center gap-2 rounded-xl border-2 border-emerald-400/40 bg-gradient-to-r from-emerald-500/15 to-cyan-500/10 px-4 py-2 shadow-md shadow-emerald-950/40 ring-1 ring-emerald-400/25">
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow shadow-emerald-400/60" aria-hidden />
+                  <div className="mb-2 text-xs text-zinc-500">Current index</div>
+                  <div className="inline-flex items-center rounded-xl border-2 border-emerald-400/40 bg-gradient-to-r from-emerald-500/15 to-cyan-500/10 px-4 py-2 shadow-md shadow-emerald-950/40 ring-1 ring-emerald-400/25">
                     <span className="font-mono text-lg font-bold tracking-tight text-white">{selectedSymbol}</span>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={resetSelection}
-                      className="rounded-xl border border-blue-400/40 bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-900/40 transition hover:from-blue-500 hover:to-cyan-500 hover:shadow-cyan-500/30 focus:outline-none focus:ring-2 focus:ring-cyan-400/60"
+                      className="rounded-xl bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
                     >
                       Reset
                     </button>
