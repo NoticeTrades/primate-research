@@ -79,15 +79,15 @@ export function DashboardMenuTrigger() {
       type="button"
       onClick={() => setOpen(true)}
       style={topStyle}
-      className="fixed left-2 sm:left-3 z-[45] flex w-10 flex-col items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900/95 py-3 shadow-lg shadow-black/30 backdrop-blur-sm transition hover:border-blue-500/45 hover:bg-zinc-800/95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 min-h-[4.5rem]"
+      className="fixed left-2 sm:left-3 z-[45] flex w-8 flex-col items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900/95 py-2 shadow-lg shadow-black/30 backdrop-blur-sm transition hover:border-blue-500/45 hover:bg-zinc-800/95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 min-h-[3.25rem]"
       aria-expanded={open}
       aria-controls="dashboard-nav-panel"
       aria-label="Open dashboard pages menu"
     >
-      <span className="flex flex-col gap-1" aria-hidden>
-        <span className="block h-0.5 w-[14px] rounded-full bg-zinc-200" />
-        <span className="block h-0.5 w-[14px] rounded-full bg-zinc-200" />
-        <span className="block h-0.5 w-[14px] rounded-full bg-zinc-200" />
+      <span className="flex flex-col gap-0.5" aria-hidden>
+        <span className="block h-px w-3 rounded-full bg-zinc-200" />
+        <span className="block h-px w-3 rounded-full bg-zinc-200" />
+        <span className="block h-px w-3 rounded-full bg-zinc-200" />
       </span>
     </button>
   );
