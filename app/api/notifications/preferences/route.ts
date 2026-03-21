@@ -67,10 +67,18 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { enabled, soundEnabled, tradeNotificationsEnabled, tradeNotificationsEmail, phoneNumber, tradeNotificationsSms } = body;
+    const {
+      enabled,
+      soundEnabled,
+      tradeNotificationsEnabled,
+      tradeNotificationsEmail,
+      phoneNumber,
+      tradeNotificationsSms,
+      smsConsent,
+    } = body;
 
     // SMS / phone preferences
-    const hasSmsPref = 'phoneNumber' in body || 'tradeNotificationsSms' in body;
+    const hasSmsPref = 'phoneNumber' in body || 'tradeNotificationsSms' in body || 'smsConsent' in body;
     if (hasSmsPref) {
       const sql = getDb();
       try {
@@ -90,20 +98,63 @@ export async function POST(request: Request) {
           }
         }
         const newSms = typeof tradeNotificationsSms === 'boolean' ? tradeNotificationsSms : (current?.trade_notifications_sms === true);
+        const optIn = newSms && !!newPhone;
+        const prevPhone = String(current?.phone_number ?? '').trim();
+        const nextPhone = String(newPhone ?? '').trim();
+        const wasOptIn = current?.trade_notifications_sms === true && prevPhone !== '';
+        /** New consent signature: first opt-in, re-opt-in after off, or number changed while subscribed */
+        const consentRefresh = optIn && (!wasOptIn || prevPhone !== nextPhone);
+        const needOptOutTimestamp = !optIn && wasOptIn;
+
         if (newSms && !newPhone) {
           return NextResponse.json({ error: 'Add a phone number to enable SMS alerts.' }, { status: 400 });
         }
-        await sql`
-          UPDATE users SET phone_number = ${newPhone}, trade_notifications_sms = ${newSms && !!newPhone}
-          WHERE email = ${userEmail}
-        `;
+        // Twilio / TCPA: explicit opt-in when enabling SMS (new subscribers or number change).
+        // Legacy: already-subscribed same-number saves without `smsConsent` still work until they update prefs in the new UI.
+        const legacySameNumber =
+          optIn && wasOptIn && prevPhone === nextPhone && (smsConsent === undefined || smsConsent === null);
+        if (optIn && smsConsent !== true && !legacySameNumber) {
+          return NextResponse.json(
+            {
+              error:
+                'Check the consent box to agree to receive SMS for live trade alerts, or turn off SMS alerts.',
+            },
+            { status: 400 }
+          );
+        }
+
+        try {
+          await sql`
+            UPDATE users SET
+              phone_number = ${newPhone},
+              trade_notifications_sms = ${optIn},
+              trade_sms_consent_at = CASE WHEN ${consentRefresh} THEN NOW() ELSE trade_sms_consent_at END,
+              trade_sms_opt_out_at = CASE
+                WHEN ${optIn} THEN NULL
+                WHEN ${needOptOutTimestamp} THEN NOW()
+                ELSE trade_sms_opt_out_at
+              END
+            WHERE email = ${userEmail}
+          `;
+        } catch (consentColErr: unknown) {
+          const msg = consentColErr instanceof Error ? consentColErr.message : '';
+          if (msg.includes('trade_sms_consent_at') || msg.includes('trade_sms_opt_out_at') || (consentColErr as { code?: string })?.code === '42703') {
+            await sql`
+              UPDATE users SET phone_number = ${newPhone}, trade_notifications_sms = ${optIn}
+              WHERE email = ${userEmail}
+            `;
+          } else {
+            throw consentColErr;
+          }
+        }
         return NextResponse.json({
           success: true,
           phoneNumber: newPhone,
-          tradeNotificationsSms: newSms && !!newPhone,
+          tradeNotificationsSms: optIn,
         });
-      } catch (dbErr: any) {
-        if (dbErr?.message?.includes('phone_number') || dbErr?.message?.includes('trade_notifications_sms') || dbErr?.code === '42703') {
+      } catch (dbErr: unknown) {
+        const msg = dbErr instanceof Error ? dbErr.message : '';
+        if (msg.includes('phone_number') || msg.includes('trade_notifications_sms') || (dbErr as { code?: string })?.code === '42703') {
           return NextResponse.json(
             { error: 'Database setup required. Run Setup in Admin to add SMS columns.' },
             { status: 500 }

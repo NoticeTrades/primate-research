@@ -9,6 +9,7 @@ import CursorHover from '../components/CursorHover';
 import DiscordSign from '../components/DiscordSign';
 import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
+import { LiveTradeSmsOptIn } from '../components/LiveTradeSmsOptIn';
 
 interface Notification {
   id: number;
@@ -68,6 +69,8 @@ export default function NotificationsPage() {
   const [isUpdatingSoundPreferences, setIsUpdatingSoundPreferences] = useState(false);
   const [smsSaving, setSmsSaving] = useState(false);
   const [smsMessage, setSmsMessage] = useState('');
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [lastSyncedPhone, setLastSyncedPhone] = useState('');
   const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
   const playedSoundForIdsRef = useRef<Set<number>>(new Set());
   const [isClient, setIsClient] = useState(false);
@@ -103,8 +106,14 @@ export default function NotificationsPage() {
           const data = await res.json();
           setBrowserNotificationsEnabled(data.browserNotificationsEnabled || false);
           setSoundNotificationsEnabled(data.soundNotificationsEnabled !== false); // Default to true
-          if (data.phoneNumber != null) setPhoneNumber(data.phoneNumber || '');
-          if (data.tradeNotificationsSms !== undefined) setTradeNotifSms(data.tradeNotificationsSms);
+          if (data.phoneNumber != null) {
+            setPhoneNumber(data.phoneNumber || '');
+            setLastSyncedPhone(data.phoneNumber || '');
+          }
+          if (data.tradeNotificationsSms !== undefined) {
+            setTradeNotifSms(data.tradeNotificationsSms);
+            if (data.tradeNotificationsSms) setSmsConsent(true);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch preferences:', err);
@@ -113,6 +122,12 @@ export default function NotificationsPage() {
     
     fetchPreferences();
   }, [router]);
+
+  useEffect(() => {
+    const p = phoneNumber.trim();
+    const b = lastSyncedPhone.trim();
+    if (p !== b && tradeNotifSms) setSmsConsent(false);
+  }, [phoneNumber, lastSyncedPhone, tradeNotifSms]);
 
   // Fetch notifications (silent background refresh after initial load)
   const fetchNotifications = async (isInitial = false) => {
@@ -413,12 +428,16 @@ export default function NotificationsPage() {
         body: JSON.stringify({
           phoneNumber: phoneNumber.trim() || null,
           tradeNotificationsSms: tradeNotifSms,
+          smsConsent: tradeNotifSms ? smsConsent : false,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         setPhoneNumber(data.phoneNumber ?? '');
         setTradeNotifSms(data.tradeNotificationsSms ?? false);
+        setLastSyncedPhone(data.phoneNumber ?? '');
+        if (data.tradeNotificationsSms) setSmsConsent(true);
+        else setSmsConsent(false);
         setSmsMessage('Saved');
         setTimeout(() => setSmsMessage(''), 2000);
       } else {
@@ -733,62 +752,27 @@ export default function NotificationsPage() {
                 <div>
                   <h3 className="text-sm font-semibold text-zinc-100">Live trade SMS alerts</h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Get a text when a new live trade is posted (entry, size, stop/target)
+                    Opt in below — we only text when a new live trade is posted
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative flex items-center flex-1 min-w-[180px]">
-                  <input
-                    type={showPhoneNumber ? 'tel' : 'password'}
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="5551234567 or +1 555 123 4567"
-                    autoComplete="tel"
-                    className="w-full pl-3 pr-14 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPhoneNumber((v) => !v)}
-                    className="absolute right-2 px-2 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    {showPhoneNumber ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <button
-                    type="button"
-                    onClick={() => setTradeNotifSms(!tradeNotifSms)}
-                    disabled={smsSaving}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 ${
-                      tradeNotifSms ? 'bg-emerald-600' : 'bg-zinc-700'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        tradeNotifSms ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-sm text-zinc-300 group-hover:text-zinc-100">Send to my phone</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={saveSmsPrefs}
-                  disabled={smsSaving || (tradeNotifSms && !phoneNumber.trim())}
-                  className="px-3 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {smsSaving ? 'Saving…' : 'Save'}
-                </button>
-                {smsMessage && (
-                  <span className={`text-xs ${smsMessage === 'Saved' ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {smsMessage}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-zinc-500 mt-2">
-                US numbers (10 digits) or E.164. Message and data rates may apply.
-              </p>
+              <LiveTradeSmsOptIn
+                phoneNumber={phoneNumber}
+                showPhoneNumber={showPhoneNumber}
+                tradeNotifSms={tradeNotifSms}
+                smsConsent={smsConsent}
+                smsSaving={smsSaving}
+                smsMessage={smsMessage}
+                onPhoneChange={setPhoneNumber}
+                onToggleShowPhone={() => setShowPhoneNumber((v) => !v)}
+                onTradeNotifSmsChange={(v) => {
+                  setTradeNotifSms(v);
+                  if (!v) setSmsConsent(false);
+                }}
+                onSmsConsentChange={setSmsConsent}
+                onSave={saveSmsPrefs}
+                enableSmsVariant="toggle"
+              />
             </div>
           </div>
 

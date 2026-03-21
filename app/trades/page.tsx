@@ -8,6 +8,7 @@ import CursorHover from '../components/CursorHover';
 import DiscordSign from '../components/DiscordSign';
 import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
+import { LiveTradeSmsOptIn } from '../components/LiveTradeSmsOptIn';
 
 // CME point values ($ per point per contract): Mini NQ $20, Micro MNQ $2, Mini ES $12.50, Micro MES $5
 const POINT_VALUE: Record<string, number> = { NQ: 20, MNQ: 2, ES: 12.5, MES: 5 };
@@ -72,6 +73,8 @@ export default function TradesPage() {
   const [prefsMessage, setPrefsMessage] = useState('');
   const [smsSaving, setSmsSaving] = useState(false);
   const [smsMessage, setSmsMessage] = useState('');
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [lastSyncedPhone, setLastSyncedPhone] = useState('');
 
   const fetchTrades = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
@@ -137,11 +140,23 @@ export default function TradesPage() {
       .then((data) => {
         if (data.tradeNotificationsEnabled !== undefined) setTradeNotifEnabled(data.tradeNotificationsEnabled);
         if (data.tradeNotificationsEmail !== undefined) setTradeNotifEmail(data.tradeNotificationsEmail);
-        if (data.phoneNumber != null) setPhoneNumber(data.phoneNumber || '');
-        if (data.tradeNotificationsSms !== undefined) setTradeNotifSms(data.tradeNotificationsSms);
+        if (data.phoneNumber != null) {
+          setPhoneNumber(data.phoneNumber || '');
+          setLastSyncedPhone(data.phoneNumber || '');
+        }
+        if (data.tradeNotificationsSms !== undefined) {
+          setTradeNotifSms(data.tradeNotificationsSms);
+          if (data.tradeNotificationsSms) setSmsConsent(true);
+        }
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const p = phoneNumber.trim();
+    const b = lastSyncedPhone.trim();
+    if (p !== b && tradeNotifSms) setSmsConsent(false);
+  }, [phoneNumber, lastSyncedPhone, tradeNotifSms]);
 
   const saveTradePrefs = async (inApp: boolean, email: boolean) => {
     setPrefsSaving(true);
@@ -181,12 +196,16 @@ export default function TradesPage() {
         body: JSON.stringify({
           phoneNumber: phoneNumber.trim() || null,
           tradeNotificationsSms: tradeNotifSms,
+          smsConsent: tradeNotifSms ? smsConsent : false,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         setPhoneNumber(data.phoneNumber ?? '');
         setTradeNotifSms(data.tradeNotificationsSms ?? false);
+        setLastSyncedPhone(data.phoneNumber ?? '');
+        if (data.tradeNotificationsSms) setSmsConsent(true);
+        else setSmsConsent(false);
         setSmsMessage('Saved');
         setTimeout(() => setSmsMessage(''), 2000);
       } else {
@@ -313,52 +332,23 @@ export default function TradesPage() {
                 {prefsMessage && <span className="text-xs text-emerald-400">{prefsMessage}</span>}
               </div>
               <div className="mt-4 pt-4 border-t border-zinc-800">
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Live trades via SMS</p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative flex items-center">
-                    <input
-                      type={showPhoneNumber ? 'tel' : 'password'}
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="5551234567 or +1 555 123 4567"
-                      autoComplete="tel"
-                      className="w-48 pl-3 pr-16 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPhoneNumber((v) => !v)}
-                      className="absolute right-2 px-2 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
-                    >
-                      {showPhoneNumber ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={tradeNotifSms}
-                      onChange={(e) => setTradeNotifSms(e.target.checked)}
-                      disabled={smsSaving}
-                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="text-sm text-zinc-300 group-hover:text-zinc-100">Send to my phone</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={saveSmsPrefs}
-                    disabled={smsSaving || (tradeNotifSms && !phoneNumber.trim())}
-                    className="px-3 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {smsSaving ? 'Saving…' : 'Save'}
-                  </button>
-                  {smsMessage && (
-                    <span className={`text-xs ${smsMessage === 'Saved' ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {smsMessage}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-zinc-500 mt-1.5">
-                  Add your number and enable to get a text when a new live trade is posted. US numbers (10 digits) or E.164. Message and data rates may apply.
-                </p>
+                <LiveTradeSmsOptIn
+                  phoneNumber={phoneNumber}
+                  showPhoneNumber={showPhoneNumber}
+                  tradeNotifSms={tradeNotifSms}
+                  smsConsent={smsConsent}
+                  smsSaving={smsSaving}
+                  smsMessage={smsMessage}
+                  onPhoneChange={setPhoneNumber}
+                  onToggleShowPhone={() => setShowPhoneNumber((v) => !v)}
+                  onTradeNotifSmsChange={(v) => {
+                    setTradeNotifSms(v);
+                    if (!v) setSmsConsent(false);
+                  }}
+                  onSmsConsentChange={setSmsConsent}
+                  onSave={saveSmsPrefs}
+                  enableSmsVariant="checkbox"
+                />
               </div>
             </div>
           )}
