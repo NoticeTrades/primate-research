@@ -1620,7 +1620,7 @@ export default function Navigation() {
               
               {/* Tools Dropdown */}
               <div 
-                className="relative" 
+                className="relative flex items-center" 
                 ref={toolsDropdownRef}
                 onMouseEnter={() => setShowToolsDropdown(true)}
                 onMouseLeave={() => setShowToolsDropdown(false)}
