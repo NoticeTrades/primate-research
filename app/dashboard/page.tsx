@@ -9,6 +9,7 @@ import ScrollFade from '../components/ScrollFade';
 import MarketTicker from '../components/MarketTicker';
 import DashboardSidebar from '../components/DashboardSidebar';
 import DashboardIndexCard from '../components/DashboardIndexCard';
+import DashboardNewsFeed from '../components/DashboardNewsFeed';
 
 type Trade = {
   id: number;
@@ -91,7 +92,7 @@ const INDEX_PICKS: { symbol: string; label: string }[] = [
 
 const DEFAULT_SELECTED = 'NQ';
 
-type DashboardModuleId = 'overview' | 'sector' | 'index';
+type DashboardModuleId = 'overview' | 'news' | 'sector' | 'index';
 /** Draggable blocks in the main column only (overview lives in the right sidebar). */
 type MainModuleId = 'sector' | 'index';
 
@@ -99,6 +100,7 @@ const MAIN_MODULES: MainModuleId[] = ['sector', 'index'];
 
 const MODULE_VISIBILITY_OPTIONS: { id: DashboardModuleId; label: string }[] = [
   { id: 'overview', label: 'Market overview (sidebar)' },
+  { id: 'news', label: 'Market news feed (sidebar)' },
   { id: 'sector', label: 'Sector performance' },
   { id: 'index', label: 'Index card' },
 ];
@@ -130,6 +132,7 @@ export default function DashboardPage() {
   const [moduleOrder, setModuleOrder] = useState<MainModuleId[]>(MAIN_MODULES);
   const [visibleModules, setVisibleModules] = useState<Record<DashboardModuleId, boolean>>({
     overview: true,
+    news: true,
     sector: true,
     index: true,
   });
@@ -550,7 +553,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-[11px] text-zinc-600 mt-3">
                   Tip: unlock layout to drag <span className="text-zinc-500">Sector</span> and{' '}
-                  <span className="text-zinc-500">Index</span> in the main column. Market overview is fixed at the top of the right sidebar.
+                  <span className="text-zinc-500">Index</span> in the main column. Sidebar modules are fixed on the right.
                 </div>
               </div>
             )}
@@ -743,6 +746,8 @@ export default function DashboardPage() {
                 )}
               </section>
             )}
+
+            {visibleModules.news && <DashboardNewsFeed />}
 
             <DashboardSidebar />
           </aside>
