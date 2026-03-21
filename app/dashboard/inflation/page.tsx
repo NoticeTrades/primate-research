@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CPI_SERIES_OPTIONS, DEFAULT_CPI_SERIES_ID } from '../../../data/cpi-series';
+import { DashboardMenuTrigger } from '../../components/DashboardNavDrawer';
 import {
   LineChart,
   Line,
@@ -273,25 +274,32 @@ export default function InflationPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <header>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs font-semibold mb-3">
-          <span className="w-2 h-2 rounded-full bg-amber-300" />
-          Macro
+        <div className="flex items-start gap-2 sm:gap-3">
+          <div className="shrink-0 pt-1">
+            <DashboardMenuTrigger />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs font-semibold mb-3">
+              <span className="w-2 h-2 rounded-full bg-amber-300" />
+              Macro
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 tracking-tight">Inflation (CPI)</h1>
+            <p className="text-zinc-400 text-sm mt-2 max-w-2xl">
+              U.S. CPI from FRED (official API if <code className="text-zinc-500">FRED_API_KEY</code> is set, otherwise the same
+              series via public CSV). Pick headline vs core and your own date range — preferences save in this browser.
+            </p>
+            {data?.source && (
+              <p className="text-xs text-zinc-600 mt-2">
+                Source: {data.source} · {data.meta?.seriesLabel ?? data.title} ({data.seriesId})
+              </p>
+            )}
+            {data?.disclaimer && (
+              <p className="text-[11px] text-zinc-600 mt-2 max-w-3xl leading-relaxed border-l border-zinc-700 pl-3">
+                {data.disclaimer}
+              </p>
+            )}
+          </div>
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 tracking-tight">Inflation (CPI)</h1>
-        <p className="text-zinc-400 text-sm mt-2 max-w-2xl">
-          U.S. CPI from FRED (official API if <code className="text-zinc-500">FRED_API_KEY</code> is set, otherwise the same
-          series via public CSV). Pick headline vs core and your own date range — preferences save in this browser.
-        </p>
-        {data?.source && (
-          <p className="text-xs text-zinc-600 mt-2">
-            Source: {data.source} · {data.meta?.seriesLabel ?? data.title} ({data.seriesId})
-          </p>
-        )}
-        {data?.disclaimer && (
-          <p className="text-[11px] text-zinc-600 mt-2 max-w-3xl leading-relaxed border-l border-zinc-700 pl-3">
-            {data.disclaimer}
-          </p>
-        )}
       </header>
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 sm:p-6 shadow-xl">

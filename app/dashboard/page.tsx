@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import DashboardSidebar from '../components/DashboardSidebar';
 import DashboardIndexCard from '../components/DashboardIndexCard';
 import DashboardNewsFeed from '../components/DashboardNewsFeed';
+import { DashboardMenuTrigger } from '../components/DashboardNavDrawer';
 
 type Trade = {
   id: number;
@@ -382,30 +383,37 @@ export default function DashboardPage() {
     <div className="max-w-8xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           <main className="lg:col-span-9">
             <header className="mb-5">
-              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs font-semibold mb-3">
-                    <span className="w-2 h-2 rounded-full bg-blue-300 animate-pulse" />
-                    Dashboard
-                  </div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 tracking-tight">
-                    Primate Dashboard
-                  </h1>
-                  <p className="text-zinc-400 text-sm mt-2">
-                    Search one index and load it full-width. You’ll see live daily bar stats, market structure, published charts, relevant movers, relevant news, and live trades.
-                  </p>
+              <div className="flex items-start gap-2 sm:gap-3">
+                <div className="shrink-0 pt-1">
+                  <DashboardMenuTrigger />
                 </div>
-                <div className="flex items-center gap-3">
-                  {indicesLastUpdated && (
-                    <span className="text-xs text-zinc-500">
-                      Indices updated {indicesLastUpdated.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
-                    </span>
-                  )}
-                  {tradesLastUpdated && (
-                    <span className="text-xs text-zinc-500 hidden sm:inline">
-                      Trades updated {tradesLastUpdated.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
-                    </span>
-                  )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                    <div>
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs font-semibold mb-3">
+                        <span className="w-2 h-2 rounded-full bg-blue-300 animate-pulse" />
+                        Dashboard
+                      </div>
+                      <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 tracking-tight">
+                        Primate Dashboard
+                      </h1>
+                      <p className="text-zinc-400 text-sm mt-2">
+                        Search one index and load it full-width. You’ll see live daily bar stats, market structure, published charts, relevant movers, relevant news, and live trades.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {indicesLastUpdated && (
+                        <span className="text-xs text-zinc-500">
+                          Indices updated {indicesLastUpdated.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+                        </span>
+                      )}
+                      {tradesLastUpdated && (
+                        <span className="text-xs text-zinc-500 hidden sm:inline">
+                          Trades updated {tradesLastUpdated.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </header>

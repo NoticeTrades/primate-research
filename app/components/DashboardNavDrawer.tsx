@@ -65,7 +65,10 @@ export function DashboardMenuProvider({
   return <DashboardMenuContext.Provider value={value}>{children}</DashboardMenuContext.Provider>;
 }
 
-/** Sits in the left rail of the ticker bar — flush to the viewport edge */
+/**
+ * Compact menu control — place in the page header row to the left of the blue “Dashboard” / section pill
+ * (below the main nav + ticker, not on the ticker bar).
+ */
 export function DashboardMenuTrigger() {
   const { open, setOpen } = useDashboardMenu();
 
@@ -73,15 +76,15 @@ export function DashboardMenuTrigger() {
     <button
       type="button"
       onClick={() => setOpen(true)}
-      className="flex h-full min-h-[48px] w-full items-center justify-center bg-zinc-950 transition hover:bg-zinc-900/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500/50"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900/90 text-zinc-200 shadow-sm transition hover:border-blue-500/40 hover:bg-zinc-800/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
       aria-expanded={open}
       aria-controls="dashboard-nav-panel"
       aria-label="Open dashboard pages menu"
     >
-      <span className="flex flex-col gap-[5px]" aria-hidden>
-        <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
-        <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
-        <span className="block h-0.5 w-[18px] rounded-full bg-zinc-200" />
+      <span className="flex flex-col gap-[3px]" aria-hidden>
+        <span className="block h-px w-3 rounded-full bg-zinc-300" />
+        <span className="block h-px w-3 rounded-full bg-zinc-300" />
+        <span className="block h-px w-3 rounded-full bg-zinc-300" />
       </span>
     </button>
   );
