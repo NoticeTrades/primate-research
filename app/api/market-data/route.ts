@@ -30,6 +30,11 @@ const NO_CACHE_HEADERS = {
   'Pragma': 'no-cache',
 } as const;
 
+function isWeekendEt(): boolean {
+  const day = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
+  return day === 'Sat' || day === 'Sun';
+}
+
 /** Fetch today's session open from Yahoo chart when quote API doesn't provide it. */
 async function fetchSessionOpenFromChart(yahooSymbol: string): Promise<number> {
   try {
@@ -264,6 +269,23 @@ export async function GET(request: Request) {
     : (YAHOO_SYMBOLS[symbol] || symbol);
 
   try {
+    // Metals futures: on weekends use last completed session from daily chart,
+    // because quote endpoints can report stale/derived % that does not match settle.
+    if ((symbol === 'GC' || symbol === 'SI') && isWeekendEt()) {
+      const chart5d = await fetchPriceAndChangeFrom5dChart(yahooSymbol);
+      if (chart5d && chart5d.price > 0) {
+        const ytdPercent = await fetchYtdFromYahoo(yahooSymbol);
+        return NextResponse.json({
+          symbol,
+          price: chart5d.price,
+          change: chart5d.change,
+          changePercent: chart5d.changePercent,
+          previousClose: chart5d.previousClose,
+          ytdPercent: ytdPercent ?? undefined,
+        }, { headers: NO_CACHE_HEADERS });
+      }
+    }
+
     // Index/commodity futures (and N225): try Twelve Data first (June 2026 contract); else Yahoo. Use June contract for Yahoo when available.
     const indexFutures = ['ES', 'NQ', 'YM', 'RTY', 'CL', 'N225'];
     if (indexFutures.includes(symbol)) {
