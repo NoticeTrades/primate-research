@@ -1,12 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Navigation from '../components/Navigation';
-import CursorGlow from '../components/CursorGlow';
-import CursorHover from '../components/CursorHover';
-import DiscordSign from '../components/DiscordSign';
-import ScrollFade from '../components/ScrollFade';
-import MarketTicker from '../components/MarketTicker';
 import DashboardSidebar from '../components/DashboardSidebar';
 import DashboardIndexCard from '../components/DashboardIndexCard';
 import DashboardNewsFeed from '../components/DashboardNewsFeed';
@@ -385,19 +379,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/50 to-zinc-950 relative">
-      <CursorGlow />
-      <CursorHover />
-      <DiscordSign />
-      <ScrollFade />
-      <Navigation />
-
-      <div className="fixed top-[72px] left-0 right-0 z-40">
-        <MarketTicker />
-      </div>
-
-        <div className="pt-44 pb-24 px-3 sm:px-4 relative z-10">
-        <div className="max-w-8xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+    <div className="max-w-8xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           <main className="lg:col-span-9">
             <header className="mb-5">
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -752,8 +734,6 @@ export default function DashboardPage() {
             <DashboardSidebar />
           </aside>
         </div>
-      </div>
-    </div>
   );
 }
 
