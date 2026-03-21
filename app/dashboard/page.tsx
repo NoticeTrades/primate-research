@@ -92,8 +92,17 @@ const INDEX_PICKS: { symbol: string; label: string }[] = [
 const DEFAULT_SELECTED = 'NQ';
 
 type DashboardModuleId = 'overview' | 'sector' | 'index';
+/** Draggable blocks in the main column only (overview lives in the right sidebar). */
+type MainModuleId = 'sector' | 'index';
 
-const DASHBOARD_MODULES: DashboardModuleId[] = ['overview', 'sector', 'index'];
+const MAIN_MODULES: MainModuleId[] = ['sector', 'index'];
+
+const MODULE_VISIBILITY_OPTIONS: { id: DashboardModuleId; label: string }[] = [
+  { id: 'overview', label: 'Market overview (sidebar)' },
+  { id: 'sector', label: 'Sector performance' },
+  { id: 'index', label: 'Index card' },
+];
+
 const DASHBOARD_LAYOUT_STORAGE_KEY = 'primateDashboardLayout_v1';
 
 export default function DashboardPage() {
@@ -118,14 +127,14 @@ export default function DashboardPage() {
 
   const [layoutPanelOpen, setLayoutPanelOpen] = useState(false);
   const [layoutLocked, setLayoutLocked] = useState(true);
-  const [moduleOrder, setModuleOrder] = useState<DashboardModuleId[]>(DASHBOARD_MODULES);
+  const [moduleOrder, setModuleOrder] = useState<MainModuleId[]>(MAIN_MODULES);
   const [visibleModules, setVisibleModules] = useState<Record<DashboardModuleId, boolean>>({
     overview: true,
     sector: true,
     index: true,
   });
 
-  const draggingModuleIdRef = useRef<DashboardModuleId | null>(null);
+  const draggingModuleIdRef = useRef<MainModuleId | null>(null);
 
   // Load saved layout (local-only).
   useEffect(() => {
@@ -134,20 +143,21 @@ export default function DashboardPage() {
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
         layoutLocked?: boolean;
-        moduleOrder?: DashboardModuleId[];
+        moduleOrder?: string[];
         visibleModules?: Partial<Record<DashboardModuleId, boolean>>;
       };
 
       if (typeof parsed.layoutLocked === 'boolean') setLayoutLocked(parsed.layoutLocked);
 
       if (Array.isArray(parsed.moduleOrder)) {
-        const cleaned = parsed.moduleOrder.filter((id) => DASHBOARD_MODULES.includes(id));
+        const cleaned = parsed.moduleOrder.filter((id): id is MainModuleId =>
+          id === 'sector' || id === 'index'
+        );
         if (cleaned.length > 0) {
-          // Ensure we keep any missing modules.
           const finalOrder = [
             ...cleaned,
-            ...DASHBOARD_MODULES.filter((id) => !cleaned.includes(id)),
-          ].slice(0, DASHBOARD_MODULES.length);
+            ...MAIN_MODULES.filter((id) => !cleaned.includes(id)),
+          ].slice(0, MAIN_MODULES.length);
           setModuleOrder(finalOrder);
         }
       }
@@ -179,7 +189,7 @@ export default function DashboardPage() {
     }
   }, [layoutLocked, moduleOrder, visibleModules]);
 
-  const moveModule = (fromId: DashboardModuleId, toId: DashboardModuleId) => {
+  const moveModule = (fromId: MainModuleId, toId: MainModuleId) => {
     if (fromId === toId) return;
     setModuleOrder((prev) => {
       const fromIdx = prev.indexOf(fromId);
@@ -518,7 +528,7 @@ export default function DashboardPage() {
               <div className="mb-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
                 <div className="text-xs text-zinc-500 mb-3">Choose what to show</div>
                 <div className="flex flex-wrap gap-3">
-                  {DASHBOARD_MODULES.map((id) => (
+                  {MODULE_VISIBILITY_OPTIONS.map(({ id, label }) => (
                     <label
                       key={id}
                       className="inline-flex items-center gap-2 text-xs text-zinc-300 cursor-pointer select-none"
@@ -534,12 +544,13 @@ export default function DashboardPage() {
                         }
                         className="accent-blue-500"
                       />
-                      {id === 'overview' ? 'Market Overview' : id === 'sector' ? 'Sector Performance' : 'Index Card'}
+                      {label}
                     </label>
                   ))}
                 </div>
                 <div className="text-[11px] text-zinc-600 mt-3">
-                  Tip: unlock layout to drag these modules into a new order.
+                  Tip: unlock layout to drag <span className="text-zinc-500">Sector</span> and{' '}
+                  <span className="text-zinc-500">Index</span> in the main column. Market overview is fixed at the top of the right sidebar.
                 </div>
               </div>
             )}
@@ -563,8 +574,10 @@ export default function DashboardPage() {
                     onDrop: (e: React.DragEvent) => {
                       if (layoutLocked) return;
                       e.preventDefault();
-                      const fromIdRaw = draggingModuleIdRef.current || (e.dataTransfer.getData('text/plain') as DashboardModuleId);
+                      const fromIdRaw =
+                        draggingModuleIdRef.current || (e.dataTransfer.getData('text/plain') as MainModuleId);
                       if (!fromIdRaw || fromIdRaw === id) return;
+                      if (fromIdRaw !== 'sector' && fromIdRaw !== 'index') return;
                       moveModule(fromIdRaw, id);
                       draggingModuleIdRef.current = null;
                     },
@@ -573,63 +586,6 @@ export default function DashboardPage() {
               const wrapperClass = id === 'index' ? 'mb-6' : '';
               return (
                 <div key={id} className={wrapperClass} {...dragProps}>
-                  {id === 'overview' && (
-                    <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                        <div>
-                          <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Market overview</h2>
-                          <p className="text-xs text-zinc-500 mt-1">ES, NQ, YM, RTY, DXY, Metals, Total Market, International and Emerging Markets</p>
-                        </div>
-                        <div className="inline-flex rounded-xl border border-zinc-700 bg-zinc-950/30 p-1">
-                          {(['1D', '1W', '1M', '1Y', 'YTD'] as const).map((tf) => (
-                            <button
-                              key={tf}
-                              type="button"
-                              onClick={() => setOverviewTf(tf)}
-                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                                overviewTf === tf
-                                  ? 'bg-blue-600 text-white'
-                                  : 'text-zinc-300 hover:bg-zinc-800/70'
-                              }`}
-                            >
-                              {tf}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {overviewLoading && overviewItems.length === 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                          {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div key={i} className="h-14 rounded-lg bg-zinc-800/50 animate-pulse" />
-                          ))}
-                        </div>
-                      ) : overviewItems.length === 0 ? (
-                        <p className="text-sm text-zinc-500">No market overview data available right now.</p>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                          {overviewItems.map((row) => (
-                            <div key={row.symbol} className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-zinc-200 truncate">{row.symbol}</p>
-                                  <p className="text-[11px] text-zinc-500 truncate">{row.name} · {row.category}</p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-sm text-zinc-300 tabular-nums">{row.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}</p>
-                                  <p className={`text-xs font-semibold tabular-nums ${row.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                    {row.changePercent >= 0 ? '+' : ''}
-                                    {row.changePercent.toFixed(2)}%
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  )}
-
                   {id === 'sector' && (
                     <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 mb-6 shadow-xl">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
@@ -719,7 +675,75 @@ export default function DashboardPage() {
             })}
           </main>
 
-          <aside className="lg:col-span-3">
+          <aside className="lg:col-span-3 flex flex-col gap-5 lg:sticky lg:top-[96px] self-start">
+            {visibleModules.overview && (
+              <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 shadow-xl">
+                <div className="mb-3">
+                  <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Market overview</h2>
+                  <p className="text-xs text-zinc-500 mt-1 leading-snug">
+                    ES, NQ, YM, RTY, DXY, metals, total market, international &amp; emerging markets
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-700 bg-zinc-950/30 p-1 mb-3">
+                  {(['1D', '1W', '1M', '1Y', 'YTD'] as const).map((tf) => (
+                    <button
+                      key={tf}
+                      type="button"
+                      onClick={() => setOverviewTf(tf)}
+                      className={`flex-1 min-w-[2.75rem] px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-colors sm:text-xs ${
+                        overviewTf === tf ? 'bg-blue-600 text-white' : 'text-zinc-300 hover:bg-zinc-800/70'
+                      }`}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+
+                {overviewLoading && overviewItems.length === 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="h-12 rounded-lg bg-zinc-800/50 animate-pulse" />
+                    ))}
+                  </div>
+                ) : overviewItems.length === 0 ? (
+                  <p className="text-sm text-zinc-500">No market overview data available right now.</p>
+                ) : (
+                  <ul className="flex max-h-[min(70vh,520px)] flex-col gap-1.5 overflow-y-auto pr-0.5">
+                    {overviewItems.map((row) => (
+                      <li
+                        key={row.symbol}
+                        className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-zinc-200">{row.symbol}</p>
+                            <p className="text-[10px] text-zinc-500 leading-tight sm:text-[11px]">
+                              {row.name}
+                              <span className="text-zinc-600"> · </span>
+                              {row.category}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-sm text-zinc-300 tabular-nums">
+                              {row.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                            </p>
+                            <p
+                              className={`text-xs font-semibold tabular-nums ${
+                                row.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'
+                              }`}
+                            >
+                              {row.changePercent >= 0 ? '+' : ''}
+                              {row.changePercent.toFixed(2)}%
+                            </p>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
+
             <DashboardSidebar />
           </aside>
         </div>

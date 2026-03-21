@@ -264,7 +264,7 @@ export default function DashboardSidebar() {
   }, [items, query, filter]);
 
   return (
-    <aside className="lg:sticky lg:top-[96px] self-start">
+    <div className="w-full min-w-0">
       <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 shadow-xl">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
@@ -412,7 +412,7 @@ export default function DashboardSidebar() {
           )}
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
 
