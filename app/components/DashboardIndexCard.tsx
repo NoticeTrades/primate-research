@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { useCompare } from '../contexts/CompareContext';
 
 type Trade = {
   id: number;
@@ -68,14 +69,6 @@ type IndexNewsItem = {
   source: string;
 };
 
-type SocialPost = {
-  id: string;
-  text: string;
-  createdAt: string;
-  url: string;
-  account: string;
-};
-
 function getStructureColor(structure: string | null | undefined): string {
   if (!structure) return 'text-zinc-400';
   const s = structure.toLowerCase();
@@ -125,18 +118,14 @@ export default function DashboardIndexCard({
   charts: IndexChart[];
   trades: Trade[];
 }) {
-  const [chartsOpen, setChartsOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(true);
   const [moversLoading, setMoversLoading] = useState(false);
   const [moversError, setMoversError] = useState<string | null>(null);
   const [movers, setMovers] = useState<{ gainers: StockMover[]; losers: StockMover[]; source?: string } | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState<string | null>(null);
   const [newsItems, setNewsItems] = useState<IndexNewsItem[]>([]);
-  const [socialLoading, setSocialLoading] = useState(false);
-  const [socialError, setSocialError] = useState<string | null>(null);
-  const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
-  const [socialSource, setSocialSource] = useState<string>('none');
-  const [socialHasToken, setSocialHasToken] = useState(false);
+  const { openCompare } = useCompare();
 
   const hasCharts = charts.length > 0;
   const hasTrades = trades.length > 0;
@@ -180,36 +169,6 @@ export default function DashboardIndexCard({
 
     loadMovers();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [symbol]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadSocial = async () => {
-      setSocialLoading(true);
-      setSocialError(null);
-      setSocialPosts([]);
-      setSocialSource('none');
-      try {
-        const res = await fetch('/api/social-feed?account=spectatorindex&limit=3', { cache: 'no-store' });
-        if (!res.ok) throw new Error('Failed to load social feed');
-        const json = (await res.json()) as { source?: string; posts?: SocialPost[]; hasToken?: boolean };
-        if (cancelled) return;
-        setSocialSource(typeof json.source === 'string' ? json.source : 'none');
-        setSocialHasToken(Boolean(json.hasToken));
-        setSocialPosts(Array.isArray(json.posts) ? json.posts.slice(0, 3) : []);
-      } catch (e) {
-        if (cancelled) return;
-        const msg = e instanceof Error ? e.message : 'Failed to load social feed';
-        setSocialError(msg);
-      } finally {
-        if (!cancelled) setSocialLoading(false);
-      }
-    };
-
-    loadSocial();
     return () => {
       cancelled = true;
     };
@@ -276,6 +235,24 @@ export default function DashboardIndexCard({
                   </span>
                 )}
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openCompare}
+                className="rounded-lg border border-blue-500/35 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-200 transition-colors hover:bg-blue-500/20"
+                title="Open index compare panel"
+              >
+                Compare
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartsOpen((v) => !v)}
+                className="rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition-colors hover:bg-zinc-800/70"
+                aria-expanded={chartsOpen}
+              >
+                {chartsOpen ? 'Hide charts' : 'Show charts'}
+              </button>
             </div>
           </header>
 
@@ -629,66 +606,28 @@ export default function DashboardIndexCard({
             )}
           </div>
 
-          <div className="mb-4 bg-zinc-950/30 border border-zinc-800 rounded-2xl p-4">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Latest X posts</h4>
-              <span className="text-xs text-zinc-500">Source: {socialSource}</span>
-            </div>
-            {socialLoading ? (
-              <div className="space-y-2">
-                {[1, 2].map((i) => (
-                  <div key={i} className="h-8 bg-zinc-800/50 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : socialError ? (
-              <p className="text-sm text-red-400">{socialError}</p>
-            ) : socialPosts.length === 0 ? (
-              <p className="text-sm text-zinc-500">
-                {socialHasToken ? 'No recent posts available.' : 'No X posts (set `X_BEARER_TOKEN` to enable the X API feed).'}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {socialPosts.map((p) => (
-                  <a
-                    key={p.id}
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 hover:border-zinc-700 transition-colors"
-                  >
-                    <p className="text-sm text-zinc-200 line-clamp-3">{p.text}</p>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      @{p.account}
-                      {p.createdAt ? ` • ${new Date(p.createdAt).toLocaleString()}` : ''}
-                    </p>
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div>
-            <div className="bg-zinc-950/30 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="bg-gradient-to-br from-blue-950/35 via-zinc-950/60 to-zinc-900/70 border border-blue-700/35 rounded-2xl overflow-hidden shadow-lg shadow-blue-950/20">
               <button
                 type="button"
                 onClick={() => setChartsOpen((v) => !v)}
-                className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-zinc-800/30 transition-colors"
+                className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-blue-900/20 transition-colors"
                 aria-expanded={chartsOpen}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-zinc-400">
+                  <span className="text-blue-300">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </span>
                   <div>
                     <h4 className="text-sm font-semibold text-zinc-50">Trading day charts</h4>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-blue-200/70">
                       {hasCharts ? `${charts.length} chart${charts.length !== 1 ? 's' : ''} available` : 'No charts for this index yet'}
                     </p>
                   </div>
                 </div>
-                <span className="text-zinc-500 transition-transform" style={{ transform: chartsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                <span className="text-blue-200/80 transition-transform" style={{ transform: chartsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>

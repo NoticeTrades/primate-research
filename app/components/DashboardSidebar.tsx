@@ -84,29 +84,6 @@ export default function DashboardSidebar() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SidebarFilter>('all');
   const [dbVideos, setDbVideos] = useState<VideoEntry[]>([]);
-  const [xLoading, setXLoading] = useState(false);
-  const [xError, setXError] = useState<string | null>(null);
-  const [xSource, setXSource] = useState<string>('none');
-  const [xHasToken, setXHasToken] = useState(false);
-  const [xPosts, setXPosts] = useState<Array<{ id: string; text: string; createdAt: string; url: string; account: string }>>([]);
-
-  useEffect(() => {
-    // Always try to load X widgets.js so the timeline embed can render even
-    // when our server-side RSS/Twitter API fetch is blocked.
-    const existing = document.getElementById('twitter-widgets-js');
-    if (existing) return;
-    const s = document.createElement('script');
-    s.id = 'twitter-widgets-js';
-    s.src = 'https://platform.twitter.com/widgets.js';
-    s.async = true;
-    s.onload = () => {
-      // Ensure the timeline embed renders after widgets.js loads.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const w = window as any;
-      if (w?.twttr?.widgets?.load) w.twttr.widgets.load();
-    };
-    document.body.appendChild(s);
-  }, []);
 
   useEffect(() => {
     const loadDbVideos = async () => {
@@ -164,46 +141,6 @@ export default function DashboardSidebar() {
     loadDbVideos();
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadX = async () => {
-      setXLoading(true);
-      setXError(null);
-      setXSource('none');
-      setXPosts([]);
-      try {
-        const res = await fetch('/api/social-feed?account=spectatorindex&limit=1', { cache: 'no-store' });
-        if (!res.ok) throw new Error('Failed to load X feed');
-        const json = (await res.json()) as { source?: string; posts?: Array<any>; hasToken?: boolean };
-        if (cancelled) return;
-        setXSource(typeof json.source === 'string' ? json.source : 'none');
-        setXHasToken(Boolean(json.hasToken));
-        const posts = Array.isArray(json.posts) ? json.posts : [];
-        const mapped = posts
-          .map((p) => {
-            if (!p || typeof p !== 'object') return null;
-            return {
-              id: String((p as any).id || ''),
-              text: String((p as any).text || ''),
-              createdAt: String((p as any).createdAt || ''),
-              url: String((p as any).url || ''),
-              account: String((p as any).account || 'spectatorindex'),
-            };
-          })
-          .filter((p): p is NonNullable<typeof p> => !!p && !!p.id && !!p.text);
-        setXPosts(mapped);
-      } catch (e) {
-        if (cancelled) return;
-        setXError(e instanceof Error ? e.message : 'Failed to load X feed');
-      } finally {
-        if (!cancelled) setXLoading(false);
-      }
-    };
-    loadX();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const items = useMemo<SidebarItem[]>(() => {
     const researchItems: SidebarItem[] = researchArticles.map((a) => {
@@ -366,51 +303,6 @@ export default function DashboardSidebar() {
           )}
         </div>
 
-        <div className="mt-4 border-t border-zinc-800 pt-3">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <h3 className="text-sm font-semibold text-zinc-200">Latest X post</h3>
-            <span className="text-[11px] text-zinc-500">{xSource}</span>
-          </div>
-
-          {xLoading ? (
-            <div className="space-y-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-8 bg-zinc-800/50 rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : xError ? (
-            <p className="text-sm text-red-400">{xError}</p>
-          ) : xPosts.length === 0 ? (
-            <div>
-              <p className="text-sm text-zinc-500 mb-3">
-                {xHasToken ? 'No recent X posts found right now.' : 'Server feed blocked; showing X timeline embed.'}
-              </p>
-              <a
-                className="twitter-timeline"
-                data-height="260"
-                data-theme="dark"
-                data-tweet-limit="1"
-                href="https://x.com/spectatorindex"
-              >
-                Tweets by spectatorindex
-              </a>
-            </div>
-          ) : (
-            <a
-              href={xPosts[0].url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block rounded-xl border border-zinc-800 bg-zinc-950/30 hover:border-zinc-700 transition-colors p-3"
-              aria-label="Open latest X post"
-            >
-              <p className="text-sm text-zinc-200 line-clamp-3">{xPosts[0].text}</p>
-              <p className="text-xs text-zinc-500 mt-2">
-                @{xPosts[0].account}
-                {xPosts[0].createdAt ? ` • ${new Date(xPosts[0].createdAt).toLocaleString()}` : ''}
-              </p>
-            </a>
-          )}
-        </div>
       </div>
     </div>
   );
