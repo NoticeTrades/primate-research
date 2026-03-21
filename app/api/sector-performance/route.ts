@@ -150,12 +150,29 @@ async function fetchYahooChartTimeframeChangePercents(
 
   if (points.length < 2) return null;
 
+  // Yahoo often pads weekends/holidays with the prior session's close as extra daily bars.
+  // Comparing last vs second-to-last then yields 0% on Sat/Sun. Use last vs most recent
+  // earlier day with a different close so 1D reflects the last real session move.
+  const computeOneDayPercent = (pts: Array<{ tsMs: number; close: number }>): number | null => {
+    if (pts.length < 2) return null;
+    const last = pts[pts.length - 1];
+    if (!(last.close > 0)) return null;
+    for (let i = pts.length - 2; i >= 0; i -= 1) {
+      const prev = pts[i];
+      if (!(prev.close > 0)) continue;
+      const relDiff = Math.abs(last.close - prev.close) / prev.close;
+      if (relDiff > 1e-9) {
+        return ((last.close - prev.close) / prev.close) * 100;
+      }
+    }
+    return 0;
+  };
+
   const nowMs = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
 
   const lastClose = points[points.length - 1].close;
-  const prevClose = points[points.length - 2].close;
-  if (!(lastClose > 0) || !(prevClose > 0)) return null;
+  if (!(lastClose > 0)) return null;
 
   const findBaselineClose = (targetMs: number): number => {
     for (let i = points.length - 1; i >= 0; i -= 1) {
@@ -176,8 +193,10 @@ async function fetchYahooChartTimeframeChangePercents(
     return ((lastClose - base) / base) * 100;
   };
 
+  const oneD = computeOneDayPercent(points);
+
   return {
-    '1D': ((lastClose - prevClose) / prevClose) * 100,
+    '1D': oneD ?? 0,
     '1W': calc(oneWBase),
     '1M': calc(oneMBase),
     '3M': calc(threeMBase),
