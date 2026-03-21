@@ -1640,19 +1640,6 @@ export default function Navigation() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <a
-                  href="https://x.com/primatetrading"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-2 inline-flex items-center p-1.5 rounded-lg hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 transition-colors group align-middle"
-                  aria-label="Follow Primate Trading on X"
-                  title="Follow us on X"
-                >
-                  <svg className="w-4 h-4 text-zinc-400 group-hover:text-[#1DA1F2] transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                </a>
-
                 {showToolsDropdown && (
                   <div className="absolute top-full left-0 pt-2 w-56 z-50">
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
@@ -1710,6 +1697,18 @@ export default function Navigation() {
                   </div>
                 )}
               </div>
+              <a
+                href="https://x.com/primatetrading"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 inline-flex items-center p-1.5 rounded-lg hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 transition-colors group align-middle"
+                aria-label="Follow Primate Trading on X"
+                title="Follow us on X"
+              >
+                <svg className="w-4 h-4 text-zinc-400 group-hover:text-[#1DA1F2] transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
             </div>
           </div>
         </div>
