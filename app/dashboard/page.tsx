@@ -678,7 +678,7 @@ export default function DashboardPage() {
             })}
           </main>
 
-          <aside className="lg:col-span-3 flex flex-col gap-5 lg:sticky lg:top-[96px] self-start">
+          <aside className="lg:col-span-3 flex flex-col gap-5">
             {visibleModules.overview && (
               <section className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 shadow-xl">
                 <div className="mb-3">
