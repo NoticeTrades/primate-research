@@ -14,6 +14,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
+  {
+    href: '/dashboard/getting-started',
+    label: 'Getting Started',
+    description: 'Guide: tools, markets & indices',
+  },
   { href: '/dashboard', label: 'Dashboard', description: 'Indices, sectors & live trades' },
   { href: '/dashboard/inflation', label: 'Inflation (CPI)', description: 'CPI history & YoY trend' },
   {

@@ -45,6 +45,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     {
+      url: `${baseUrl}/dashboard/getting-started`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
+      priority: 0.84,
+    },
+    {
       url: `${baseUrl}/dashboard/inflation`,
       lastModified: currentDate,
       changeFrequency: 'daily',
@@ -52,6 +58,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${baseUrl}/dashboard/fed-policy`,
+      lastModified: currentDate,
+      changeFrequency: 'daily',
+      priority: 0.82,
+    },
+    {
+      url: `${baseUrl}/dashboard/unemployment`,
       lastModified: currentDate,
       changeFrequency: 'daily',
       priority: 0.82,
