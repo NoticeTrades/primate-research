@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { VALUATION_INDICES } from '../../../data/valuation-indices';
-import { fetchYahooEtfValuationSnapshot } from '../../../lib/yahoo-valuation';
+import { fetchFreeEtfValuationSnapshot } from '../../../lib/free-valuation-snapshot';
 import {
   computePeriodChanges,
   explainFmpResponseError,
@@ -140,8 +140,10 @@ async function buildIndicesFromFmp(apiKey: string): Promise<{
 
 async function buildIndicesFromYahoo(): Promise<IndexBlock[]> {
   const out: IndexBlock[] = [];
-  for (const meta of VALUATION_INDICES) {
-    const ttm = await fetchYahooEtfValuationSnapshot(meta.symbol);
+  for (let i = 0; i < VALUATION_INDICES.length; i++) {
+    const meta = VALUATION_INDICES[i];
+    if (i > 0) await new Promise((r) => setTimeout(r, 200));
+    const ttm = await fetchFreeEtfValuationSnapshot(meta.symbol);
     const history: MetricPoint[] = [];
     const latest = mergeLatestQuarterlyWithTtm(history, ttm);
     const periods = computePeriodChanges(history, latest);
@@ -153,7 +155,9 @@ async function buildIndicesFromYahoo(): Promise<IndexBlock[]> {
       ttm,
       history,
       periods,
-      fmpError: ttm ? null : 'Could not load metrics from Yahoo Finance for this symbol.',
+      fmpError: ttm
+        ? null
+        : 'Could not load metrics (Yahoo Finance may block server requests; add ALPHA_VANTAGE_API_KEY in Vercel as a free backup).',
     });
   }
   return out;
@@ -198,14 +202,14 @@ export async function GET() {
       updatedAt,
       dataSource: 'yahoo_finance' as const,
       granularityNote:
-        'Live ratios from Yahoo Finance (no API key required for this mode). Historical P/E series and “how multiples changed” tables need quarterly fundamentals — add a paid FMP plan later if you want those here.',
+        'Live ratios: Yahoo Finance when reachable, else Alpha Vantage OVERVIEW if ALPHA_VANTAGE_API_KEY is set (recommended on Vercel — Yahoo often blocks servers). Historical P/E tables need a paid FMP plan.',
       fmpPaymentRequired: false,
       fmpBillingHint: null,
       yahooFallback: true,
       yahooNote:
         fmp.fmpPaymentRequired || !fmp.anyData
-          ? 'FMP Key Metrics are not available on your current FMP tier (or returned no data). Showing free Yahoo Finance ETF snapshots instead. You can upgrade FMP later for quarterly history and period change tables.'
-          : 'Using Yahoo Finance for ETF valuation snapshots.',
+          ? 'FMP Key Metrics are not available on your current FMP tier (or returned no data). Using free Yahoo Finance and/or Alpha Vantage (set ALPHA_VANTAGE_API_KEY in Vercel if Yahoo blocks this host). Upgrade FMP later for quarterly history and period tables.'
+          : 'Using free Yahoo / Alpha Vantage for ETF valuation snapshots.',
       hasHistoricalMultiples,
       indices: yahooIndices,
       anyData,
@@ -223,12 +227,12 @@ export async function GET() {
     updatedAt,
     dataSource: 'yahoo_finance' as const,
     granularityNote:
-      'Live ratios from Yahoo Finance (unofficial feed, delayed). Optional: set FMP_API_KEY later for quarterly P/E history and period change matrices from Financial Modeling Prep.',
+      'Live ratios from Yahoo Finance and/or Alpha Vantage (add free ALPHA_VANTAGE_API_KEY if Yahoo blocks servers). Optional FMP_API_KEY for quarterly P/E history and period tables.',
     fmpPaymentRequired: false,
     fmpBillingHint: null,
     yahooFallback: true,
     yahooNote:
-      'No FMP_API_KEY set — using free Yahoo Finance ETF metrics. Add FMP in Vercel anytime for historical multiples tables.',
+      'No FMP_API_KEY — using free Yahoo Finance + optional Alpha Vantage (ALPHA_VANTAGE_API_KEY) for ETF metrics. Add FMP later for historical multiples tables.',
     hasHistoricalMultiples,
     indices: yahooIndices,
     anyData,
