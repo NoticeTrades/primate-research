@@ -1,47 +1,47 @@
 /**
  * FOMC Summary of Economic Projections (SEP) — federal funds rate “dot plot” style data.
  *
- * Update after each SEP release from the Federal Reserve Board:
- * https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+ * Source: Federal Reserve Board, Table 1 & Figure 2, March 18, 2026 release:
+ * https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260318.htm
  *
- * Values below are illustrative — replace min/max/median with the official SEP table from the Fed’s PDF.
+ * Median and **range** (min–max of all participants’ midpoint projections) are from that table.
+ * Dots between min and median and median and max are evenly spaced for visualization (not individual submissions).
  */
 
-export type SepHorizonKey = '2026' | '2027' | '2028' | '2029' | 'longer';
+export type SepHorizonKey = '2026' | '2027' | '2028' | 'longer';
 
 export type SepHorizon = {
   key: SepHorizonKey;
   label: string;
   xIndex: number;
+  /** Low of published range (%) */
   minPct: number;
+  /** High of published range (%) */
   maxPct: number;
+  /** Median projection (%) */
   medianPct: number;
 };
 
 export const SEP_PARTICIPANT_COUNT = 19;
 
-/**
- * Illustrative SEP-style snapshot — update dates + numbers when the Fed publishes a new SEP.
- * Meeting date aligned with a typical December FOMC round (projection materials released with statement).
- */
 export const FED_SEP_META = {
-  meetingLabel: 'FOMC Summary of Economic Projections (illustrative)',
-  asOfDate: '2025-12-17',
-  sourceUrl: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm',
+  meetingLabel: 'FOMC Summary of Economic Projections, March 18, 2026',
+  asOfDate: '2026-03-18',
+  sourceUrl: 'https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260318.htm',
   disclaimer:
-    'Dot positions are modeled from median and central tendency for visualization only. ' +
-    'Replace values in data/fed-sep-dots.ts using the latest Federal Reserve SEP release. Not investment advice.',
+    'Medians and ranges match the Federal Reserve’s March 18, 2026 projection table. Dot positions between range ' +
+    'endpoints and the median are interpolated for display. Not investment advice.',
 } as const;
 
 /**
- * Year-end projections forward from the SEP “cutoff” — illustrative ranges (%, midpoint of target range).
+ * Federal funds rate projections — midpoint of target range, year-end (Table 1, March 2026).
+ * Range = full participant range; central tendency in the Fed table is slightly narrower.
  */
 export const FED_SEP_HORIZONS: SepHorizon[] = [
-  { key: '2026', label: '2026', xIndex: 0, minPct: 3.1, maxPct: 4.1, medianPct: 3.5 },
-  { key: '2027', label: '2027', xIndex: 1, minPct: 2.9, maxPct: 3.9, medianPct: 3.25 },
-  { key: '2028', label: '2028', xIndex: 2, minPct: 2.7, maxPct: 3.7, medianPct: 3.1 },
-  { key: '2029', label: '2029', xIndex: 3, minPct: 2.6, maxPct: 3.6, medianPct: 3.0 },
-  { key: 'longer', label: 'Longer run', xIndex: 4, minPct: 2.5, maxPct: 3.5, medianPct: 2.9 },
+  { key: '2026', label: '2026', xIndex: 0, minPct: 2.6, maxPct: 3.6, medianPct: 3.4 },
+  { key: '2027', label: '2027', xIndex: 1, minPct: 2.4, maxPct: 3.9, medianPct: 3.1 },
+  { key: '2028', label: '2028', xIndex: 2, minPct: 2.6, maxPct: 3.9, medianPct: 3.1 },
+  { key: 'longer', label: 'Longer run', xIndex: 3, minPct: 2.6, maxPct: 3.9, medianPct: 3.1 },
 ];
 
 function linspace(a: number, b: number, count: number): number[] {

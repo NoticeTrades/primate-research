@@ -143,7 +143,7 @@ function mergeSeriesByDate(
 }
 
 /** Per-column dot colors (lighter → deeper across the horizon) */
-const DOT_HORIZON_FILLS = ['#67e8f9', '#22d3ee', '#06b6d4', '#0891b2', '#164e63'];
+const DOT_HORIZON_FILLS = ['#67e8f9', '#22d3ee', '#06b6d4', '#164e63'];
 
 function SepDotShape(props: {
   cx?: number;
@@ -152,7 +152,7 @@ function SepDotShape(props: {
 }) {
   const { cx, cy, payload } = props;
   if (cx == null || cy == null) return null;
-  const idx = Math.min(4, Math.max(0, payload?.xIndex ?? 0));
+  const idx = Math.min(3, Math.max(0, payload?.xIndex ?? 0));
   const fill = DOT_HORIZON_FILLS[idx] ?? '#22d3ee';
   return (
     <circle
@@ -391,8 +391,8 @@ export default function FedPolicyPage() {
                     <XAxis
                       type="number"
                       dataKey="x"
-                      domain={[-0.32, 4.32]}
-                      ticks={[0, 1, 2, 3, 4]}
+                      domain={[-0.35, 3.35]}
+                      ticks={[0, 1, 2, 3]}
                       tickFormatter={(v) => {
                         const i = Math.round(Number(v));
                         return data.sep.horizons[i]?.label ?? '';
