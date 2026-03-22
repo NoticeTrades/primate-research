@@ -12,10 +12,14 @@ import {
   DashboardMenuTrigger,
   DashboardNavPanel,
   useDashboardChromeTop,
+  DASHBOARD_NAV_OFFSET_PX,
 } from './DashboardNavDrawer';
 
 /** Space between the scrolling ticker and the main dashboard content */
 const MAIN_CONTENT_GAP_PX = 20;
+
+/** Hamburger sits below the ticker strip (not tied to drawer top under nav) */
+const MENU_BUTTON_EXTRA_OFFSET_PX = 14;
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const chromeRef = useRef<HTMLDivElement>(null);
@@ -30,8 +34,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <ScrollFade />
       <Navigation />
 
-      {/* Drawer aligns to ticker bottom (no gap) so the panel meets the strip cleanly; content keeps MAIN_CONTENT_GAP_PX below ticker */}
-      <DashboardMenuProvider contentTopPx={tickerBottomPx}>
+      {/* Drawer + overlay start under the main nav (72px) so the sidebar aligns with the header; menu button is lower, under the ticker */}
+      <DashboardMenuProvider
+        drawerTopPx={DASHBOARD_NAV_OFFSET_PX}
+        menuButtonTopPx={tickerBottomPx + MENU_BUTTON_EXTRA_OFFSET_PX}
+      >
         <div ref={chromeRef} className="fixed top-[72px] left-0 right-0 z-40">
           <MarketTicker embedded />
         </div>

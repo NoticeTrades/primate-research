@@ -18,10 +18,16 @@ const NAV_ITEMS = [
   { href: '/dashboard/inflation', label: 'Inflation (CPI)', description: 'CPI history & YoY trend' },
 ] as const;
 
+/** Must match `Navigation` height and `DashboardShell` ticker `top-[72px]`. */
+export const DASHBOARD_NAV_OFFSET_PX = 72;
+
 type DashboardMenuContextValue = {
   open: boolean;
   setOpen: (open: boolean) => void;
-  contentTopPx: number;
+  /** Top of drawer + overlay — flush under main nav so the panel reads with the header */
+  drawerTopPx: number;
+  /** Top of hamburger button — below ticker + small gap (not tied to drawer top) */
+  menuButtonTopPx: number;
 };
 
 const DashboardMenuContext = createContext<DashboardMenuContextValue | null>(null);
@@ -36,10 +42,12 @@ export function useDashboardMenu() {
 
 export function DashboardMenuProvider({
   children,
-  contentTopPx,
+  drawerTopPx,
+  menuButtonTopPx,
 }: {
   children: React.ReactNode;
-  contentTopPx: number;
+  drawerTopPx: number;
+  menuButtonTopPx: number;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -58,8 +66,8 @@ export function DashboardMenuProvider({
   }, [open]);
 
   const value = useMemo(
-    () => ({ open, setOpen, contentTopPx }),
-    [open, contentTopPx]
+    () => ({ open, setOpen, drawerTopPx, menuButtonTopPx }),
+    [open, drawerTopPx, menuButtonTopPx]
   );
 
   return <DashboardMenuContext.Provider value={value}>{children}</DashboardMenuContext.Provider>;
@@ -67,12 +75,12 @@ export function DashboardMenuProvider({
 
 /**
  * Fixed left rail — tall vertical control so it reads clearly as a menu (same spot on all dashboard routes).
- * `contentTopPx` is the Y position flush under the ticker chrome (drawer + overlay + trigger align here).
+ * Position uses `menuButtonTopPx` (below ticker), not the drawer top.
  */
 export function DashboardMenuTrigger() {
-  const { open, setOpen, contentTopPx } = useDashboardMenu();
+  const { open, setOpen, menuButtonTopPx } = useDashboardMenu();
 
-  const topStyle = useMemo(() => ({ top: `${contentTopPx}px` }), [contentTopPx]);
+  const topStyle = useMemo(() => ({ top: `${menuButtonTopPx}px` }), [menuButtonTopPx]);
 
   return (
     <button
@@ -95,9 +103,9 @@ export function DashboardMenuTrigger() {
 
 export function DashboardNavPanel() {
   const pathname = usePathname();
-  const { open, setOpen, contentTopPx } = useDashboardMenu();
+  const { open, setOpen, drawerTopPx } = useDashboardMenu();
 
-  const topStyle = useMemo(() => ({ top: `${contentTopPx}px` }), [contentTopPx]);
+  const topStyle = useMemo(() => ({ top: `${drawerTopPx}px` }), [drawerTopPx]);
 
   return (
     <>
