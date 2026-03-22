@@ -9,12 +9,17 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+/** Curves, policy anchors, and inflation compensation — traders often layer these for context */
 const FRED_MARKET_SERIES = [
   { id: 'FEDFUNDS', label: 'Effective federal funds', unit: '%' },
+  { id: 'SOFR', label: 'SOFR (overnight)', unit: '%' },
+  { id: 'DGS3MO', label: '3M Treasury (bill / short end)', unit: '%' },
   { id: 'DGS2', label: '2Y Treasury (constant maturity)', unit: '%' },
   { id: 'DGS10', label: '10Y Treasury (constant maturity)', unit: '%' },
-  { id: 'T10Y2Y', label: '10Y − 2Y Treasury spread', unit: 'pp' },
-  { id: 'SOFR', label: 'SOFR', unit: '%' },
+  { id: 'DGS30', label: '30Y Treasury (constant maturity)', unit: '%' },
+  { id: 'T10Y2Y', label: '10Y − 2Y spread (curve shape)', unit: 'pp' },
+  { id: 'T5YIE', label: '5Y breakeven inflation (TIPS-implied)', unit: '%' },
+  { id: 'DFII10', label: '10Y TIPS real yield', unit: '%' },
 ] as const;
 
 function cutoffDate(years: number): string {

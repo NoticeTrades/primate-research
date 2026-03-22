@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  FED_GENERAL_DISCLAIMER,
+  FED_POLICY_INTRO,
+  FED_POLICY_SECTIONS,
+} from '../../../data/fed-policy-guide';
+import {
   CartesianGrid,
   ComposedChart,
   Legend,
@@ -23,6 +28,8 @@ type Prefs = {
   showStats: boolean;
   showMedianLine: boolean;
   showSepDisclaimer: boolean;
+  /** Macro “how to read this” panel */
+  showMacroGuide: boolean;
   /** Which FRED series IDs to plot together */
   seriesIds: string[];
 };
@@ -34,15 +41,20 @@ const DEFAULT_PREFS: Prefs = {
   showStats: true,
   showMedianLine: true,
   showSepDisclaimer: true,
+  showMacroGuide: true,
   seriesIds: ['FEDFUNDS', 'DGS2', 'DGS10', 'T10Y2Y'],
 };
 
 const SERIES_COLORS: Record<string, string> = {
   FEDFUNDS: '#34d399',
+  SOFR: '#f472b6',
+  DGS3MO: '#2dd4bf',
   DGS2: '#60a5fa',
   DGS10: '#a78bfa',
+  DGS30: '#c084fc',
   T10Y2Y: '#fbbf24',
-  SOFR: '#f472b6',
+  T5YIE: '#f97316',
+  DFII10: '#a3e635',
 };
 
 type FedPayload = {
@@ -84,6 +96,7 @@ function loadPrefs(): Prefs {
       ...DEFAULT_PREFS,
       ...p,
       seriesIds: Array.isArray(p.seriesIds) && p.seriesIds.length ? p.seriesIds : DEFAULT_PREFS.seriesIds,
+      showMacroGuide: typeof p.showMacroGuide === 'boolean' ? p.showMacroGuide : DEFAULT_PREFS.showMacroGuide,
     };
   } catch {
     return DEFAULT_PREFS;
@@ -173,21 +186,46 @@ export default function FedPolicyPage() {
     }));
   }, [data]);
 
-  const anyFredApi = useMemo(() => {
-    if (!data) return false;
-    return Object.values(data.series).some((s) => s.usedFredApi);
-  }, [data]);
-
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wider text-blue-400/90">Dashboard</p>
         <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Rates & Fed Policy</h1>
-        <p className="text-sm text-zinc-400 max-w-3xl leading-relaxed">
-          FOMC-style federal funds projections, Treasury curve context, and overnight rates — tune what you see and the
-          lookback window. Market data from FRED (set your free API key for best reliability).
+        <p className="text-sm text-zinc-400 max-w-3xl leading-relaxed">{FED_POLICY_INTRO}</p>
+        <p className="text-xs text-zinc-500 max-w-3xl leading-relaxed pt-1">
+          Economic data from the Federal Reserve Bank of St. Louis (FRED). Adjust panels and series below; preferences
+          save in this browser.
         </p>
       </header>
+
+      {/* Macro guide — why this matters for markets */}
+      {prefs.showMacroGuide && (
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 md:p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-zinc-200 uppercase tracking-wider">How to use this for markets</h2>
+          <p className="text-xs text-zinc-500 leading-relaxed">{FED_GENERAL_DISCLAIMER}</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {FED_POLICY_SECTIONS.map((sec) => (
+              <details
+                key={sec.title}
+                className="group rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-4 py-3 open:border-zinc-700"
+              >
+                <summary className="cursor-pointer text-sm font-medium text-zinc-200 list-none flex items-center justify-between gap-2">
+                  {sec.title}
+                  <span className="text-zinc-500 text-xs group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="text-xs text-zinc-400 mt-3 leading-relaxed">{sec.body}</p>
+                {sec.bullets && sec.bullets.length > 0 && (
+                  <ul className="mt-2 space-y-1.5 text-[11px] text-zinc-500 list-disc pl-4">
+                    {sec.bullets.map((b) => (
+                      <li key={b}>{b}</li>
+                    ))}
+                  </ul>
+                )}
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Controls */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 md:p-5 space-y-4">
@@ -210,6 +248,7 @@ export default function FedPolicyPage() {
         <div className="flex flex-wrap gap-4">
           {(
             [
+              ['showMacroGuide', 'Macro guide'],
               ['showDotPlot', 'SEP dot plot'],
               ['showMedianLine', 'Median path'],
               ['showMarketChart', 'Market rates chart'],
@@ -348,7 +387,8 @@ export default function FedPolicyPage() {
             <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 md:p-6">
               <h2 className="text-lg font-semibold text-white mb-1">Market rates & curve</h2>
               <p className="text-xs text-zinc-500 mb-4">
-                Effective fed funds, Treasury yields, SOFR, and the 10Y−2Y spread — {data.meta.years}y lookback.
+                Policy anchors, nominal curve (3M–30Y), curve shape (10Y−2Y), inflation breakevens, and TIPS real yields —
+                pick any combination above. {data.meta.years}-year lookback.
               </p>
               <div className="h-[360px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -386,8 +426,8 @@ export default function FedPolicyPage() {
 
           {/* Stats */}
           {prefs.showStats && (
-            <section className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-3">
-              {['FEDFUNDS', 'SOFR', 'DGS2', 'DGS10', 'T10Y2Y'].map((id) => {
+            <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {data.seriesCatalog.map(({ id }) => {
                 const s = data.series[id];
                 const last = s?.observations?.[s.observations.length - 1];
                 return (
@@ -406,17 +446,6 @@ export default function FedPolicyPage() {
               })}
             </section>
           )}
-
-          <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-500">
-            <span>
-              FRED:{' '}
-              {anyFredApi ? (
-                <span className="text-emerald-400/90">API</span>
-              ) : (
-                <span className="text-amber-400/90">CSV fallback — add FRED_API_KEY</span>
-              )}
-            </span>
-          </div>
         </>
       )}
     </div>

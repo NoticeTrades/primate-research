@@ -279,8 +279,8 @@ export default function InflationPage() {
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 tracking-tight">Inflation (CPI)</h1>
         <p className="text-zinc-400 text-sm mt-2 max-w-2xl">
-          U.S. CPI from FRED (official API if <code className="text-zinc-500">FRED_API_KEY</code> is set, otherwise the same
-          series via public CSV). Pick headline vs core and your own date range — preferences save in this browser.
+          U.S. consumer price data from the Federal Reserve Bank of St. Louis (FRED). Pick headline vs core and your date
+          range — preferences save in this browser.
         </p>
         {data?.source && (
           <p className="text-xs text-zinc-600 mt-2">
@@ -297,9 +297,7 @@ export default function InflationPage() {
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 sm:p-6 shadow-xl">
         <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-1">Series & date range</h2>
         <p className="text-xs text-zinc-500 mb-4 max-w-3xl">
-          Trend, tables, and charts below reflect your selection. Add{' '}
-          <code className="text-zinc-400">FRED_API_KEY</code> to <code className="text-zinc-400">.env</code> for the
-          official API (free from St. Louis Fed); without it, data still loads from the same FRED CSV export.
+          Trend, tables, and charts below reflect your selection.
         </p>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
           <label className="block flex-1 min-w-[200px]">
@@ -383,14 +381,7 @@ export default function InflationPage() {
         )}
         {!loading && data?.meta && (
           <p className="text-[11px] text-zinc-600 mt-4 border-t border-zinc-800 pt-3">
-            <span className="text-zinc-500">Feed:</span>{' '}
-            {data.meta.usedFredApi ? (
-              <span className="text-emerald-400/90">FRED API</span>
-            ) : (
-              <span className="text-amber-400/90">FRED CSV (add API key for JSON)</span>
-            )}
-            {' · '}
-            <span className="text-zinc-500">{data.meta.observationCount} monthly points</span>
+            <span className="text-zinc-500">FRED ·</span> {data.meta.observationCount} monthly points
             {' · '}
             {data.meta.from || data.meta.to ? (
               <span>
