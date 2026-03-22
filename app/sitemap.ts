@@ -44,6 +44,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 0.85,
     },
+    {
+      url: `${baseUrl}/dashboard/inflation`,
+      lastModified: currentDate,
+      changeFrequency: 'daily',
+      priority: 0.82,
+    },
+    {
+      url: `${baseUrl}/dashboard/fed-policy`,
+      lastModified: currentDate,
+      changeFrequency: 'daily',
+      priority: 0.82,
+    },
   ];
 
   // Research articles

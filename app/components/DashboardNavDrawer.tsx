@@ -16,6 +16,11 @@ import { usePathname } from 'next/navigation';
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', description: 'Indices, sectors & live trades' },
   { href: '/dashboard/inflation', label: 'Inflation (CPI)', description: 'CPI history & YoY trend' },
+  {
+    href: '/dashboard/fed-policy',
+    label: 'Rates & Fed Policy',
+    description: 'Dot plot, yields & curve tools',
+  },
 ] as const;
 
 /** Must match `Navigation` height and `DashboardShell` ticker `top-[72px]`. */
