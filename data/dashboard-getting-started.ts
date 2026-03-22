@@ -91,12 +91,29 @@ export const DASHBOARD_GUIDE_SECTIONS: GuideSection[] = [
       'Weak jobs data can hit cyclicals and small caps first; defensives and quality may outperform on growth scares.',
     ],
   },
+  {
+    id: 'valuation',
+    title: 'Valuation',
+    href: '/dashboard/valuation',
+    shortLabel: 'Valuation',
+    whatItIs:
+      'Index ETF proxies (SPY, QQQ, DIA, IWM) with trailing multiples from Financial Modeling Prep when configured: P/E, P/B, earnings yield, dividend yield, P/S, PEG, EV/EBITDA — plus how those multiples changed over 1M–YTD (quarterly reporting granularity).',
+    howToUse: [
+      'Compare P/E and P/B across large-cap (SPY), growth/tech-heavy (QQQ), Dow (DIA), and small caps (IWM) to see where the market is paying up for earnings.',
+      'Read period % changes as expansion vs compression of multiples — often as important as price direction when earnings are volatile.',
+      'Pair with Rates & Fed Policy: higher real yields typically pressure duration and high-multiple baskets unless growth accelerates.',
+    ],
+    indicesAndMarkets: [
+      'Index futures (ES/NQ/YM/RTY) react to macro and positioning; underlying cash multiples explain part of “how much is priced in” for future earnings.',
+      'QQQ-style multiples are usually above SPY; IWM can cheapen in credit stress even when NQ leads — watch dispersion, not just the headline index.',
+    ],
+  },
 ];
 
 export const DASHBOARD_GUIDE_PUTTING_IT_TOGETHER = {
   title: 'Using everything together',
   paragraphs: [
-    'Start with the main dashboard for price and sector context, then open the macro page that matches the catalyst (CPI week → inflation; FOMC → Fed policy; NFP week → unemployment).',
+    'Start with the main dashboard for price and sector context, then open the macro page that matches the catalyst (CPI week → inflation; FOMC → Fed policy; NFP week → unemployment). Use Valuation when you care whether multiples are expanding or compressing vs rates and earnings — especially around earnings season.',
     'Ask: “What would surprise markets?” — then check whether indices have already priced that path (extension, VIX term structure, breadth on your dashboard).',
     'Correlations break: a soft CPI can still sell off if the Fed sounds hawkish, or if tech earnings disappoint. Macro is context, not a single trigger.',
   ],
@@ -105,5 +122,6 @@ export const DASHBOARD_GUIDE_PUTTING_IT_TOGETHER = {
     'CPI: headline/core trend vs your inflation view?',
     'Fed page: median path vs curve — too many cuts priced?',
     'Jobs: slack building or labor still tight?',
+    'Valuation: multiples expanding or compressing vs your rates/earnings view?',
   ],
 } as const;

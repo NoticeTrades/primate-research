@@ -31,6 +31,11 @@ const NAV_ITEMS = [
     label: 'Unemployment',
     description: 'U-3 / U-6, claims & projections',
   },
+  {
+    href: '/dashboard/valuation',
+    label: 'Valuation',
+    description: 'Index ETF P/E, P/B & period changes',
+  },
 ] as const;
 
 /** Must match `Navigation` height and `DashboardShell` ticker `top-[72px]`. */

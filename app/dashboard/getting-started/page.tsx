@@ -41,7 +41,9 @@ export default function GettingStartedPage() {
           <span className="text-zinc-300"> policy rate path</span> and{' '}
           <span className="text-zinc-300">growth/inflation mix</span> that investors use to discount future cash flows.
           This dashboard separates <strong className="text-zinc-200">price</strong> (main page) from{' '}
-          <strong className="text-zinc-200">drivers</strong> (CPI, Fed, labor) so you can line up narrative vs tape.
+          <strong className="text-zinc-200">drivers</strong> (CPI, Fed, labor) and{' '}
+          <strong className="text-zinc-200">multiples</strong> (Valuation — how cheap or rich index ETFs look vs history)
+          so you can line up narrative vs tape.
         </p>
       </section>
 

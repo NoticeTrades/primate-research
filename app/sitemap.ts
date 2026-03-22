@@ -68,6 +68,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 0.82,
     },
+    {
+      url: `${baseUrl}/dashboard/valuation`,
+      lastModified: currentDate,
+      changeFrequency: 'daily',
+      priority: 0.82,
+    },
   ];
 
   // Research articles
