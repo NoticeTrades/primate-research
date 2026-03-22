@@ -281,6 +281,8 @@ export type TtmSnapshot = {
   priceToSalesRatio: number | null;
   enterpriseValueMultiple: number | null;
   pegRatio: number | null;
+  /** Forward P/E when available (e.g. Yahoo quoteSummary). */
+  forwardPe?: number | null;
   date: string | null;
 };
 

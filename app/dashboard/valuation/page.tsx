@@ -35,6 +35,7 @@ type TtmSnapshot = {
   priceToSalesRatio: number | null;
   enterpriseValueMultiple: number | null;
   pegRatio: number | null;
+  forwardPe?: number | null;
   date: string | null;
 };
 
@@ -70,9 +71,12 @@ type ValuationPayload = {
   message?: string;
   granularityNote?: string;
   anyData?: boolean;
-  /** FMP HTTP 402 — plan/credits, not necessarily wrong key */
+  /** True when FMP returned quarterly P/E history (period table + chart) */
+  hasHistoricalMultiples?: boolean;
   fmpPaymentRequired?: boolean;
   fmpBillingHint?: string | null;
+  yahooFallback?: boolean;
+  yahooNote?: string | null;
   indices: IndexBlock[];
 };
 
@@ -162,13 +166,15 @@ export default function ValuationPage() {
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
           Trailing and cross-sectional multiples for <strong>SPY</strong>, <strong>QQQ</strong>, <strong>DIA</strong>, and{' '}
-          <strong>IWM</strong> — how P/E and P/B have shifted over 1M, 3M, 6M, 1Y, and YTD (quarterly reporting
-          granularity). Compare to long-run averages for context, not as a timing trigger.
+          <strong>IWM</strong>. With Financial Modeling Prep (paid tier) you also get quarterly history and period change
+          tables; otherwise this page uses free Yahoo Finance snapshots for live ratios.
         </p>
         {data?.updatedAt && (
           <p className="mt-2 text-xs text-zinc-500">
             Last updated: {new Date(data.updatedAt).toLocaleString()}
-            {data.configured && data.dataSource ? ` · Source: ${data.dataSource}` : null}
+            {data.configured && data.dataSource
+              ? ` · Source: ${data.dataSource === 'yahoo_finance' ? 'Yahoo Finance (free)' : data.dataSource}`
+              : null}
           </p>
         )}
       </header>
@@ -205,23 +211,21 @@ export default function ValuationPage() {
         </div>
       )}
 
-      {!loading && data && !data.configured && (
-        <div className="mb-8 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-          <p className="font-semibold">API key required for live data</p>
-          <p className="mt-2 text-amber-950/90 dark:text-amber-100/90">
-            {data.message ?? 'Set FMP_API_KEY in your environment (same Financial Modeling Prep key used elsewhere in this app). Data refreshes about every 5 minutes when deployed.'}
-          </p>
+      {!loading && data?.configured && data.yahooFallback && data.yahooNote && (
+        <div className="mb-8 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-4 text-sm text-sky-950 dark:border-sky-500/35 dark:bg-sky-950/30 dark:text-sky-100">
+          <p className="font-semibold">Free data mode (Yahoo Finance)</p>
+          <p className="mt-2 leading-relaxed opacity-95">{data.yahooNote}</p>
           <p className="mt-2 text-xs opacity-90">
-            Free tier:{' '}
-            <a
-              href="https://site.financialmodelingprep.com/developer/docs/"
-              className="underline hover:no-underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              financialmodelingprep.com/developer
-            </a>
+            Yahoo provides live-style ETF ratios (trailing/forward P/E, P/B, yields) without an API key. Historical
+            multiple series and period-% tables need a fundamentals provider (e.g. upgraded FMP).
           </p>
+        </div>
+      )}
+
+      {!loading && data?.configured && !data.anyData && (
+        <div className="mb-8 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          <p className="font-semibold">Could not load valuation metrics</p>
+          <p className="mt-2">Neither Financial Modeling Prep nor Yahoo Finance returned data. Try again later.</p>
         </div>
       )}
 
@@ -230,9 +234,16 @@ export default function ValuationPage() {
       )}
 
       {/* Snapshot cards */}
-      {!loading && data?.configured && (
+      {!loading && data?.configured && data.anyData && (
         <section className="mb-10">
-          <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Current snapshot (TTM / latest)</h2>
+          <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            Current snapshot
+            {data.yahooFallback ? (
+              <span className="ml-2 text-sm font-normal text-zinc-500">(Yahoo Finance · trailing / forward where shown)</span>
+            ) : (
+              <span className="ml-2 text-sm font-normal text-zinc-500">(TTM / latest from FMP)</span>
+            )}
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {VALUATION_INDICES.map((meta) => {
               const block = bySymbol.get(meta.symbol);
@@ -255,8 +266,14 @@ export default function ValuationPage() {
                   )}
                   <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-2 text-xs">
                     <div>
-                      <dt className="text-zinc-500">P/E</dt>
+                      <dt className="text-zinc-500">P/E (trailing)</dt>
                       <dd className="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">{fmtNum(t?.peRatio)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-zinc-500">P/E (forward)</dt>
+                      <dd className="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {fmtNum(t?.forwardPe ?? null)}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-zinc-500">P/B</dt>
@@ -296,8 +313,8 @@ export default function ValuationPage() {
         </section>
       )}
 
-      {/* Period change matrix */}
-      {!loading && data?.configured && data.anyData && (
+      {/* Period change matrix — FMP quarterly history only */}
+      {!loading && data?.configured && data.anyData && data.hasHistoricalMultiples && (
         <section className="mb-10">
           <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">How multiples changed</h2>
           <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
@@ -345,12 +362,12 @@ export default function ValuationPage() {
       )}
 
       {/* Chart */}
-      {!loading && data?.configured && data.anyData && (
+      {!loading && data?.configured && data.anyData && data.hasHistoricalMultiples && (
         <section className="mb-10">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Trailing P/E (quarterly)</h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Select an ETF to plot reported history from FMP.</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Quarterly history from Financial Modeling Prep.</p>
             </div>
             <label className="flex items-center gap-2 text-sm">
               <span className="text-zinc-500">Index</span>

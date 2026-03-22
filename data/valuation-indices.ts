@@ -4,7 +4,7 @@
  */
 
 export const VALUATION_DISCLAIMER =
-  'Valuation ratios are model-dependent, can be revised, and reflect the underlying ETF’s reported metrics—not the cash index future (ES/NQ/YM/RTY) directly. Not investment advice.';
+  'Valuation ratios are model-dependent, can be revised, and reflect the underlying ETF’s reported metrics—not the cash index future (ES/NQ/YM/RTY) directly. When sourced from Yahoo Finance they come from an unofficial feed and may differ slightly from fund factsheets. Not investment advice.';
 
 export const VALUATION_INDICES = [
   {

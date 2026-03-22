@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { VALUATION_INDICES } from '../../../data/valuation-indices';
+import { fetchYahooEtfValuationSnapshot } from '../../../lib/yahoo-valuation';
 import {
   computePeriodChanges,
   explainFmpResponseError,
@@ -22,13 +23,11 @@ type IndexBlock = {
   etfName: string;
   blurb: string;
   ttm: TtmSnapshot | null;
-  /** Quarterly series (ascending by date) — for charts and period baselines */
   history: MetricPoint[];
   periods: PeriodSnapshot[];
   fmpError: string | null;
 };
 
-/** Current FMP APIs only — `/api/v3/` legacy routes are disabled for accounts created after Aug 2025. */
 const FMP_STABLE = 'https://financialmodelingprep.com/stable';
 
 async function fetchFmpJson(url: string): Promise<{ data: unknown; httpStatus: number; ok: boolean }> {
@@ -87,27 +86,15 @@ async function fetchRatiosTtmPeg(symbol: string, apiKey: string): Promise<number
   return typeof peg === 'number' && Number.isFinite(peg) ? peg : null;
 }
 
-export async function GET() {
-  const updatedAt = new Date().toISOString();
-  const apiKey = getFmpKey();
-
-  if (!apiKey) {
-    return NextResponse.json({
-      ok: true,
-      configured: false,
-      updatedAt,
-      dataSource: 'none' as const,
-      message:
-        'Add FMP_API_KEY (Financial Modeling Prep — free tier available) to load live ETF valuation metrics. See .env.example.',
-      indices: [] as IndexBlock[],
-    });
-  }
-
+async function buildIndicesFromFmp(apiKey: string): Promise<{
+  indices: IndexBlock[];
+  anyData: boolean;
+  fmpPaymentRequired: boolean;
+}> {
   const indices: IndexBlock[] = [];
 
   for (const meta of VALUATION_INDICES) {
     const sym = meta.symbol;
-
     const [qResult, tResult] = await Promise.all([
       fetchKeyMetricsQuarterly(sym, apiKey),
       fetchKeyMetricsTtm(sym, apiKey),
@@ -117,7 +104,6 @@ export async function GET() {
     let fmpError: string | null = errs.length ? [...new Set(errs)].join(' | ') : null;
 
     const history = parseKeyMetricsQuarterly(qResult.list);
-
     let ttm = parseTtmResponse(tResult.raw);
     if (ttm && (ttm.pegRatio == null || !Number.isFinite(ttm.pegRatio))) {
       const peg = await fetchRatiosTtmPeg(sym, apiKey);
@@ -145,24 +131,106 @@ export async function GET() {
   }
 
   const anyData = indices.some((i) => i.history.length > 0 || i.ttm != null);
-
   const fmpPaymentRequired = indices.some((i) =>
     /402|Payment Required|no API credits|paid tier|not included in your current subscription/i.test(i.fmpError ?? '')
   );
+
+  return { indices, anyData, fmpPaymentRequired };
+}
+
+async function buildIndicesFromYahoo(): Promise<IndexBlock[]> {
+  const out: IndexBlock[] = [];
+  for (const meta of VALUATION_INDICES) {
+    const ttm = await fetchYahooEtfValuationSnapshot(meta.symbol);
+    const history: MetricPoint[] = [];
+    const latest = mergeLatestQuarterlyWithTtm(history, ttm);
+    const periods = computePeriodChanges(history, latest);
+    out.push({
+      symbol: meta.symbol,
+      name: meta.name,
+      etfName: meta.etfName,
+      blurb: meta.blurb,
+      ttm,
+      history,
+      periods,
+      fmpError: ttm ? null : 'Could not load metrics from Yahoo Finance for this symbol.',
+    });
+  }
+  return out;
+}
+
+export async function GET() {
+  const updatedAt = new Date().toISOString();
+  const apiKey = getFmpKey();
+
+  /** Try FMP first when a key is configured */
+  if (apiKey) {
+    const fmp = await buildIndicesFromFmp(apiKey);
+    const fmpWorks = fmp.anyData && !fmp.fmpPaymentRequired;
+
+    if (fmpWorks) {
+      const hasHistoricalMultiples = fmp.indices.some((i) => i.history.length > 0);
+      return NextResponse.json({
+        ok: true,
+        configured: true,
+        updatedAt,
+        dataSource: 'financialmodelingprep.com/stable' as const,
+        granularityNote:
+          'FMP stable: period changes use quarterly metrics; “current” blends TTM where available. Short horizons align to quarter-end, not daily.',
+        fmpPaymentRequired: false,
+        fmpBillingHint: null,
+        yahooFallback: false,
+        yahooNote: null,
+        hasHistoricalMultiples,
+        indices: fmp.indices,
+        anyData: fmp.anyData,
+      });
+    }
+
+    /** 402 / empty → free Yahoo Finance snapshots */
+    const yahooIndices = await buildIndicesFromYahoo();
+    const anyData = yahooIndices.some((i) => i.ttm != null || i.history.length > 0);
+    const hasHistoricalMultiples = yahooIndices.some((i) => i.history.length > 0);
+
+    return NextResponse.json({
+      ok: true,
+      configured: true,
+      updatedAt,
+      dataSource: 'yahoo_finance' as const,
+      granularityNote:
+        'Live ratios from Yahoo Finance (no API key required for this mode). Historical P/E series and “how multiples changed” tables need quarterly fundamentals — add a paid FMP plan later if you want those here.',
+      fmpPaymentRequired: false,
+      fmpBillingHint: null,
+      yahooFallback: true,
+      yahooNote:
+        fmp.fmpPaymentRequired || !fmp.anyData
+          ? 'FMP Key Metrics are not available on your current FMP tier (or returned no data). Showing free Yahoo Finance ETF snapshots instead. You can upgrade FMP later for quarterly history and period change tables.'
+          : 'Using Yahoo Finance for ETF valuation snapshots.',
+      hasHistoricalMultiples,
+      indices: yahooIndices,
+      anyData,
+    });
+  }
+
+  /** No FMP key — Yahoo only */
+  const yahooIndices = await buildIndicesFromYahoo();
+  const anyData = yahooIndices.some((i) => i.ttm != null);
+  const hasHistoricalMultiples = false;
 
   return NextResponse.json({
     ok: true,
     configured: true,
     updatedAt,
-    dataSource: 'financialmodelingprep.com/stable' as const,
+    dataSource: 'yahoo_finance' as const,
     granularityNote:
-      'Uses FMP stable endpoints only (legacy /api/v3 is not called). Period changes use quarterly metrics; “current” blends TTM where available.',
-    /** True when FMP returned HTTP 402 — key may be valid but plan/credits block Key Metrics. */
-    fmpPaymentRequired,
-    fmpBillingHint: fmpPaymentRequired
-      ? 'HTTP 402 is not a wrong API key (that would usually be 401). It means Financial Modeling Prep is blocking this data until you upgrade the plan or add API credits — Key Metrics / fundamentals are often paid-only. Confirm which endpoints your subscription includes in the FMP dashboard.'
-      : null,
-    indices,
+      'Live ratios from Yahoo Finance (unofficial feed, delayed). Optional: set FMP_API_KEY later for quarterly P/E history and period change matrices from Financial Modeling Prep.',
+    fmpPaymentRequired: false,
+    fmpBillingHint: null,
+    yahooFallback: true,
+    yahooNote:
+      'No FMP_API_KEY set — using free Yahoo Finance ETF metrics. Add FMP in Vercel anytime for historical multiples tables.',
+    hasHistoricalMultiples,
+    indices: yahooIndices,
     anyData,
   });
 }
