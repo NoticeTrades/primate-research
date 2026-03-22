@@ -68,8 +68,16 @@ type FedPayload = {
       participantIndex: number;
       ratePct: number;
       xJitter: number;
+      x: number;
+      y: number;
     }>;
-    medianLine: Array<{ label: string; xIndex: number; medianPct: number }>;
+    medianLine: Array<{
+      label: string;
+      xIndex: number;
+      medianPct: number;
+      x: number;
+      y: number;
+    }>;
   };
   series: Record<
     string,
@@ -134,6 +142,31 @@ function mergeSeriesByDate(
   return Array.from(dateMap.values()).sort((a, b) => String(a.date).localeCompare(String(b.date)));
 }
 
+/** Per-column dot colors (lighter → deeper across the horizon) */
+const DOT_HORIZON_FILLS = ['#67e8f9', '#22d3ee', '#06b6d4', '#0891b2', '#164e63'];
+
+function SepDotShape(props: {
+  cx?: number;
+  cy?: number;
+  payload?: { xIndex?: number };
+}) {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null) return null;
+  const idx = Math.min(4, Math.max(0, payload?.xIndex ?? 0));
+  const fill = DOT_HORIZON_FILLS[idx] ?? '#22d3ee';
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={5.5}
+      fill={fill}
+      fillOpacity={0.88}
+      stroke="rgba(15, 23, 42, 0.55)"
+      strokeWidth={1.25}
+    />
+  );
+}
+
 export default function FedPolicyPage() {
   const [data, setData] = useState<FedPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -177,14 +210,32 @@ export default function FedPolicyPage() {
     return mergeSeriesByDate(data.series, prefs.seriesIds);
   }, [data, prefs.seriesIds]);
 
-  const medianLineData = useMemo(() => {
+  /** Median path sorted by x so the line connects in column order */
+  const medianLineSorted = useMemo(() => {
     if (!data) return [];
-    return data.sep.medianLine.map((m) => ({
-      xJitter: m.xIndex + 0.45,
-      medianPct: m.medianPct,
-      label: m.label,
-    }));
+    return [...data.sep.medianLine].sort((a, b) => a.x - b.x);
   }, [data]);
+
+  const dotPlotYDomain = useMemo((): [number, number] => {
+    if (!data?.sep.dots.length) return [2, 5];
+    let min = Infinity;
+    let max = -Infinity;
+    for (const d of data.sep.dots) {
+      const y = d.y ?? d.ratePct;
+      min = Math.min(min, y);
+      max = Math.max(max, y);
+    }
+    if (prefs.showMedianLine) {
+      for (const m of data.sep.medianLine) {
+        const y = m.y ?? m.medianPct;
+        min = Math.min(min, y);
+        max = Math.max(max, y);
+      }
+    }
+    const span = max - min || 0.5;
+    const pad = Math.max(0.08, span * 0.14);
+    return [Number((min - pad).toFixed(3)), Number((max + pad).toFixed(3))];
+  }, [data, prefs.showMedianLine]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -333,51 +384,99 @@ export default function FedPolicyPage() {
                   </p>
                 </div>
               </div>
-              <div className="h-[340px] w-full">
+              <div className="h-[400px] w-full rounded-xl bg-gradient-to-b from-zinc-950/50 to-zinc-950/20 border border-zinc-800/60 p-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <ComposedChart margin={{ top: 12, right: 16, left: 4, bottom: 12 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} opacity={0.65} />
                     <XAxis
                       type="number"
-                      dataKey="xJitter"
-                      domain={[-0.35, 4.35]}
+                      dataKey="x"
+                      domain={[-0.32, 4.32]}
                       ticks={[0, 1, 2, 3, 4]}
-                      tickFormatter={(v) => data.sep.horizons[Math.round(Number(v))]?.label ?? ''}
-                      stroke="#71717a"
-                      tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                      tickFormatter={(v) => {
+                        const i = Math.round(Number(v));
+                        return data.sep.horizons[i]?.label ?? '';
+                      }}
+                      stroke="#52525b"
+                      tick={{ fill: '#d4d4d8', fontSize: 12 }}
+                      tickLine={{ stroke: '#52525b' }}
+                      axisLine={{ stroke: '#3f3f46' }}
                     />
                     <YAxis
-                      domain={['auto', 'auto']}
-                      stroke="#71717a"
+                      type="number"
+                      dataKey="y"
+                      domain={dotPlotYDomain}
+                      stroke="#52525b"
                       tick={{ fill: '#a1a1aa', fontSize: 11 }}
-                      label={{ value: '% mid', angle: -90, position: 'insideLeft', fill: '#71717a', fontSize: 11 }}
+                      tickLine={{ stroke: '#52525b' }}
+                      axisLine={{ stroke: '#3f3f46' }}
+                      tickFormatter={(v) => `${v}%`}
+                      width={48}
+                      label={{
+                        value: 'Midpoint of target range (%)',
+                        angle: -90,
+                        position: 'insideLeft',
+                        fill: '#71717a',
+                        fontSize: 11,
+                        offset: 4,
+                      }}
                     />
                     <Tooltip
-                      contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8 }}
-                      formatter={(value) => [
-                        `${typeof value === 'number' ? value.toFixed(2) : '—'}%`,
-                        'Rate',
-                      ]}
+                      cursor={{ stroke: '#64748b', strokeWidth: 1, strokeDasharray: '4 4' }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const raw = payload[0].payload as {
+                          label?: string;
+                          y?: number;
+                          ratePct?: number;
+                          medianPct?: number;
+                          participantIndex?: number;
+                        };
+                        const isMedian =
+                          raw.medianPct != null && typeof raw.participantIndex !== 'number';
+                        const v = raw.y ?? raw.ratePct ?? raw.medianPct;
+                        return (
+                          <div className="rounded-lg border border-zinc-600 bg-zinc-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
+                            <p className="font-medium text-zinc-100">{raw.label ?? '—'}</p>
+                            <p className={`tabular-nums mt-0.5 ${isMedian ? 'text-amber-300' : 'text-cyan-200'}`}>
+                              {typeof v === 'number' ? `${v.toFixed(2)}%` : '—'}{' '}
+                              <span className="text-zinc-500">mid</span>
+                            </p>
+                          </div>
+                        );
+                      }}
                     />
-                    <Scatter name="Participants" data={data.sep.dots} fill="#38bdf8" fillOpacity={0.65} />
-                    {prefs.showMedianLine && (
+                    <Legend
+                      wrapperStyle={{ paddingTop: 8 }}
+                      formatter={(value) => <span className="text-zinc-400 text-xs">{value}</span>}
+                    />
+                    <Scatter
+                      name="Participant projections"
+                      data={data.sep.dots}
+                      fill="#22d3ee"
+                      shape={SepDotShape}
+                      isAnimationActive={false}
+                    />
+                    {prefs.showMedianLine && medianLineSorted.length > 0 && (
                       <Line
-                        name="Median"
-                        data={medianLineData}
-                        dataKey="medianPct"
+                        name="Median projection"
+                        data={medianLineSorted}
+                        dataKey="y"
                         stroke="#fbbf24"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#fbbf24' }}
-                        type="monotone"
+                        strokeWidth={2.5}
+                        dot={{ r: 5, fill: '#fbbf24', stroke: '#422006', strokeWidth: 1 }}
+                        activeDot={{ r: 6 }}
+                        type="linear"
                         connectNulls
+                        isAnimationActive={false}
                       />
                     )}
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
               <p className="text-[11px] text-zinc-500 mt-2">
-                Each dot is one participant’s projection for that year-end (or longer-run equilibrium). Horizontal jitter
-                is for visibility only.
+                Each dot is one participant’s projection for that year-end (or longer-run equilibrium). Horizontal spread
+                within a column is jitter for readability only; the median path connects official median midpoints.
               </p>
             </section>
           )}

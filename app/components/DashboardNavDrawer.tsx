@@ -21,6 +21,11 @@ const NAV_ITEMS = [
     label: 'Rates & Fed Policy',
     description: 'Dot plot, yields & curve tools',
   },
+  {
+    href: '/dashboard/unemployment',
+    label: 'Unemployment',
+    description: 'U-3 / U-6, claims & projections',
+  },
 ] as const;
 
 /** Must match `Navigation` height and `DashboardShell` ticker `top-[72px]`. */

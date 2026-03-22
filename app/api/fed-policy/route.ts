@@ -39,12 +39,21 @@ export async function GET(request: NextRequest) {
     const years = Math.min(30, Math.max(1, Number.parseInt(searchParams.get('years') || '10', 10) || 10));
     const from = cutoffDate(years);
 
-    const medianLine = fedSepMedianSeries();
+    const dots = FED_SEP_DOTS.map((d) => {
+      const xJitter = d.xIndex + (d.participantIndex - 9) * 0.028;
+      return {
+        ...d,
+        xJitter,
+        /** Explicit x/y for Recharts numeric axes (same scale for scatter + median line) */
+        x: xJitter,
+        y: d.ratePct,
+      };
+    });
 
-    const dots = FED_SEP_DOTS.map((d) => ({
-      ...d,
-      /** Slight horizontal jitter for scatter visibility (deterministic) */
-      xJitter: d.xIndex + (d.participantIndex - 9) * 0.035,
+    const medianLine = fedSepMedianSeries().map((m) => ({
+      ...m,
+      x: m.xIndex + 0.45,
+      y: m.medianPct,
     }));
 
     const seriesResults: Record<
