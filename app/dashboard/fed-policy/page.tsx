@@ -240,7 +240,10 @@ export default function FedPolicyPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-blue-400/90">Dashboard</p>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs font-semibold mb-1">
+          <span className="w-2 h-2 rounded-full bg-blue-300 animate-pulse" />
+          Macro
+        </div>
         <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Rates & Fed Policy</h1>
         <p className="text-sm text-zinc-400 max-w-3xl leading-relaxed">{FED_POLICY_INTRO}</p>
         <p className="text-xs text-zinc-500 max-w-3xl leading-relaxed pt-1">

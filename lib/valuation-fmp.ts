@@ -54,8 +54,72 @@ function earningsYieldToPct(v: unknown): number | null {
   return n;
 }
 
+/** FMP stable/legacy may use date, fiscalDateEnding, or calendarYear + period. */
+export function resolveKeyMetricDate(raw: Record<string, unknown>): string | null {
+  if (typeof raw.date === 'string') return raw.date.slice(0, 10);
+  if (typeof raw.fiscalDateEnding === 'string') return raw.fiscalDateEnding.slice(0, 10);
+  const y =
+    typeof raw.calendarYear === 'number'
+      ? raw.calendarYear
+      : typeof raw.calendarYear === 'string'
+        ? Number.parseInt(raw.calendarYear, 10)
+        : typeof raw.year === 'number'
+          ? raw.year
+          : typeof raw.year === 'string'
+            ? Number.parseInt(raw.year, 10)
+            : NaN;
+  if (!Number.isFinite(y)) return null;
+  const p = raw.period;
+  let month = 12;
+  let day = 31;
+  if (typeof p === 'string') {
+    const q = p.trim().toUpperCase();
+    if (q === 'Q1' || q === '1') {
+      month = 3;
+      day = 31;
+    } else if (q === 'Q2' || q === '2') {
+      month = 6;
+      day = 30;
+    } else if (q === 'Q3' || q === '3') {
+      month = 9;
+      day = 30;
+    } else if (q === 'Q4' || q === '4') {
+      month = 12;
+      day = 31;
+    }
+  }
+  return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function normalizeFmpListResponse(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>;
+    if (Array.isArray(d.data)) return d.data;
+    if (Array.isArray(d.historical)) return d.historical;
+  }
+  return [];
+}
+
+export function normalizeFmpTtmObject(data: unknown): Record<string, unknown> | null {
+  if (data == null) return null;
+  if (Array.isArray(data) && data.length > 0 && data[0] && typeof data[0] === 'object') {
+    return data[0] as Record<string, unknown>;
+  }
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    const o = data as Record<string, unknown>;
+    if (o.data != null && typeof o.data === 'object') {
+      const inner = o.data as unknown;
+      if (Array.isArray(inner) && inner[0] && typeof inner[0] === 'object') return inner[0] as Record<string, unknown>;
+      if (!Array.isArray(inner) && typeof inner === 'object') return inner as Record<string, unknown>;
+    }
+    return o;
+  }
+  return null;
+}
+
 export function parseKeyMetricRow(raw: Record<string, unknown>): MetricPoint | null {
-  const date = typeof raw.date === 'string' ? raw.date : null;
+  const date = resolveKeyMetricDate(raw);
   if (!date) return null;
 
   const peRatio =
@@ -75,7 +139,7 @@ export function parseKeyMetricRow(raw: Record<string, unknown>): MetricPoint | n
   const priceToSalesRatio = num(raw.priceToSalesRatio) ?? num((raw as { priceSalesRatio?: number }).priceSalesRatio);
 
   return {
-    date: date.slice(0, 10),
+    date,
     peRatio,
     pbRatio,
     dividendYieldPct,
@@ -195,18 +259,16 @@ export function parseTtmRow(raw: Record<string, unknown>): TtmSnapshot | null {
     num(raw.enterpriseValueMultiple) ??
     num((raw as { enterpriseValueOverEBITDA?: number }).enterpriseValueOverEBITDA);
   const pegRatio = num(raw.pegRatio);
-  const date =
-    typeof raw.date === 'string'
-      ? raw.date.slice(0, 10)
-      : typeof (raw as { calendarYear?: string }).calendarYear === 'string'
-        ? String((raw as { calendarYear?: string }).calendarYear)
-        : null;
+  const date = resolveKeyMetricDate(raw);
 
   if (
     peRatio == null &&
     pbRatio == null &&
     dividendYieldPct == null &&
-    earningsYieldPct == null
+    earningsYieldPct == null &&
+    priceToSalesRatio == null &&
+    enterpriseValueMultiple == null &&
+    pegRatio == null
   ) {
     return null;
   }
@@ -224,17 +286,18 @@ export function parseTtmRow(raw: Record<string, unknown>): TtmSnapshot | null {
 }
 
 export function parseTtmResponse(data: unknown): TtmSnapshot | null {
-  if (Array.isArray(data) && data.length > 0 && data[0] && typeof data[0] === 'object') {
-    return parseTtmRow(data[0] as Record<string, unknown>);
-  }
-  if (data && typeof data === 'object' && !Array.isArray(data)) {
-    return parseTtmRow(data as Record<string, unknown>);
-  }
-  return null;
+  const row = normalizeFmpTtmObject(data);
+  if (!row) return null;
+  return parseTtmRow(row);
 }
 
 export function getFmpKey(): string | null {
-  const k = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY;
+  const raw =
+    process.env.FMP_API_KEY ||
+    process.env.FINANCIAL_MODELING_PREP_API_KEY ||
+    process.env.FMP_KEY ||
+    process.env.FINANCIAL_MODELING_PREP_KEY;
+  const k = typeof raw === 'string' ? raw.trim() : '';
   if (!k || k === 'demo') return null;
   return k;
 }

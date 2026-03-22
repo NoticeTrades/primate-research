@@ -274,7 +274,7 @@ export default function InflationPage() {
     <div className="max-w-6xl mx-auto space-y-8">
       <header>
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs font-semibold mb-3">
-          <span className="w-2 h-2 rounded-full bg-amber-300" />
+          <span className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
           Macro
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 tracking-tight">Inflation (CPI)</h1>

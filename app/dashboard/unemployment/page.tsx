@@ -242,8 +242,8 @@ export default function UnemploymentPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <header>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-200 text-xs font-semibold mb-3">
-          <span className="w-2 h-2 rounded-full bg-violet-300" />
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs font-semibold mb-3">
+          <span className="w-2 h-2 rounded-full bg-blue-300 animate-pulse" />
           Macro
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-zinc-50 tracking-tight">Unemployment</h1>

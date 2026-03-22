@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getFmpKey } from '../../../lib/valuation-fmp';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -236,7 +237,7 @@ function splitGainersLosers(
 }
 
 async function fetchFmpUniverseMovers(universe: string[], limit: number): Promise<{ gainers: StockMover[]; losers: StockMover[] } | null> {
-  const apiKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || 'demo';
+  const apiKey = getFmpKey() || 'demo';
   const symbols = universe
     .map((s) => s.replace(/\.[a-z]+$/i, '').toUpperCase())
     .filter(Boolean)

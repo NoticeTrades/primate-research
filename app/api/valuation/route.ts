@@ -4,6 +4,7 @@ import {
   computePeriodChanges,
   getFmpKey,
   mergeLatestQuarterlyWithTtm,
+  normalizeFmpListResponse,
   parseKeyMetricsQuarterly,
   parseTtmResponse,
   type MetricPoint,
@@ -25,14 +26,8 @@ type IndexBlock = {
   fmpError: string | null;
 };
 
-async function fetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url, {
-    next: { revalidate: 300 },
-    headers: { Accept: 'application/json' },
-  });
-  if (!res.ok) return null;
-  return res.json();
-}
+const FMP_STABLE = 'https://financialmodelingprep.com/stable';
+const FMP_V3 = 'https://financialmodelingprep.com/api/v3';
 
 function fmpErrorMessage(data: unknown): string | null {
   if (!data || typeof data !== 'object') return null;
@@ -40,21 +35,102 @@ function fmpErrorMessage(data: unknown): string | null {
   return typeof msg === 'string' ? msg : null;
 }
 
+/**
+ * FMP returns 200 JSON with an error body, or non-OK with a body.
+ * New API keys often require `/stable/...` — legacy `/api/v3/...` can return empty arrays.
+ */
+async function fetchFmpJson(url: string): Promise<{ data: unknown; httpStatus: number; ok: boolean }> {
+  const res = await fetch(url, {
+    next: { revalidate: 300 },
+    headers: { Accept: 'application/json' },
+  });
+  let data: unknown = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  return { data, httpStatus: res.status, ok: res.ok };
+}
+
+/** Try stable quarterly key-metrics, then legacy v3 path. */
+async function fetchKeyMetricsQuarterly(symbol: string, apiKey: string): Promise<{ list: unknown[]; error: string | null }> {
+  const enc = encodeURIComponent(symbol);
+  const key = encodeURIComponent(apiKey);
+  const candidates = [
+    `${FMP_STABLE}/key-metrics?symbol=${enc}&period=quarter&limit=120&apikey=${key}`,
+    `${FMP_V3}/key-metrics/${enc}?period=quarter&limit=120&apikey=${key}`,
+  ];
+
+  let lastError: string | null = null;
+  for (const url of candidates) {
+    const { data, ok, httpStatus } = await fetchFmpJson(url);
+    const err = fmpErrorMessage(data);
+    if (err) {
+      lastError = err;
+      continue;
+    }
+    if (!ok && httpStatus !== 200) {
+      lastError = `HTTP ${httpStatus}`;
+      continue;
+    }
+    const list = normalizeFmpListResponse(data);
+    if (list.length > 0) return { list, error: null };
+  }
+  return { list: [], error: lastError };
+}
+
+/** Try stable TTM, then v3 path. */
+async function fetchKeyMetricsTtm(symbol: string, apiKey: string): Promise<{ raw: unknown; error: string | null }> {
+  const enc = encodeURIComponent(symbol);
+  const key = encodeURIComponent(apiKey);
+  const candidates = [
+    `${FMP_STABLE}/key-metrics-ttm?symbol=${enc}&apikey=${key}`,
+    `${FMP_V3}/key-metrics-ttm/${enc}?apikey=${key}`,
+  ];
+
+  let lastError: string | null = null;
+  for (const url of candidates) {
+    const { data, ok, httpStatus } = await fetchFmpJson(url);
+    const err = fmpErrorMessage(data);
+    if (err) {
+      lastError = err;
+      continue;
+    }
+    if (!ok && httpStatus !== 200) {
+      lastError = `HTTP ${httpStatus}`;
+      continue;
+    }
+    // Stable may return a bare object; v3 often returns a one-element array.
+    if (parseTtmResponse(data) != null) {
+      return { raw: data, error: null };
+    }
+  }
+  return { raw: null, error: lastError };
+}
+
 async function fetchRatiosTtmPeg(symbol: string, apiKey: string): Promise<number | null> {
-  const data = await fetchJson(
-    `https://financialmodelingprep.com/api/v3/ratios-ttm/${encodeURIComponent(symbol)}?apikey=${encodeURIComponent(apiKey)}`
-  );
-  if (!data || fmpErrorMessage(data)) return null;
-  const arr = Array.isArray(data) ? data : [data];
-  const row = arr[0] as Record<string, unknown> | undefined;
-  if (!row) return null;
-  const peg =
-    typeof row.priceEarningsToGrowthRatio === 'number'
-      ? row.priceEarningsToGrowthRatio
-      : typeof row.pegRatio === 'number'
-        ? row.pegRatio
-        : null;
-  return typeof peg === 'number' && Number.isFinite(peg) ? peg : null;
+  const enc = encodeURIComponent(symbol);
+  const key = encodeURIComponent(apiKey);
+  const urls = [
+    `${FMP_STABLE}/ratios-ttm?symbol=${enc}&apikey=${key}`,
+    `${FMP_V3}/ratios-ttm/${enc}?apikey=${key}`,
+  ];
+  for (const url of urls) {
+    const { data, ok } = await fetchFmpJson(url);
+    if (!ok || fmpErrorMessage(data)) continue;
+    const list = normalizeFmpListResponse(data);
+    const row = (list[0] ?? data) as Record<string, unknown> | undefined;
+    if (!row || typeof row !== 'object') continue;
+    const peg =
+      typeof row.priceEarningsToGrowthRatio === 'number'
+        ? row.priceEarningsToGrowthRatio
+        : typeof row.pegRatio === 'number'
+          ? row.pegRatio
+          : null;
+    if (typeof peg === 'number' && Number.isFinite(peg)) return peg;
+  }
+  return null;
 }
 
 export async function GET() {
@@ -77,16 +153,17 @@ export async function GET() {
 
   for (const meta of VALUATION_INDICES) {
     const sym = meta.symbol;
-    const qUrl = `https://financialmodelingprep.com/api/v3/key-metrics/${encodeURIComponent(sym)}?period=quarter&limit=120&apikey=${encodeURIComponent(apiKey)}`;
-    const tUrl = `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${encodeURIComponent(sym)}?apikey=${encodeURIComponent(apiKey)}`;
 
-    const [qData, tData] = await Promise.all([fetchJson(qUrl), fetchJson(tUrl)]);
+    const [qResult, tResult] = await Promise.all([
+      fetchKeyMetricsQuarterly(sym, apiKey),
+      fetchKeyMetricsTtm(sym, apiKey),
+    ]);
 
-    let fmpError: string | null = fmpErrorMessage(qData) ?? fmpErrorMessage(tData);
+    let fmpError: string | null = qResult.error ?? tResult.error ?? null;
 
-    const history = parseKeyMetricsQuarterly(Array.isArray(qData) ? qData : []);
+    const history = parseKeyMetricsQuarterly(qResult.list);
 
-    let ttm = parseTtmResponse(tData);
+    let ttm = parseTtmResponse(tResult.raw);
     if (ttm && (ttm.pegRatio == null || !Number.isFinite(ttm.pegRatio))) {
       const peg = await fetchRatiosTtmPeg(sym, apiKey);
       if (peg != null) ttm = { ...ttm, pegRatio: peg };
@@ -96,7 +173,8 @@ export async function GET() {
     const periods = computePeriodChanges(history, latest);
 
     if (history.length === 0 && !ttm && !fmpError) {
-      fmpError = 'No key-metrics data returned for this symbol.';
+      fmpError =
+        'No key-metrics data returned for this symbol. Confirm your FMP plan includes ETF fundamentals, or try regenerating the API key. This app tries stable + legacy FMP endpoints.';
     }
 
     indices.push({
