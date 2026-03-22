@@ -67,7 +67,7 @@ export function DashboardMenuProvider({
 
 /**
  * Fixed left rail — tall vertical control so it reads clearly as a menu (same spot on all dashboard routes).
- * `contentTopPx` is the top of the main content area (below nav + ticker + gap).
+ * `contentTopPx` is the Y position flush under the ticker chrome (drawer + overlay + trigger align here).
  */
 export function DashboardMenuTrigger() {
   const { open, setOpen, contentTopPx } = useDashboardMenu();
@@ -105,7 +105,7 @@ export function DashboardNavPanel() {
         type="button"
         aria-label="Close menu"
         style={topStyle}
-        className={`fixed left-0 right-0 bottom-0 z-[46] bg-black/60 backdrop-blur-[2px] transition-opacity ${
+        className={`fixed left-0 right-0 bottom-0 z-[46] bg-black/55 backdrop-blur-md transition-opacity ${
           open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setOpen(false)}
@@ -114,7 +114,7 @@ export function DashboardNavPanel() {
       <aside
         id="dashboard-nav-panel"
         style={topStyle}
-        className={`fixed left-0 bottom-0 z-[47] flex w-[min(100vw-2.5rem,18rem)] flex-col border-r border-zinc-800 border-t-0 bg-zinc-950/98 shadow-2xl backdrop-blur-md transition-transform duration-300 ease-out ${
+        className={`fixed left-0 bottom-0 z-[47] flex w-[min(100vw-2.5rem,18rem)] flex-col border-r border-zinc-800/80 border-t-0 bg-gradient-to-b from-zinc-900 via-zinc-950 to-zinc-950 shadow-2xl shadow-black/40 backdrop-blur-md transition-transform duration-300 ease-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-hidden={!open}

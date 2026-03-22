@@ -30,9 +30,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <ScrollFade />
       <Navigation />
 
-      <DashboardMenuProvider contentTopPx={mainContentTopPx}>
+      {/* Drawer aligns to ticker bottom (no gap) so the panel meets the strip cleanly; content keeps MAIN_CONTENT_GAP_PX below ticker */}
+      <DashboardMenuProvider contentTopPx={tickerBottomPx}>
         <div ref={chromeRef} className="fixed top-[72px] left-0 right-0 z-40">
-          <MarketTicker />
+          <MarketTicker embedded />
         </div>
         <DashboardNavPanel />
         {/* Fixed vertical menu — same position on /dashboard and /dashboard/inflation */}
