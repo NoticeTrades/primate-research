@@ -5,6 +5,7 @@ import {
   getFmpKey,
   mergeLatestQuarterlyWithTtm,
   normalizeFmpListResponse,
+  parseFmpApiError,
   parseKeyMetricsQuarterly,
   parseTtmResponse,
   type MetricPoint,
@@ -26,19 +27,9 @@ type IndexBlock = {
   fmpError: string | null;
 };
 
+/** Current FMP APIs only — `/api/v3/` legacy routes are disabled for accounts created after Aug 2025. */
 const FMP_STABLE = 'https://financialmodelingprep.com/stable';
-const FMP_V3 = 'https://financialmodelingprep.com/api/v3';
 
-function fmpErrorMessage(data: unknown): string | null {
-  if (!data || typeof data !== 'object') return null;
-  const msg = (data as { 'Error Message'?: string; error?: string })['Error Message'] ?? (data as { error?: string }).error;
-  return typeof msg === 'string' ? msg : null;
-}
-
-/**
- * FMP returns 200 JSON with an error body, or non-OK with a body.
- * New API keys often require `/stable/...` — legacy `/api/v3/...` can return empty arrays.
- */
 async function fetchFmpJson(url: string): Promise<{ data: unknown; httpStatus: number; ok: boolean }> {
   const res = await fetch(url, {
     next: { revalidate: 300 },
@@ -53,84 +44,46 @@ async function fetchFmpJson(url: string): Promise<{ data: unknown; httpStatus: n
   return { data, httpStatus: res.status, ok: res.ok };
 }
 
-/** Try stable quarterly key-metrics, then legacy v3 path. */
 async function fetchKeyMetricsQuarterly(symbol: string, apiKey: string): Promise<{ list: unknown[]; error: string | null }> {
   const enc = encodeURIComponent(symbol);
   const key = encodeURIComponent(apiKey);
-  const candidates = [
-    `${FMP_STABLE}/key-metrics?symbol=${enc}&period=quarter&limit=120&apikey=${key}`,
-    `${FMP_V3}/key-metrics/${enc}?period=quarter&limit=120&apikey=${key}`,
-  ];
-
-  let lastError: string | null = null;
-  for (const url of candidates) {
-    const { data, ok, httpStatus } = await fetchFmpJson(url);
-    const err = fmpErrorMessage(data);
-    if (err) {
-      lastError = err;
-      continue;
-    }
-    if (!ok && httpStatus !== 200) {
-      lastError = `HTTP ${httpStatus}`;
-      continue;
-    }
-    const list = normalizeFmpListResponse(data);
-    if (list.length > 0) return { list, error: null };
-  }
-  return { list: [], error: lastError };
+  const url = `${FMP_STABLE}/key-metrics?symbol=${enc}&period=quarter&limit=120&apikey=${key}`;
+  const { data, ok, httpStatus } = await fetchFmpJson(url);
+  const err = parseFmpApiError(data);
+  if (err) return { list: [], error: err };
+  if (!ok && httpStatus !== 200) return { list: [], error: `HTTP ${httpStatus}` };
+  const list = normalizeFmpListResponse(data);
+  return { list, error: null };
 }
 
-/** Try stable TTM, then v3 path. */
 async function fetchKeyMetricsTtm(symbol: string, apiKey: string): Promise<{ raw: unknown; error: string | null }> {
   const enc = encodeURIComponent(symbol);
   const key = encodeURIComponent(apiKey);
-  const candidates = [
-    `${FMP_STABLE}/key-metrics-ttm?symbol=${enc}&apikey=${key}`,
-    `${FMP_V3}/key-metrics-ttm/${enc}?apikey=${key}`,
-  ];
-
-  let lastError: string | null = null;
-  for (const url of candidates) {
-    const { data, ok, httpStatus } = await fetchFmpJson(url);
-    const err = fmpErrorMessage(data);
-    if (err) {
-      lastError = err;
-      continue;
-    }
-    if (!ok && httpStatus !== 200) {
-      lastError = `HTTP ${httpStatus}`;
-      continue;
-    }
-    // Stable may return a bare object; v3 often returns a one-element array.
-    if (parseTtmResponse(data) != null) {
-      return { raw: data, error: null };
-    }
-  }
-  return { raw: null, error: lastError };
+  const url = `${FMP_STABLE}/key-metrics-ttm?symbol=${enc}&apikey=${key}`;
+  const { data, ok, httpStatus } = await fetchFmpJson(url);
+  const err = parseFmpApiError(data);
+  if (err) return { raw: null, error: err };
+  if (!ok && httpStatus !== 200) return { raw: null, error: `HTTP ${httpStatus}` };
+  if (parseTtmResponse(data) != null) return { raw: data, error: null };
+  return { raw: null, error: null };
 }
 
 async function fetchRatiosTtmPeg(symbol: string, apiKey: string): Promise<number | null> {
   const enc = encodeURIComponent(symbol);
   const key = encodeURIComponent(apiKey);
-  const urls = [
-    `${FMP_STABLE}/ratios-ttm?symbol=${enc}&apikey=${key}`,
-    `${FMP_V3}/ratios-ttm/${enc}?apikey=${key}`,
-  ];
-  for (const url of urls) {
-    const { data, ok } = await fetchFmpJson(url);
-    if (!ok || fmpErrorMessage(data)) continue;
-    const list = normalizeFmpListResponse(data);
-    const row = (list[0] ?? data) as Record<string, unknown> | undefined;
-    if (!row || typeof row !== 'object') continue;
-    const peg =
-      typeof row.priceEarningsToGrowthRatio === 'number'
-        ? row.priceEarningsToGrowthRatio
-        : typeof row.pegRatio === 'number'
-          ? row.pegRatio
-          : null;
-    if (typeof peg === 'number' && Number.isFinite(peg)) return peg;
-  }
-  return null;
+  const url = `${FMP_STABLE}/ratios-ttm?symbol=${enc}&apikey=${key}`;
+  const { data, ok } = await fetchFmpJson(url);
+  if (!ok || parseFmpApiError(data)) return null;
+  const list = normalizeFmpListResponse(data);
+  const row = (list[0] ?? data) as Record<string, unknown> | undefined;
+  if (!row || typeof row !== 'object') return null;
+  const peg =
+    typeof row.priceEarningsToGrowthRatio === 'number'
+      ? row.priceEarningsToGrowthRatio
+      : typeof row.pegRatio === 'number'
+        ? row.pegRatio
+        : null;
+  return typeof peg === 'number' && Number.isFinite(peg) ? peg : null;
 }
 
 export async function GET() {
@@ -174,7 +127,7 @@ export async function GET() {
 
     if (history.length === 0 && !ttm && !fmpError) {
       fmpError =
-        'No key-metrics data returned for this symbol. Confirm your FMP plan includes ETF fundamentals, or try regenerating the API key. This app tries stable + legacy FMP endpoints.';
+        'No key-metrics data returned for this symbol. Confirm your FMP plan includes ETF fundamentals, or check symbol coverage in the FMP stable API docs.';
     }
 
     indices.push({
@@ -195,9 +148,9 @@ export async function GET() {
     ok: true,
     configured: true,
     updatedAt,
-    dataSource: 'financialmodelingprep.com' as const,
+    dataSource: 'financialmodelingprep.com/stable' as const,
     granularityNote:
-      'Period changes use quarterly reported metrics from FMP; “current” blends TTM where available. Short horizons (1M) align to the nearest quarter-end before the cutoff — not daily mark-to-market.',
+      'Uses FMP stable endpoints only (legacy /api/v3 is not called). Period changes use quarterly metrics; “current” blends TTM where available.',
     indices,
     anyData,
   });

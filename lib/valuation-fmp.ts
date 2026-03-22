@@ -91,6 +91,14 @@ export function resolveKeyMetricDate(raw: Record<string, unknown>): string | nul
   return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+/** FMP returns `{ "Error Message": "..." }` with HTTP 200 for many failures. */
+export function parseFmpApiError(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return null;
+  const msg =
+    (data as { 'Error Message'?: string; error?: string })['Error Message'] ?? (data as { error?: string }).error;
+  return typeof msg === 'string' ? msg : null;
+}
+
 export function normalizeFmpListResponse(data: unknown): unknown[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === 'object') {

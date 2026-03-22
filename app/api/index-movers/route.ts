@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getFmpKey } from '../../../lib/valuation-fmp';
+import { getFmpKey, normalizeFmpListResponse, parseFmpApiError } from '../../../lib/valuation-fmp';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -244,11 +244,12 @@ async function fetchFmpUniverseMovers(universe: string[], limit: number): Promis
     .slice(0, 60);
   if (symbols.length === 0) return null;
 
-  const url = `https://financialmodelingprep.com/api/v3/quote/${encodeURIComponent(symbols.join(','))}?apikey=${encodeURIComponent(apiKey)}`;
+  const url = `https://financialmodelingprep.com/stable/batch-quote?symbols=${encodeURIComponent(symbols.join(','))}&apikey=${encodeURIComponent(apiKey)}`;
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) return null;
-  const data = (await res.json()) as Array<Record<string, unknown>> | Record<string, unknown>;
-  const rows = Array.isArray(data) ? data : Array.isArray((data as any)?.quoteResponse?.result) ? (data as any).quoteResponse.result : [];
+  const data = (await res.json()) as unknown;
+  if (parseFmpApiError(data)) return null;
+  const rows = normalizeFmpListResponse(data);
   if (!Array.isArray(rows) || rows.length === 0) return null;
 
   const movers: StockMover[] = rows
