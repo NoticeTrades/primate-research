@@ -99,6 +99,34 @@ export function parseFmpApiError(data: unknown): string | null {
   return typeof msg === 'string' ? msg : null;
 }
 
+/**
+ * Human-readable FMP errors. HTTP 402 = payment/plan (key can still be valid).
+ * 401 = bad/missing key — not the same as 402.
+ */
+export function explainFmpResponseError(httpStatus: number, ok: boolean, data: unknown): string {
+  const body = parseFmpApiError(data);
+  const payment402 =
+    ' HTTP 402 (Payment Required) at FMP usually means: your API key works, but Key Metrics / company fundamentals are not included in your current subscription, or you have no API credits left. Check plan features & usage in your Financial Modeling Prep account — free tier often excludes these endpoints.';
+
+  if (httpStatus === 402) {
+    return body ? `${body.trim()}${payment402}` : `Financial Modeling Prep returned HTTP 402.${payment402}`;
+  }
+  if (body) return body;
+  if (ok && httpStatus === 200) {
+    return 'Unexpected response from Financial Modeling Prep.';
+  }
+  switch (httpStatus) {
+    case 401:
+      return 'HTTP 401 Unauthorized — API key missing or invalid. Confirm FMP_API_KEY in Vercel matches your dashboard key exactly (no extra spaces).';
+    case 403:
+      return 'HTTP 403 Forbidden — this endpoint is not enabled on your FMP plan.';
+    case 429:
+      return 'HTTP 429 Too Many Requests — rate limit; wait and retry or upgrade FMP.';
+    default:
+      return `HTTP ${httpStatus} — Financial Modeling Prep request failed.`;
+  }
+}
+
 export function normalizeFmpListResponse(data: unknown): unknown[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === 'object') {

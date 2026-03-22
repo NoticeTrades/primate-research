@@ -70,6 +70,9 @@ type ValuationPayload = {
   message?: string;
   granularityNote?: string;
   anyData?: boolean;
+  /** FMP HTTP 402 — plan/credits, not necessarily wrong key */
+  fmpPaymentRequired?: boolean;
+  fmpBillingHint?: string | null;
   indices: IndexBlock[];
 };
 
@@ -179,6 +182,26 @@ export default function ValuationPage() {
       {error && (
         <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {error}
+        </div>
+      )}
+
+      {!loading && data?.configured && data.fmpPaymentRequired && data.fmpBillingHint && (
+        <div className="mb-8 rounded-xl border border-violet-500/45 bg-violet-500/10 px-4 py-4 text-sm text-violet-950 dark:border-violet-500/35 dark:bg-violet-950/40 dark:text-violet-100">
+          <p className="font-semibold">Financial Modeling Prep: HTTP 402 (Payment Required)</p>
+          <p className="mt-2 leading-relaxed opacity-95">{data.fmpBillingHint}</p>
+          <p className="mt-3 text-xs opacity-90">
+            Your <code className="rounded bg-black/10 px-1 py-0.5 dark:bg-white/10">?apikey=…</code> format is correct.{' '}
+            <strong className="font-semibold">402 ≠ wrong key</strong> (invalid keys are usually HTTP 401). Check your FMP
+            subscription includes <strong>Key Metrics</strong> / fundamentals, and that you have API credits remaining.
+          </p>
+          <a
+            href="https://site.financialmodelingprep.com/developer/docs/pricing"
+            className="mt-2 inline-block text-sm font-medium text-violet-700 underline hover:no-underline dark:text-violet-300"
+            target="_blank"
+            rel="noreferrer"
+          >
+            FMP pricing & plan features →
+          </a>
         </div>
       )}
 

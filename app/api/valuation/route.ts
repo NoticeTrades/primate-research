@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { VALUATION_INDICES } from '../../../data/valuation-indices';
 import {
   computePeriodChanges,
+  explainFmpResponseError,
   getFmpKey,
   mergeLatestQuarterlyWithTtm,
   normalizeFmpListResponse,
@@ -49,9 +50,9 @@ async function fetchKeyMetricsQuarterly(symbol: string, apiKey: string): Promise
   const key = encodeURIComponent(apiKey);
   const url = `${FMP_STABLE}/key-metrics?symbol=${enc}&period=quarter&limit=120&apikey=${key}`;
   const { data, ok, httpStatus } = await fetchFmpJson(url);
-  const err = parseFmpApiError(data);
-  if (err) return { list: [], error: err };
-  if (!ok && httpStatus !== 200) return { list: [], error: `HTTP ${httpStatus}` };
+  const apiErr = parseFmpApiError(data);
+  if (apiErr) return { list: [], error: explainFmpResponseError(httpStatus, ok, data) };
+  if (!ok || httpStatus !== 200) return { list: [], error: explainFmpResponseError(httpStatus, ok, data) };
   const list = normalizeFmpListResponse(data);
   return { list, error: null };
 }
@@ -61,9 +62,9 @@ async function fetchKeyMetricsTtm(symbol: string, apiKey: string): Promise<{ raw
   const key = encodeURIComponent(apiKey);
   const url = `${FMP_STABLE}/key-metrics-ttm?symbol=${enc}&apikey=${key}`;
   const { data, ok, httpStatus } = await fetchFmpJson(url);
-  const err = parseFmpApiError(data);
-  if (err) return { raw: null, error: err };
-  if (!ok && httpStatus !== 200) return { raw: null, error: `HTTP ${httpStatus}` };
+  const apiErr = parseFmpApiError(data);
+  if (apiErr) return { raw: null, error: explainFmpResponseError(httpStatus, ok, data) };
+  if (!ok || httpStatus !== 200) return { raw: null, error: explainFmpResponseError(httpStatus, ok, data) };
   if (parseTtmResponse(data) != null) return { raw: data, error: null };
   return { raw: null, error: null };
 }
@@ -112,7 +113,8 @@ export async function GET() {
       fetchKeyMetricsTtm(sym, apiKey),
     ]);
 
-    let fmpError: string | null = qResult.error ?? tResult.error ?? null;
+    const errs = [qResult.error, tResult.error].filter((x): x is string => Boolean(x));
+    let fmpError: string | null = errs.length ? [...new Set(errs)].join(' | ') : null;
 
     const history = parseKeyMetricsQuarterly(qResult.list);
 
@@ -144,6 +146,10 @@ export async function GET() {
 
   const anyData = indices.some((i) => i.history.length > 0 || i.ttm != null);
 
+  const fmpPaymentRequired = indices.some((i) =>
+    /402|Payment Required|no API credits|paid tier|not included in your current subscription/i.test(i.fmpError ?? '')
+  );
+
   return NextResponse.json({
     ok: true,
     configured: true,
@@ -151,6 +157,11 @@ export async function GET() {
     dataSource: 'financialmodelingprep.com/stable' as const,
     granularityNote:
       'Uses FMP stable endpoints only (legacy /api/v3 is not called). Period changes use quarterly metrics; “current” blends TTM where available.',
+    /** True when FMP returned HTTP 402 — key may be valid but plan/credits block Key Metrics. */
+    fmpPaymentRequired,
+    fmpBillingHint: fmpPaymentRequired
+      ? 'HTTP 402 is not a wrong API key (that would usually be 401). It means Financial Modeling Prep is blocking this data until you upgrade the plan or add API credits — Key Metrics / fundamentals are often paid-only. Confirm which endpoints your subscription includes in the FMP dashboard.'
+      : null,
     indices,
     anyData,
   });
