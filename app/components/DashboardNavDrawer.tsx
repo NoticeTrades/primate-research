@@ -114,23 +114,23 @@ export function DashboardNavPanel() {
       <aside
         id="dashboard-nav-panel"
         style={topStyle}
-        className={`fixed left-0 bottom-0 z-[47] flex w-[min(100vw-2.5rem,18rem)] flex-col border-r border-zinc-800/80 border-t-0 bg-gradient-to-b from-zinc-900 via-zinc-950 to-zinc-950 shadow-2xl shadow-black/40 backdrop-blur-md transition-transform duration-300 ease-out ${
+        className={`fixed left-0 bottom-0 z-[47] flex w-[min(100vw-2.5rem,18rem)] flex-col border-t-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md shadow-sm transition-transform duration-300 ease-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-hidden={!open}
         aria-modal="true"
         role="dialog"
       >
-        <div className="border-b border-zinc-800 px-4 py-3">
+        <div className="border-b border-zinc-200 dark:border-zinc-800 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-blue-400/90">Primate</p>
-              <p className="text-sm font-bold text-zinc-50">Dashboard</p>
+              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Dashboard</p>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800"
+              className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
             >
               Close
             </button>
@@ -152,8 +152,8 @@ export function DashboardNavPanel() {
                     onClick={() => setOpen(false)}
                     className={`block rounded-xl border px-3 py-3 transition-colors ${
                       active
-                        ? 'border-blue-500/50 bg-blue-500/10 text-blue-100'
-                        : 'border-transparent bg-transparent text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900/80'
+                        ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-100'
+                        : 'border-transparent bg-transparent text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-100/80 dark:hover:bg-zinc-900/80'
                     }`}
                   >
                     <span className="block text-sm font-semibold">{item.label}</span>
