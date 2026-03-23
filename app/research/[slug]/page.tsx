@@ -47,6 +47,10 @@ export default function ReportViewer() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [copyDone, setCopyDone] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+
+  /** Shown on wide layout; shorter than card so long summaries still get Read more */
+  const SUMMARY_READ_MORE_THRESHOLD = 160;
 
   // Load like count and user liked from API; fallback to localStorage for guest "liked" state
   useEffect(() => {
@@ -211,6 +215,28 @@ export default function ReportViewer() {
             </h1>
             {article.dateRange && (
               <p className="text-sm text-zinc-500 mb-4">{article.dateRange}</p>
+            )}
+            {article.description && (
+              <div className="mb-4">
+                <p
+                  className={`text-base text-zinc-400 leading-relaxed ${
+                    article.description.length > SUMMARY_READ_MORE_THRESHOLD && !summaryExpanded
+                      ? 'line-clamp-4'
+                      : ''
+                  }`}
+                >
+                  {article.description}
+                </p>
+                {article.description.length > SUMMARY_READ_MORE_THRESHOLD && (
+                  <button
+                    type="button"
+                    onClick={() => setSummaryExpanded((v) => !v)}
+                    className="mt-2 text-sm font-medium text-blue-400 hover:text-blue-300"
+                  >
+                    {summaryExpanded ? 'Show less' : 'Read more'}
+                  </button>
+                )}
+              </div>
             )}
             {article.tags && article.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-4">

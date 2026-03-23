@@ -80,7 +80,7 @@ export const researchArticles: ResearchArticle[] = [
     title:
       'Weekly Market Outlook (03/23-03/27): Record NYSE Volume, a 3.40% ES Bar in Five Minutes—DXY, Bonds, Indices & BTC',
     description:
-      'Historic down- then up-volume on the NYSE (Jason Goepfert), a once-in-a-generation 5-minute ES bar, risk management, then DXY under the prior year low, ZB1! toward PYL, divergent NQ/ES dailies, and Bitcoin consolidation.',
+      'Historic down- then up-volume on the NYSE, a once-in-a-generation 5-minute ES bar, risk management, then DXY under the prior year low, ZB1! toward PYL, divergent NQ/ES dailies, and Bitcoin consolidation.',
     content: `Weekly Market Outlook 03/23-03/27. Heavy down volume then heaviest up volume ever. Jason Goepfert. ES 5-minute bar 3.40% March 23 2026 6509.75 to 6731.00 221 points. Standard deviation fat tails circuit breaker 1987 flash crash. DXY TACO Iran Trump productive discussions prior year low March 2 88-90. ZB bonds safety inflation Fed PYL 4-7%. NQ ES divergence Mag 7 outflows YTD ES NQ YM RTY 3-month bar low 2025 TRH. BTC consolidation prior to indices 2021-2022. Ending trader market protect capital.`,
     category: 'Weekly Market Outlook',
     date: 'Mar 23, 2026',

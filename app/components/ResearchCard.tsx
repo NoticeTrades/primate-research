@@ -1,7 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateSlug } from '../../data/research';
+
+/** Rough threshold: ~3 lines of card body copy before line-clamp hides the rest */
+const READ_MORE_THRESHOLD = 140;
 
 interface ResearchCardProps {
   title: string;
@@ -27,6 +31,8 @@ export default function ResearchCard({
   likeCount = 0,
 }: ResearchCardProps) {
   const router = useRouter();
+  const [descExpanded, setDescExpanded] = useState(false);
+  const showReadMore = description.length > READ_MORE_THRESHOLD;
 
   const handleViewReport = () => {
     const articleSlug = slug || generateSlug(title);
@@ -61,9 +67,27 @@ export default function ResearchCard({
           {dateRange}
         </p>
       )}
-      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-3">
-        {description}
-      </p>
+      <div className="mb-4">
+        <p
+          className={`text-sm text-zinc-600 dark:text-zinc-400 ${
+            showReadMore && !descExpanded ? 'line-clamp-3' : ''
+          }`}
+        >
+          {description}
+        </p>
+        {showReadMore && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDescExpanded((v) => !v);
+            }}
+            className="mt-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+          >
+            {descExpanded ? 'Show less' : 'Read more'}
+          </button>
+        )}
+      </div>
       {tags && tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {tags.map((tag, index) => (
