@@ -74,6 +74,98 @@ export function getArticleBySlug(slug: string): ResearchArticle | undefined {
 
 export const researchArticles: ResearchArticle[] = [
   // ──────────────────────────────────────────────
+  // Weekly Market Outlook — Week of March 23, 2026
+  // ──────────────────────────────────────────────
+  {
+    title:
+      'Weekly Market Outlook (03/23-03/27): Record NYSE Volume, a 3.40% ES Bar in Five Minutes—DXY, Bonds, Indices & BTC',
+    description:
+      'Historic down- then up-volume on the NYSE (Jason Goepfert), a once-in-a-generation 5-minute ES bar, risk management, then DXY under the prior year low, ZB1! toward PYL, divergent NQ/ES dailies, and Bitcoin consolidation.',
+    content: `Weekly Market Outlook 03/23-03/27. Heavy down volume then heaviest up volume ever. Jason Goepfert. ES 5-minute bar 3.40% March 23 2026 6509.75 to 6731.00 221 points. Standard deviation fat tails circuit breaker 1987 flash crash. DXY TACO Iran Trump productive discussions prior year low March 2 88-90. ZB bonds safety inflation Fed PYL 4-7%. NQ ES divergence Mag 7 outflows YTD ES NQ YM RTY 3-month bar low 2025 TRH. BTC consolidation prior to indices 2021-2022. Ending trader market protect capital.`,
+    category: 'Weekly Market Outlook',
+    date: 'Mar 23, 2026',
+    dateRange: '03/23/2026 - 03/27/2026',
+    slug: 'weekly-market-outlook-03-23-2026',
+    tags: [
+      'ES',
+      'Volume',
+      'NYSE',
+      'DXY',
+      'ZB1!',
+      'NQ',
+      'BTC',
+      'Macro',
+      'Risk Management',
+    ],
+
+    sections: [
+      {
+        title: 'Record NYSE volume & the ES move',
+        subtitle: 'Context before the charts',
+        content: '',
+        images: ['/charts/weekly-03-23-2026/heavy-volume.png'],
+        blocks: [
+          {
+            type: 'text',
+            content: `The markets recently experienced one of the heaviest down volume days in history, and today we had the complete opposite, with the heaviest up volume day ever.`,
+          },
+          { type: 'images', images: ['/charts/weekly-03-23-2026/heavy-volume.png'] },
+          {
+            type: 'text',
+            content: `Source: [Jason Goepfert on X](https://x.com/jasongoepfert)`,
+          },
+          {
+            type: 'text',
+            content: `At 7:05 a.m. ET on March 23, 2026, on one 5-minute bar, a 3.40% measured move from the low of 6,509.75 to a high of 6,731.00—221 points. That sounds like a move you see on the NQ, where a 200-point move is quite normal, but no, this was on the ES.`,
+          },
+          {
+            type: 'text',
+            content: `To understand just how extreme that is statistically, the standard deviation of a typical 5-minute ES bar runs about 0.10% to 0.15% under normal conditions, and maybe 0.25% to 0.30% on a high-volatility day. A 3.40% move works out to somewhere between 13 and 28 standard deviations. Even with the fat tails ES returns are known for, that number is essentially off the chart.`,
+          },
+          { type: 'images', images: ['/charts/weekly-03-23-2026/es-5min-context.png'] },
+          {
+            type: 'text',
+            content: `ES returns do have fat tails, so these events do occur, but they are confined to a tiny handful of moments in market history—March 2020 circuit breaker opens, the 1987 crash cascade, Flash Crash (May 2010), COVID lockdown days, a few post-9/11 sessions, and the recent tariff madness. This is an event that has only ever occurred 5 to 10 times in ES futures history. That is roughly 1 in 50,000 to 1 in 100,000 five-minute bars.\n\nA 3.40% single 5-minute bar on the ES is essentially a once-a-decade to once-a-generation event.`,
+          },
+          {
+            type: 'text',
+            content: `These types of moves can ruin a trader's account if risk is not managed, which should be your number one priority when trading the financial markets, especially during the extreme environments we are seeing today.\n\nLet's dive into the charts.`,
+          },
+        ],
+      },
+      {
+        title: 'DXY (US Dollar Index)',
+        subtitle: 'Daily',
+        content: `There has been a common phrase surrounding U.S. President Donald Trump when an extreme environment comes across his administration. This phrase is called "TACO," or "Trump Always Chickens Out."\n\nToday, Trump said "the US and Iran have had productive discussions" to end the Iran war, which caused the DXY to fall and U.S. indices and metals to rise.\n\nLooking at the daily DXY chart, DXY is still trading under and rejecting the prior year low. The main cause of the DXY decline has been risk-off sentiment due to geopolitical tensions surrounding the U.S.-Israel vs. Iran conflict, rather than pure fundamentals.\n\nFrom a technical standpoint, DXY still remains weak and I'm expecting the bear trend to continue once again. The March 2nd low will be a pivotal level for bulls and bears.\n\nI'm still calling for the 88-90 range on DXY.`,
+        images: ['/charts/weekly-03-23-2026/dxy-daily.png'],
+      },
+      {
+        title: 'ZB1! (Bonds)',
+        subtitle: 'Daily',
+        content: `Bonds rose today because investors briefly shifted back toward safety and began to price in a slightly lower path for future inflation and Fed tightening after an intense selloff tied to war- and oil-driven inflation fears over the past few weeks.\n\nOver the last three to four weeks, Treasury yields had marched to nine-month highs as the Iran war and a spike in oil upended expectations for 2026 rate cuts and forced a sharp repricing across the curve, which is why prices were falling.\n\nToday's rally reflects some cooling of that panic—oil has eased and headlines have hinted at de-escalation and potential openings for diplomacy, which takes a bit of pressure off inflation expectations and supports bond prices.\n\nWhile rising concerns about U.S. deficits and heavy Treasury issuance have been one structural driver of higher yields, the day-to-day move was less about "lost trust" and more about tactical repositioning after a crowded selloff, with investors seeing value at higher yields rather than demanding even more risk premium.\n\nI am expecting Bonds to continue to fall another 4%-7% towards the PYL.`,
+        images: ['/charts/weekly-03-23-2026/zb1-daily.png'],
+      },
+      {
+        title: 'NQ / ES',
+        subtitle: 'Daily — side by side',
+        content: `After the two major U.S. stock indices formed a divergence on the daily chart, the NQ started the downside move and led as the weaker market, as the Mag 7 saw major outflows and has continued to see pretty big outflows over the last few trading days.\n\nRecently though, the NQ has remained strong during selloffs and has seen decent recoveries compared to the other indices.\n\nYTD, the ES is down 3.65%, NQ is down 3.59%, YM is down 4.13%, and RTY is down only 0.18%, with the idea of lower rates and inflation still being seen as possible.\n\nThe trend we've seen has been interesting. You would expect that with the potential for lower inflation, which has been the trend in regards to Core CPI, that risk-on markets would rise, but I believe the markets have been pricing this in for the most part over the last 2 to 3 years.\n\nLooking at the daily chart on the NQ and ES the trend remains bearish and more so heavily bearish on ES.\n\nPrice has reclaimed above the 3-month bar low, which could be the start of a local bottom and a move higher to form some sort of swing high on the weekly charts. That is what I would watch over the next 1 to 3 weeks.\n\nMy view on the stock indices leans more neutral to bearish rather than bullish given the current macro environment. Earnings will play a big factor, as earnings have overall been healthy, but any sort of sentiment shift there could lead to major selloffs.\n\nOverall, I'm expecting a short-term rally that will eventually fade back down towards 2025 TRH (Trading Range High).`,
+        images: ['/charts/weekly-03-23-2026/es-nq-daily.png'],
+      },
+      {
+        title: 'Bitcoin (BTC)',
+        subtitle: 'Daily',
+        content: `Bitcoin has been an interesting story. In an older report, before this website was created, I talked about how Bitcoin has in the past traded lower prior to the indices during big macro events. One of the biggest being the 2021 to 2022 inflation crisis, where Bitcoin traded lower weeks before the indices.\n\nThe daily chart on Bitcoin is still not bullish, but has formed a base where accumulation and consolidation are occurring.\n\nTo me, if you are a bull, this market is in a consolidation environment where I would not expect major gains or any sort of major bull trend.`,
+        images: ['/charts/weekly-03-23-2026/btc-daily.png'],
+      },
+      {
+        title: 'Ending thoughts',
+        subtitle: '',
+        content: `Overall, this has not been an easy market to trade, and that should be quite obvious after the 7 a.m. candle if it hasn't been already.\n\nThis is a market where if you are up, protect capital and take profits. It's a trader's market, not an investing market. The macro environment just does not support that narrative currently.\n\nI hope you found this market outlook helpful. If you have any questions, please feel free to reach me in the live chat or on Discord in the top right corner of the site.\n\nTrade safely.`,
+      },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
   // Weekly Market Outlook — Week of March 16, 2026
   // ──────────────────────────────────────────────
   {
