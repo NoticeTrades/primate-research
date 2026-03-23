@@ -15,6 +15,7 @@ import {
   type PeriodSnapshot,
   type TtmSnapshot,
 } from '../../../lib/valuation-fmp';
+import { fetchSp500PeHistoryFromFred } from '../../../lib/valuation-pe-history';
 
 export const revalidate = 300;
 
@@ -158,7 +159,7 @@ async function buildIndicesFromYahoo(): Promise<IndexBlock[]> {
       periods,
       fmpError: ttm
         ? null
-        : 'Could not load free metrics from Yahoo / ETFDB / Alpha Vantage. If this persists on Vercel, set ALPHA_VANTAGE_API_KEY as backup.',
+        : 'Could not load free metrics from Yahoo / ETFDB / Alpha Vantage at this time.',
     });
   }
   return out;
@@ -178,9 +179,39 @@ function buildIndicesFromStaticBaseline(): IndexBlock[] {
       ttm,
       history,
       periods,
-      fmpError: ttm ? 'Loaded static baseline snapshot (live provider unavailable).' : 'No baseline snapshot found.',
+      fmpError: ttm ? null : 'No baseline snapshot found.',
     };
   });
+}
+
+async function buildHistoricalPeJson() {
+  const hp = await fetchSp500PeHistoryFromFred();
+  if (hp.points.length === 0) {
+    return {
+      historicalPe: null as null | {
+        points: { date: string; pe: number }[];
+        metricKind: 'trailing_pe' | 'cape';
+        chartTitle: string;
+        shortLabel: string;
+        source: string;
+        fredSeriesId: string | null;
+      },
+      historicalPeDisclaimer:
+        'When available, the chart uses an S&P 500–based monthly series from FRED as a broad U.S. large-cap valuation backdrop. Other index ETFs can trade at different absolute multiples.',
+    };
+  }
+  return {
+    historicalPe: {
+      points: hp.points,
+      metricKind: hp.metricKind,
+      chartTitle: hp.chartTitle,
+      shortLabel: hp.shortLabel,
+      source: hp.source,
+      fredSeriesId: hp.fredSeriesId,
+    },
+    historicalPeDisclaimer:
+      'This curve is the S&P 500 index (broad U.S. large-cap), not the selected ETF’s exact history. QQQ / DIA / IWM often differ in level—use as a market-wide backdrop.',
+  };
 }
 
 export async function GET() {
@@ -194,6 +225,7 @@ export async function GET() {
 
     if (fmpWorks) {
       const hasHistoricalMultiples = fmp.indices.some((i) => i.history.length > 0);
+      const pe = await buildHistoricalPeJson();
       return NextResponse.json({
         ok: true,
         configured: true,
@@ -205,7 +237,10 @@ export async function GET() {
         fmpBillingHint: null,
         yahooFallback: false,
         yahooNote: null,
+        snapshotNote: null,
         hasHistoricalMultiples,
+        hasHistoricalPe: pe.historicalPe != null && pe.historicalPe.points.length > 0,
+        ...pe,
         indices: fmp.indices,
         anyData: fmp.anyData,
       });
@@ -217,24 +252,33 @@ export async function GET() {
     const indicesForResponse = anyData ? yahooIndices : buildIndicesFromStaticBaseline();
     if (!anyData) anyData = indicesForResponse.some((i) => i.ttm != null);
     const hasHistoricalMultiples = yahooIndices.some((i) => i.history.length > 0);
+    const dataSource =
+      anyData && indicesForResponse === yahooIndices ? ('yahoo_finance' as const) : ('static_baseline' as const);
+    const pe = await buildHistoricalPeJson();
 
     return NextResponse.json({
       ok: true,
       configured: true,
       updatedAt,
-      dataSource: anyData && indicesForResponse === yahooIndices ? 'yahoo_finance' as const : 'static_baseline' as const,
+      dataSource,
       granularityNote:
-        'Live ratios: Yahoo Finance when reachable, else ETFDB public valuation pages, else Alpha Vantage OVERVIEW if ALPHA_VANTAGE_API_KEY is set. Historical P/E tables need a paid FMP plan.',
+        'Live ratios: Yahoo Finance when reachable, else ETFDB public valuation pages, else Alpha Vantage OVERVIEW. FRED supplies long-run S&P 500 P/E history when reachable.',
       fmpPaymentRequired: false,
       fmpBillingHint: null,
       yahooFallback: true,
       yahooNote:
         fmp.fmpPaymentRequired || !fmp.anyData
           ? anyData && indicesForResponse === yahooIndices
-            ? 'FMP Key Metrics are not available on your current FMP tier (or returned no data). Using free Yahoo, ETFDB, and/or Alpha Vantage (set ALPHA_VANTAGE_API_KEY in Vercel if Yahoo is blocked). Upgrade FMP later for quarterly history and period tables.'
+            ? 'Primary fundamentals provider is currently unavailable. Using free Yahoo, ETFDB, and/or Alpha Vantage sources for live-style snapshots.'
             : 'FMP and free live providers were unavailable from this host, so we loaded built-in baseline valuation snapshots to keep the page usable.'
           : 'Using free Yahoo / ETFDB / Alpha Vantage for ETF valuation snapshots.',
+      snapshotNote:
+        dataSource === 'static_baseline'
+          ? 'Reference snapshot: approximate values while live feeds are unavailable.'
+          : null,
       hasHistoricalMultiples,
+      hasHistoricalPe: pe.historicalPe != null && pe.historicalPe.points.length > 0,
+      ...pe,
       indices: indicesForResponse,
       anyData,
     });
@@ -246,22 +290,31 @@ export async function GET() {
   const indicesForResponse = anyData ? yahooIndices : buildIndicesFromStaticBaseline();
   if (!anyData) anyData = indicesForResponse.some((i) => i.ttm != null);
   const hasHistoricalMultiples = false;
+  const dataSource =
+    anyData && indicesForResponse === yahooIndices ? ('yahoo_finance' as const) : ('static_baseline' as const);
+  const pe = await buildHistoricalPeJson();
 
   return NextResponse.json({
     ok: true,
     configured: true,
     updatedAt,
-    dataSource: anyData && indicesForResponse === yahooIndices ? 'yahoo_finance' as const : 'static_baseline' as const,
+    dataSource,
     granularityNote:
-      'Live ratios from Yahoo, ETFDB, and/or Alpha Vantage (add free ALPHA_VANTAGE_API_KEY if Yahoo is blocked). Optional FMP_API_KEY for quarterly P/E history and period tables.',
+      'Live ratios from Yahoo, ETFDB, and/or Alpha Vantage. FRED supplies long-run S&P 500 P/E history when reachable.',
     fmpPaymentRequired: false,
     fmpBillingHint: null,
     yahooFallback: true,
     yahooNote:
       anyData && indicesForResponse === yahooIndices
-        ? 'No FMP_API_KEY — using free Yahoo / ETFDB plus optional Alpha Vantage (ALPHA_VANTAGE_API_KEY) for ETF metrics. Add FMP later for historical multiples tables.'
-        : 'Live providers were unavailable from this host; loaded built-in baseline valuation snapshots. Add ALPHA_VANTAGE_API_KEY to improve reliability or FMP later for historical tables.',
+        ? 'Using free Yahoo / ETFDB / Alpha Vantage sources for ETF valuation snapshots.'
+        : 'Live providers were unavailable from this host; built-in baseline valuation snapshots are shown.',
+    snapshotNote:
+      dataSource === 'static_baseline'
+        ? 'Reference snapshot: approximate values while live feeds are unavailable.'
+        : null,
     hasHistoricalMultiples,
+    hasHistoricalPe: pe.historicalPe != null && pe.historicalPe.points.length > 0,
+    ...pe,
     indices: indicesForResponse,
     anyData,
   });

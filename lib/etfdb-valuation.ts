@@ -46,21 +46,32 @@ function parseEtfdbValuation(text: string, symbol: string): TtmSnapshot | null {
     text.match(/Annual Dividend Yield\s+([0-9]+(?:\.[0-9]+)?)%/i) ??
     text.match(/Dividend Yield\s+([0-9]+(?:\.[0-9]+)?)%/i);
 
+  const pbMatch =
+    text.match(new RegExp(`${s}\\s+P/B Ratio\\s+([0-9]+(?:\\.[0-9]+)?)`, 'i')) ??
+    text.match(/P\/B Ratio\s+([0-9]+(?:\.[0-9]+)?)/i) ??
+    text.match(/Price\/Book\s+([0-9]+(?:\.[0-9]+)?)/i);
+
+  const forwardMatch =
+    text.match(new RegExp(`${s}\\s+Forward P/E\\s+([0-9]+(?:\\.[0-9]+)?)`, 'i')) ??
+    text.match(/Forward P\/E\s+([0-9]+(?:\.[0-9]+)?)/i);
+
   const peRatio = parseNum(peMatch?.[1]);
   const dividendYieldPct = parseNum(divMatch?.[1]);
+  const pbRatio = parseNum(pbMatch?.[1]);
+  const forwardPe = parseNum(forwardMatch?.[1]);
   const earningsYieldPct = peRatio != null && peRatio > 0 ? 100 / peRatio : null;
 
   if (peRatio == null && dividendYieldPct == null) return null;
 
   return {
     peRatio,
-    pbRatio: null,
+    pbRatio,
     dividendYieldPct,
     earningsYieldPct,
     priceToSalesRatio: null,
     enterpriseValueMultiple: null,
     pegRatio: null,
-    forwardPe: null,
+    forwardPe,
     date: new Date().toISOString().slice(0, 10),
   };
 }

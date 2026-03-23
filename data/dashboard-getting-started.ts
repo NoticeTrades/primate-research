@@ -97,7 +97,7 @@ export const DASHBOARD_GUIDE_SECTIONS: GuideSection[] = [
     href: '/dashboard/valuation',
     shortLabel: 'Valuation',
     whatItIs:
-      'Index ETF proxies (SPY, QQQ, DIA, IWM): free Yahoo Finance snapshots for live trailing/forward P/E, P/B, yields, and more. Optional FMP_API_KEY adds quarterly history and 1M–YTD multiple change tables when your FMP plan includes Key Metrics.',
+      'Index ETF proxies (SPY, QQQ, DIA, IWM): trailing/forward P/E, P/B, yields, and related ratios from the best available source, with graceful fallbacks when a provider is unavailable.',
     howToUse: [
       'Compare P/E and P/B across large-cap (SPY), growth/tech-heavy (QQQ), Dow (DIA), and small caps (IWM) to see where the market is paying up for earnings.',
       'Read period % changes as expansion vs compression of multiples — often as important as price direction when earnings are volatile.',

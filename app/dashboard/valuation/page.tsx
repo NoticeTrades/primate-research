@@ -63,6 +63,15 @@ type IndexBlock = {
   fmpError: string | null;
 };
 
+type HistoricalPeBlock = {
+  points: { date: string; pe: number }[];
+  metricKind: 'trailing_pe' | 'cape';
+  chartTitle: string;
+  shortLabel: string;
+  source: string;
+  fredSeriesId: string | null;
+};
+
 type ValuationPayload = {
   ok: boolean;
   configured: boolean;
@@ -73,6 +82,11 @@ type ValuationPayload = {
   anyData?: boolean;
   /** True when FMP returned quarterly P/E history (period table + chart) */
   hasHistoricalMultiples?: boolean;
+  /** FRED monthly S&P 500 P/E (or CAPE) series */
+  hasHistoricalPe?: boolean;
+  historicalPe?: HistoricalPeBlock | null;
+  historicalPeDisclaimer?: string;
+  snapshotNote?: string | null;
   fmpPaymentRequired?: boolean;
   fmpBillingHint?: string | null;
   yahooFallback?: boolean;
@@ -98,11 +112,32 @@ function formatQuarter(d: string) {
   return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
+function formatMonthDay(d: string) {
+  const [y, mo, day] = d.split('-');
+  if (!y || !mo) return d;
+  const dt = new Date(Number(y), Number(mo) - 1, day ? Number(day) : 1);
+  return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+type PeRange = '5y' | '10y' | '20y' | 'max';
+
+function filterPeByRange(points: { date: string; pe: number }[], range: PeRange): { date: string; pe: number }[] {
+  if (range === 'max' || points.length === 0) return points;
+  const last = points[points.length - 1]?.date;
+  if (!last) return points;
+  const end = new Date(last);
+  const years = range === '5y' ? 5 : range === '10y' ? 10 : 20;
+  const start = new Date(end);
+  start.setFullYear(start.getFullYear() - years);
+  return points.filter((p) => new Date(p.date) >= start);
+}
+
 export default function ValuationPage() {
   const [data, setData] = useState<ValuationPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [chartSymbol, setChartSymbol] = useState<string>('SPY');
+  const [peRange, setPeRange] = useState<PeRange>('10y');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,6 +176,17 @@ export default function ValuationPage() {
     }));
   }, [bySymbol, chartSymbol]);
 
+  const fredPeRows = useMemo(() => {
+    const pts = data?.historicalPe?.points;
+    if (!pts?.length) return [];
+    const sliced = filterPeByRange(pts, peRange);
+    return sliced.map((p) => ({
+      date: p.date,
+      label: formatMonthDay(p.date),
+      pe: p.pe,
+    }));
+  }, [data?.historicalPe?.points, peRange]);
+
   const periodRows = useMemo(() => {
     const ids = VALUATION_PERIODS.map((p) => p.id);
     return ids.map((pid) => {
@@ -166,8 +212,8 @@ export default function ValuationPage() {
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
           Trailing and cross-sectional multiples for <strong>SPY</strong>, <strong>QQQ</strong>, <strong>DIA</strong>, and{' '}
-          <strong>IWM</strong>. With Financial Modeling Prep (paid tier) you also get quarterly history and period change
-          tables; otherwise this page uses free Yahoo Finance snapshots for live ratios.
+          <strong>IWM</strong>. This page uses the best available data source at runtime and falls back gracefully when a
+          provider is unavailable.
         </p>
         {data?.updatedAt && (
           <p className="mt-2 text-xs text-zinc-500">
@@ -201,11 +247,6 @@ export default function ValuationPage() {
         <div className="mb-8 rounded-xl border border-violet-500/45 bg-violet-500/10 px-4 py-4 text-sm text-violet-950 dark:border-violet-500/35 dark:bg-violet-950/40 dark:text-violet-100">
           <p className="font-semibold">Financial Modeling Prep: HTTP 402 (Payment Required)</p>
           <p className="mt-2 leading-relaxed opacity-95">{data.fmpBillingHint}</p>
-          <p className="mt-3 text-xs opacity-90">
-            Your <code className="rounded bg-black/10 px-1 py-0.5 dark:bg-white/10">?apikey=…</code> format is correct.{' '}
-            <strong className="font-semibold">402 ≠ wrong key</strong> (invalid keys are usually HTTP 401). Check your FMP
-            subscription includes <strong>Key Metrics</strong> / fundamentals, and that you have API credits remaining.
-          </p>
           <a
             href="https://site.financialmodelingprep.com/developer/docs/pricing"
             className="mt-2 inline-block text-sm font-medium text-violet-700 underline hover:no-underline dark:text-violet-300"
@@ -217,14 +258,24 @@ export default function ValuationPage() {
         </div>
       )}
 
-      {!loading && data?.configured && data.yahooFallback && data.yahooNote && (
+      {!loading && data?.configured && data.yahooFallback && data.yahooNote && data.dataSource !== 'static_baseline' && (
         <div className="mb-8 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-4 text-sm text-sky-950 dark:border-sky-500/35 dark:bg-sky-950/30 dark:text-sky-100">
           <p className="font-semibold">Free data mode (Yahoo / ETFDB / Alpha Vantage)</p>
           <p className="mt-2 leading-relaxed opacity-95">{data.yahooNote}</p>
           <p className="mt-2 text-xs opacity-90">
-            Yahoo, ETFDB, and/or Alpha Vantage supply live-style ETF ratios. If Yahoo is blocked on this server, ETFDB
-            can still provide P/E + dividend yield, and Alpha Vantage can fill additional ratios when{' '}
-            <strong>ALPHA_VANTAGE_API_KEY</strong> is set in Vercel.
+            Yahoo, ETFDB, and/or Alpha Vantage supply live-style ETF ratios. If one source is blocked on this host,
+            the API automatically falls back to another source.
+          </p>
+        </div>
+      )}
+
+      {!loading && data?.configured && data.dataSource === 'static_baseline' && data.yahooNote && (
+        <div className="mb-8 rounded-xl border border-zinc-200 bg-zinc-50/90 px-4 py-4 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-200">
+          <p className="font-semibold">Reference snapshot</p>
+          <p className="mt-2 leading-relaxed opacity-95">{data.yahooNote}</p>
+          <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+            Ratios below are approximate placeholders so the dashboard stays usable when live feeds fail. They are not
+            real-time quotes.
           </p>
         </div>
       )}
@@ -233,10 +284,8 @@ export default function ValuationPage() {
         <div className="mb-8 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
           <p className="font-semibold">Could not load valuation metrics</p>
           <p className="mt-2">
-            Yahoo Finance often blocks automated requests from hosting providers (e.g. Vercel). Add a free{' '}
-            <strong>ALPHA_VANTAGE_API_KEY</strong> in Vercel → Environment Variables (same key used elsewhere on this site)
-            — the valuation API uses Alpha Vantage as backup, and ETFDB for P/E + dividend yield. You can upgrade FMP
-            later for historical tables.
+            Live valuation providers are temporarily unavailable from this host. The page retries automatically and may
+            use a baseline snapshot until live feeds recover.
           </p>
         </div>
       )}
@@ -250,12 +299,17 @@ export default function ValuationPage() {
         <section className="mb-10">
           <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             Current snapshot
-            {data.yahooFallback ? (
-              <span className="ml-2 text-sm font-normal text-zinc-500">(Yahoo Finance · trailing / forward where shown)</span>
+            {data.dataSource === 'static_baseline' ? (
+              <span className="ml-2 text-sm font-normal text-zinc-500">(reference snapshot · not live)</span>
+            ) : data.yahooFallback ? (
+              <span className="ml-2 text-sm font-normal text-zinc-500">(free provider mix · trailing / forward where shown)</span>
             ) : (
               <span className="ml-2 text-sm font-normal text-zinc-500">(TTM / latest from FMP)</span>
             )}
           </h2>
+          {data.snapshotNote && data.dataSource !== 'static_baseline' && (
+            <p className="mb-4 text-sm text-sky-800 dark:text-sky-200/90">{data.snapshotNote}</p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {VALUATION_INDICES.map((meta) => {
               const block = bySymbol.get(meta.symbol);
@@ -274,7 +328,7 @@ export default function ValuationPage() {
                   </div>
                   <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">{meta.blurb}</p>
                   {err && (
-                    <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{err}</p>
+                    <p className="mt-2 text-xs text-amber-700 dark:text-amber-400/90">{err}</p>
                   )}
                   <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-2 text-xs">
                     <div>
@@ -321,6 +375,92 @@ export default function ValuationPage() {
                 </div>
               );
             })}
+          </div>
+        </section>
+      )}
+
+      {/* Long-run S&P 500 P/E (FRED) — works without FMP quarterly history */}
+      {!loading && data?.configured && data.anyData && data.hasHistoricalPe && data.historicalPe && (
+        <section className="mb-10">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{data.historicalPe.chartTitle}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                <span className="font-mono text-[11px] text-zinc-600 dark:text-zinc-500">{data.historicalPe.source}</span>
+                {data.historicalPe.metricKind === 'cape' ? (
+                  <span> · CAPE uses 10-year real earnings; levels differ from one-year trailing P/E.</span>
+                ) : (
+                  <span> · Broad U.S. large-cap index multiple (monthly).</span>
+                )}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{data.historicalPeDisclaimer}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <label className="flex items-center gap-2">
+                <span className="text-zinc-500">Context</span>
+                <select
+                  value={chartSymbol}
+                  onChange={(e) => setChartSymbol(e.target.value)}
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                >
+                  {VALUATION_INDICES.map((m) => (
+                    <option key={m.symbol} value={m.symbol}>
+                      {m.symbol} — {m.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2">
+                <span className="text-zinc-500">Range</span>
+                <select
+                  value={peRange}
+                  onChange={(e) => setPeRange(e.target.value as PeRange)}
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="5y">5 years</option>
+                  <option value="10y">10 years</option>
+                  <option value="20y">20 years</option>
+                  <option value="max">Max</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div className="h-80 w-full rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950/40">
+            {fredPeRows.length === 0 ? (
+              <p className="p-8 text-center text-sm text-zinc-500">No points in this range.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={fredPeRows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-zinc-200 dark:stroke-zinc-800" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} className="text-zinc-500" interval="preserveStartEnd" />
+                  <YAxis
+                    tick={{ fontSize: 10 }}
+                    className="text-zinc-500"
+                    domain={['auto', 'auto']}
+                    label={{
+                      value: data.historicalPe.shortLabel,
+                      angle: -90,
+                      position: 'insideLeft',
+                      fontSize: 10,
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{ fontSize: 12 }}
+                    formatter={(v: number | undefined) => [v != null ? v.toFixed(2) : '—', data.historicalPe?.shortLabel ?? 'P/E']}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="pe"
+                    name={data.historicalPe.shortLabel}
+                    stroke="#0ea5e9"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </section>
       )}
