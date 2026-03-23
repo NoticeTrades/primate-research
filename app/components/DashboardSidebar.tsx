@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { researchArticles, generateSlug, type ResearchArticle } from '../../data/research';
 import { videos, type VideoCategory, type VideoEntry, type VideoType } from '../../data/videos';
 
 type SidebarFilter = 'all' | 'research' | 'videos';
@@ -21,7 +20,17 @@ function parseResearchDate(dateStr?: string): number {
   if (!dateStr) return 0;
   const d = new Date(dateStr);
   const t = d.getTime();
-  return Number.isFinite(t) ? t : 0;
+  if (Number.isFinite(t)) return t;
+  const m = dateStr.trim().match(/^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4})$/);
+  if (m) {
+    const months: Record<string, number> = {
+      Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+      Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+    };
+    const mon = months[m[1]];
+    if (mon != null) return new Date(Number(m[3]), mon, Number(m[2])).getTime();
+  }
+  return 0;
 }
 
 function parseVideoDate(dateStr?: string): number {
@@ -56,10 +65,6 @@ function parseVideoDate(dateStr?: string): number {
   return new Date(year, idx, 1).getTime();
 }
 
-function getItemDescription(article: ResearchArticle): string {
-  return article.description || 'View report';
-}
-
 function coerceVideoType(value: unknown): VideoType | undefined {
   if (value === 'youtube' || value === 'exclusive' || value === 'external') return value;
   return undefined;
@@ -80,10 +85,47 @@ function coerceVideoCategory(value: unknown): VideoCategory | undefined {
   return allowed.has(v as VideoCategory) ? (v as VideoCategory) : undefined;
 }
 
+type ResearchListItem = {
+  title: string;
+  description: string;
+  date: string | null;
+  category: string;
+  slug: string;
+  sortTs: number;
+};
+
 export default function DashboardSidebar() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SidebarFilter>('all');
   const [dbVideos, setDbVideos] = useState<VideoEntry[]>([]);
+  const [researchList, setResearchList] = useState<ResearchListItem[]>([]);
+
+  useEffect(() => {
+    const loadResearch = async () => {
+      try {
+        const res = await fetch('/api/research/list', { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = (await res.json()) as { articles?: ResearchListItem[] };
+        const list = Array.isArray(json?.articles) ? json.articles : [];
+        setResearchList(list);
+      } catch {
+        // ignore
+      }
+    };
+
+    loadResearch();
+    const interval = setInterval(loadResearch, 60_000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadResearch();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', loadResearch);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', loadResearch);
+    };
+  }, []);
 
   useEffect(() => {
     const loadDbVideos = async () => {
@@ -139,22 +181,30 @@ export default function DashboardSidebar() {
     };
 
     loadDbVideos();
+    const interval = setInterval(loadDbVideos, 60_000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadDbVideos();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', loadDbVideos);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', loadDbVideos);
+    };
   }, []);
 
 
   const items = useMemo<SidebarItem[]>(() => {
-    const researchItems: SidebarItem[] = researchArticles.map((a) => {
-      const slug = a.slug || generateSlug(a.title);
-      return {
-        type: 'research',
-        title: a.title,
-        description: getItemDescription(a),
-        dateLabel: a.date,
-        tag: a.category,
-        href: `/research/${slug}`,
-        sortTs: parseResearchDate(a.date),
-      };
-    });
+    const researchItems: SidebarItem[] = researchList.map((a) => ({
+      type: 'research' as const,
+      title: a.title,
+      description: a.description || 'View report',
+      dateLabel: a.date ?? undefined,
+      tag: a.category,
+      href: `/research/${a.slug}`,
+      sortTs: a.sortTs || parseResearchDate(a.date ?? undefined),
+    }));
 
     const allVideos: VideoEntry[] = (() => {
       // Prefer DB uploads when there are duplicates.
@@ -185,7 +235,7 @@ export default function DashboardSidebar() {
     });
 
     return [...researchItems, ...videoItems].sort((x, y) => y.sortTs - x.sortTs);
-  }, [dbVideos]);
+  }, [dbVideos, researchList]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
