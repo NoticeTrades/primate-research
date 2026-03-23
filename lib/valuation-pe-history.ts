@@ -62,6 +62,17 @@ const CANDIDATES: {
  * broad-market benchmark for all ETF symbols on the valuation page (with a short disclaimer).
  */
 export async function fetchSp500PeHistoryFromFred(): Promise<HistoricalPePayload> {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return {
+      points: [],
+      metricKind: 'trailing_pe',
+      chartTitle: 'S&P 500 P/E history',
+      shortLabel: 'P/E',
+      source: '',
+      fredSeriesId: null,
+    };
+  }
+
   for (const c of CANDIDATES) {
     try {
       const { raw, dataSource } = await fetchFredSeries(c.id);

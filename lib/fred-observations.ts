@@ -21,11 +21,25 @@ export function parseFredCsv(text: string): { date: string; value: number }[] {
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+const FRED_FETCH_MS = 12_000;
+
+function fredAbortSignal(): AbortSignal | undefined {
+  try {
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+      return AbortSignal.timeout(FRED_FETCH_MS);
+    }
+  } catch {
+    /* ignore */
+  }
+  return undefined;
+}
+
 export async function fetchFredSeries(seriesId: string): Promise<{
   raw: { date: string; value: number }[];
   dataSource: 'fred_api' | 'fred_csv';
   usedFredApi: boolean;
 }> {
+  const signal = fredAbortSignal();
   const key = process.env.FRED_API_KEY;
   if (key) {
     try {
@@ -37,6 +51,7 @@ export async function fetchFredSeries(seriesId: string): Promise<{
       const res = await fetch(url.toString(), {
         next: { revalidate: 43_200 },
         headers: { Accept: 'application/json' },
+        ...(signal ? { signal } : {}),
       });
       if (res.ok) {
         const json = (await res.json()) as {
@@ -64,6 +79,7 @@ export async function fetchFredSeries(seriesId: string): Promise<{
   const res = await fetch(csvUrl, {
     next: { revalidate: 43_200 },
     headers: { Accept: 'text/csv' },
+    ...(signal ? { signal } : {}),
   });
   if (!res.ok) {
     throw new Error(`FRED CSV failed for ${seriesId}: ${res.status}`);

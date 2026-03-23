@@ -17,7 +17,9 @@ import {
 } from '../../../lib/valuation-fmp';
 import { fetchSp500PeHistoryFromFred } from '../../../lib/valuation-pe-history';
 
-export const revalidate = 300;
+/** Avoid static generation / prerender during `next build` (FRED + FMP can exceed the ~60s route budget on Vercel). */
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type IndexBlock = {
   symbol: string;
@@ -184,6 +186,9 @@ function buildIndicesFromStaticBaseline(): IndexBlock[] {
   });
 }
 
+const HISTORICAL_PE_EMPTY_DISCLAIMER =
+  'When available, the chart uses an S&P 500–based monthly series from FRED as a broad U.S. large-cap valuation backdrop. Other index ETFs can trade at different absolute multiples.';
+
 async function buildHistoricalPeJson() {
   const hp = await fetchSp500PeHistoryFromFred();
   if (hp.points.length === 0) {
@@ -196,8 +201,7 @@ async function buildHistoricalPeJson() {
         source: string;
         fredSeriesId: string | null;
       },
-      historicalPeDisclaimer:
-        'When available, the chart uses an S&P 500–based monthly series from FRED as a broad U.S. large-cap valuation backdrop. Other index ETFs can trade at different absolute multiples.',
+      historicalPeDisclaimer: HISTORICAL_PE_EMPTY_DISCLAIMER,
     };
   }
   return {
@@ -214,7 +218,43 @@ async function buildHistoricalPeJson() {
   };
 }
 
+/** Next sets this while collecting static data during `next build` — skip all outbound network. */
+function isNextProductionBuild(): boolean {
+  return process.env.NEXT_PHASE === 'phase-production-build';
+}
+
+/** Fast, deterministic response so `next build` never waits on FRED/FMP/Yahoo (60s Vercel route limit). */
+function buildTimePlaceholderResponse() {
+  const updatedAt = new Date().toISOString();
+  const indicesForResponse = buildIndicesFromStaticBaseline();
+  const anyData = indicesForResponse.some((i) => i.ttm != null);
+  return NextResponse.json({
+    ok: true,
+    configured: true,
+    updatedAt,
+    dataSource: 'static_baseline' as const,
+    granularityNote:
+      'Live ratios from Yahoo, ETFDB, and/or Alpha Vantage. FRED supplies long-run S&P 500 P/E history when reachable.',
+    fmpPaymentRequired: false,
+    fmpBillingHint: null,
+    yahooFallback: true,
+    yahooNote:
+      'Build-time placeholder only — open the dashboard at runtime for live valuation data and FRED history.',
+    snapshotNote: 'Reference snapshot: approximate values while live feeds are unavailable.',
+    hasHistoricalMultiples: false,
+    hasHistoricalPe: false,
+    historicalPe: null,
+    historicalPeDisclaimer: HISTORICAL_PE_EMPTY_DISCLAIMER,
+    indices: indicesForResponse,
+    anyData,
+  });
+}
+
 export async function GET() {
+  if (isNextProductionBuild()) {
+    return buildTimePlaceholderResponse();
+  }
+
   const updatedAt = new Date().toISOString();
   const apiKey = getFmpKey();
 
