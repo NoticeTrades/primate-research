@@ -138,6 +138,8 @@ export default function ValuationPage() {
   const [loading, setLoading] = useState(true);
   const [chartSymbol, setChartSymbol] = useState<string>('SPY');
   const [peRange, setPeRange] = useState<PeRange>('10y');
+  const [peModalSymbol, setPeModalSymbol] = useState<string | null>(null);
+  const [peModalRange, setPeModalRange] = useState<PeRange>('5y');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -186,6 +188,35 @@ export default function ValuationPage() {
       pe: p.pe,
     }));
   }, [data?.historicalPe?.points, peRange]);
+
+  const peModalFmpRows = useMemo(() => {
+    if (!peModalSymbol) return [];
+    const block = bySymbol.get(peModalSymbol);
+    const pts =
+      block?.history
+        ?.filter((p) => p.peRatio != null && Number.isFinite(p.peRatio))
+        .map((p) => ({ date: p.date, pe: p.peRatio as number })) ?? [];
+    const sliced = filterPeByRange(pts, peModalRange);
+    return sliced.map((p) => ({
+      date: p.date,
+      label: formatQuarter(p.date),
+      pe: p.pe,
+    }));
+  }, [bySymbol, peModalSymbol, peModalRange]);
+
+  const peModalFredRows = useMemo(() => {
+    const pts = data?.historicalPe?.points;
+    if (!pts?.length) return [];
+    const sliced = filterPeByRange(pts, peModalRange);
+    return sliced.map((p) => ({
+      date: p.date,
+      label: formatMonthDay(p.date),
+      pe: p.pe,
+    }));
+  }, [data?.historicalPe?.points, peModalRange]);
+
+  const peModalIsFmp = peModalFmpRows.length > 0;
+  const peModalCurrentPe = peModalSymbol ? bySymbol.get(peModalSymbol)?.ttm?.peRatio ?? null : null;
 
   const periodRows = useMemo(() => {
     const ids = VALUATION_PERIODS.map((p) => p.id);
@@ -372,11 +403,136 @@ export default function ValuationPage() {
                       </dd>
                     </div>
                   </dl>
+
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setPeModalSymbol(meta.symbol)}
+                      className="inline-flex w-full items-center justify-center rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-100 dark:hover:bg-zinc-900"
+                    >
+                      Chart P/E trend
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         </section>
+      )}
+
+      {/* P/E history modal */}
+      {!loading && peModalSymbol && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-zinc-900/60" onClick={() => setPeModalSymbol(null)} />
+          <div className="relative mx-auto mt-16 max-w-4xl px-4">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-950/80">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    {peModalSymbol} trailing P/E history
+                  </h2>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    Current trailing P/E: <span className="font-mono text-zinc-700 dark:text-zinc-200">{fmtNum(peModalCurrentPe)}</span>
+                    {peModalIsFmp ? (
+                      <span> · Quarterly history (FMP)</span>
+                    ) : (
+                      <span> · Proxy: broad S&P 500 P/E (FRED)</span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <span className="text-zinc-500">Range</span>
+                    <select
+                      value={peModalRange}
+                      onChange={(e) => setPeModalRange(e.target.value as PeRange)}
+                      className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                    >
+                      <option value="5y">5 years</option>
+                      <option value="10y">10 years</option>
+                      <option value="20y">20 years</option>
+                      <option value="max">Max</option>
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setPeModalSymbol(null)}
+                    className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-100"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 h-80 w-full rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950/40">
+                {peModalIsFmp ? (
+                  peModalFmpRows.length === 0 ? (
+                    <p className="p-8 text-center text-sm text-zinc-500">No P/E history points for this symbol.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={peModalFmpRows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-zinc-200 dark:stroke-zinc-800" />
+                        <XAxis dataKey="label" tick={{ fontSize: 10 }} className="text-zinc-500" interval="preserveStartEnd" />
+                        <YAxis
+                          tick={{ fontSize: 10 }}
+                          className="text-zinc-500"
+                          domain={['auto', 'auto']}
+                          label={{ value: 'P/E', angle: -90, position: 'insideLeft', fontSize: 10 }}
+                        />
+                        <Tooltip
+                          contentStyle={{ fontSize: 12 }}
+                          formatter={(v: number | undefined) => [v != null ? v.toFixed(2) : '—', 'P/E']}
+                        />
+                        <Legend />
+                        <Line type="monotone" dataKey="pe" name="P/E" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )
+                ) : (
+                  peModalFredRows.length === 0 ? (
+                    <p className="p-8 text-center text-sm text-zinc-500">No proxy series available right now.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={peModalFredRows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-zinc-200 dark:stroke-zinc-800" />
+                        <XAxis dataKey="label" tick={{ fontSize: 10 }} className="text-zinc-500" interval="preserveStartEnd" />
+                        <YAxis
+                          tick={{ fontSize: 10 }}
+                          className="text-zinc-500"
+                          domain={['auto', 'auto']}
+                          label={{
+                            value: data?.historicalPe?.shortLabel ?? 'P/E',
+                            angle: -90,
+                            position: 'insideLeft',
+                            fontSize: 10,
+                          }}
+                        />
+                        <Tooltip
+                          contentStyle={{ fontSize: 12 }}
+                          formatter={(v: number | undefined) => [v != null ? v.toFixed(2) : '—', data?.historicalPe?.shortLabel ?? 'P/E']}
+                        />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="pe"
+                          name={data?.historicalPe?.shortLabel ?? 'P/E'}
+                          stroke="#0ea5e9"
+                          strokeWidth={2}
+                          dot={false}
+                          connectNulls
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )
+                )}
+              </div>
+
+              {!peModalIsFmp && data?.historicalPeDisclaimer && (
+                <p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">{data.historicalPeDisclaimer}</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Long-run S&P 500 P/E (FRED) — works without FMP quarterly history */}
