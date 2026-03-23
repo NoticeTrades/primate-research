@@ -92,6 +92,19 @@ export async function fetchSp500PeHistoryFromFred(): Promise<HistoricalPePayload
     }
   }
 
+  /** Last resort when FRED CSV/API is blocked (e.g. strict egress). ~decade of S&P 500–style trailing P/E anchors. */
+  const embedded = getEmbeddedSp500PeFallback();
+  if (embedded.length >= 12 && looksLikePriceEarningsRatio(embedded.map((p) => p.pe))) {
+    return {
+      points: embedded,
+      metricKind: 'trailing_pe',
+      chartTitle: 'S&P 500 trailing P/E (monthly, embedded fallback)',
+      shortLabel: 'Trailing P/E',
+      source: 'embedded benchmark (approximate — use FRED when reachable for official series)',
+      fredSeriesId: null,
+    };
+  }
+
   return {
     points: [],
     metricKind: 'trailing_pe',
@@ -100,4 +113,36 @@ export async function fetchSp500PeHistoryFromFred(): Promise<HistoricalPePayload
     source: '',
     fredSeriesId: null,
   };
+}
+
+/** Sparse monthly anchors so charts still render if FRED is unreachable. Not live. */
+function getEmbeddedSp500PeFallback(): { date: string; pe: number }[] {
+  const anchors: { y: number; m: number; pe: number }[] = [
+    { y: 2015, m: 1, pe: 20.0 },
+    { y: 2015, m: 7, pe: 21.5 },
+    { y: 2016, m: 1, pe: 18.2 },
+    { y: 2016, m: 7, pe: 19.5 },
+    { y: 2017, m: 1, pe: 20.8 },
+    { y: 2017, m: 7, pe: 22.5 },
+    { y: 2018, m: 1, pe: 24.0 },
+    { y: 2018, m: 7, pe: 23.0 },
+    { y: 2019, m: 1, pe: 19.5 },
+    { y: 2019, m: 7, pe: 21.5 },
+    { y: 2020, m: 1, pe: 22.5 },
+    { y: 2020, m: 7, pe: 21.5 },
+    { y: 2021, m: 1, pe: 23.5 },
+    { y: 2021, m: 7, pe: 28.0 },
+    { y: 2022, m: 1, pe: 25.5 },
+    { y: 2022, m: 7, pe: 18.5 },
+    { y: 2023, m: 1, pe: 20.0 },
+    { y: 2023, m: 7, pe: 22.5 },
+    { y: 2024, m: 1, pe: 23.5 },
+    { y: 2024, m: 7, pe: 24.5 },
+    { y: 2025, m: 1, pe: 25.5 },
+    { y: 2025, m: 7, pe: 27.0 },
+  ];
+  return anchors.map((a) => ({
+    date: `${a.y}-${String(a.m).padStart(2, '0')}-01`,
+    pe: a.pe,
+  }));
 }

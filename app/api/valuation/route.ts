@@ -253,12 +253,12 @@ function buildLiveDataHints(input: {
   const hints: string[] = [];
   if (input.dataSource === 'static_baseline') {
     hints.push(
-      'Static fallback is active. For live ratios as of each request, set FINANCIAL_MODELING_PREP_API_KEY (plan that includes ETF key-metrics) and/or ALPHA_VANTAGE_API_KEY in your deployment env, and ensure outbound requests to Yahoo/FRED are not blocked.',
+      'Static fallback is active. Prefer TWELVE_DATA_API_KEY (statistics/quote) and/or FINNHUB_API_KEY — they usually work from Vercel when Yahoo is blocked. Add FINANCIAL_MODELING_PREP_API_KEY only if you want a single paid fundamentals vendor.',
     );
   }
   if (!input.fmpKeyConfigured && input.dataSource !== 'static_baseline') {
     hints.push(
-      'Adding FINANCIAL_MODELING_PREP_API_KEY (with ETF key-metrics enabled on your plan) is the most reliable way to keep snapshots and quarterly P/E trends aligned with a single fundamentals vendor.',
+      'Optional: FINANCIAL_MODELING_PREP_API_KEY unlocks FMP quarterly P/E history in one vendor. Live snapshots already merge Twelve Data, Finnhub, Yahoo, ETFDB, and Alpha Vantage.',
     );
   }
   if (
@@ -267,12 +267,12 @@ function buildLiveDataHints(input: {
     !input.hasHistoricalMultiples
   ) {
     hints.push(
-      'True per-ETF quarterly P/E history (and the most reliable trend charts) need Financial Modeling Prep key-metrics on a subscription that includes those endpoints.',
+      'Per-ETF quarterly P/E history needs FMP key-metrics on your plan. Until then, use Twelve Data / Finnhub snapshots and the long-run P/E chart (FRED or embedded fallback).',
     );
   }
   if (!input.hasHistoricalPe) {
     hints.push(
-      'Long-run market P/E chart uses FRED when reachable (public CSV or FRED_API_KEY). If the chart is empty, check network access to fred.stlouisfed.org.',
+      'Long-run P/E chart: allow fred.stlouisfed.org or set FRED_API_KEY. If FRED is blocked, an embedded approximate S&P 500 series may be used so the chart is not empty.',
     );
   }
   return hints;
@@ -315,6 +315,7 @@ async function buildHistoricalPeJson() {
       historicalPeDisclaimer: HISTORICAL_PE_EMPTY_DISCLAIMER,
     };
   }
+  const embedded = hp.source.includes('embedded');
   return {
     historicalPe: {
       points: hp.points,
@@ -324,8 +325,9 @@ async function buildHistoricalPeJson() {
       source: hp.source,
       fredSeriesId: hp.fredSeriesId,
     },
-    historicalPeDisclaimer:
-      'This curve is the S&P 500 index (broad U.S. large-cap), not the selected ETF’s exact history. QQQ / DIA / IWM often differ in level—use as a market-wide backdrop.',
+    historicalPeDisclaimer: embedded
+      ? 'Approximate embedded S&P 500–style trailing P/E (only used when FRED is unreachable). Not an official FRED series. QQQ / DIA / IWM differ from the S&P — use as a broad backdrop.'
+      : 'This curve is the S&P 500 index (broad U.S. large-cap), not the selected ETF’s exact history. QQQ / DIA / IWM often differ in level—use as a market-wide backdrop.',
   };
 }
 
@@ -345,7 +347,7 @@ function buildTimePlaceholderResponse() {
     updatedAt,
     dataSource: 'static_baseline' as const,
     granularityNote:
-      'Live ratios from Yahoo, ETFDB, and/or Alpha Vantage. FRED supplies long-run S&P 500 P/E history when reachable.',
+      'Live ratios from Twelve Data (TWELVE_DATA_API_KEY), Finnhub (FINNHUB_API_KEY), Yahoo, ETFDB, and/or Alpha Vantage. FRED or embedded fallback for long-run P/E.',
     fmpPaymentRequired: false,
     fmpBillingHint: null,
     yahooFallback: true,
@@ -435,15 +437,15 @@ export async function GET() {
       dataSource,
       granularityNote:
         dataSource === 'blended'
-          ? 'Blended: Financial Modeling Prep fundamentals where your plan allows, plus live-style ratios from Yahoo / ETFDB / Alpha Vantage to fill gaps. FRED supplies long-run S&P 500 P/E when reachable.'
-          : 'Live ratios: Yahoo Finance when reachable, else ETFDB public valuation pages, else Alpha Vantage OVERVIEW. FRED supplies long-run S&P 500 P/E history when reachable.',
+          ? 'Blended: Financial Modeling Prep fundamentals where your plan allows, plus Twelve Data / Finnhub / Yahoo / ETFDB / Alpha Vantage to fill gaps. FRED or embedded fallback supplies long-run S&P 500 P/E.'
+          : 'Live ratios: Twelve Data & Finnhub (when keys are set), then Yahoo, ETFDB, Alpha Vantage. FRED or embedded fallback for long-run P/E.',
       fmpPaymentRequired: false,
       fmpBillingHint: null,
       yahooFallback: true,
       yahooNote:
         fmp.fmpPaymentRequired || !fmp.anyData
           ? dataSource === 'blended'
-            ? 'FMP did not return a full dataset on this plan or request. We merged any FMP history/TTM with Yahoo, ETFDB, and Alpha Vantage for the freshest available snapshot.'
+            ? 'FMP did not return a full dataset on this plan or request. We merged any FMP history/TTM with Twelve Data, Finnhub, Yahoo, ETFDB, and Alpha Vantage for the freshest available snapshot.'
             : anyData && dataSource === 'yahoo_finance'
               ? 'Primary fundamentals provider is currently unavailable. Using merged Yahoo, ETFDB, and/or Alpha Vantage sources for live-style snapshots.'
               : 'FMP and free live providers were unavailable from this host, so we loaded built-in baseline valuation snapshots to keep the page usable.'
@@ -483,13 +485,13 @@ export async function GET() {
     updatedAt,
     dataSource,
     granularityNote:
-      'Live ratios from Yahoo, ETFDB, and/or Alpha Vantage. FRED supplies long-run S&P 500 P/E history when reachable.',
+      'Live ratios from Twelve Data (TWELVE_DATA_API_KEY), Finnhub (FINNHUB_API_KEY), Yahoo, ETFDB, and/or Alpha Vantage. FRED or embedded fallback for long-run P/E.',
     fmpPaymentRequired: false,
     fmpBillingHint: null,
     yahooFallback: true,
     yahooNote:
       anyData && indicesForResponse === yahooIndices
-        ? 'Using merged Yahoo, ETFDB, and Alpha Vantage (when configured) for live-style ETF snapshots.'
+        ? 'Using merged Twelve Data, Finnhub, Yahoo, ETFDB, and Alpha Vantage (when configured) for live-style ETF snapshots.'
         : 'Live providers were unavailable from this host; built-in baseline valuation snapshots are shown.',
     snapshotNote:
       dataSource === 'static_baseline'
