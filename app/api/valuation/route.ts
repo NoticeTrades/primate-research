@@ -157,7 +157,7 @@ async function buildIndicesFromYahoo(): Promise<IndexBlock[]> {
       periods,
       fmpError: ttm
         ? null
-        : 'Could not load metrics (Yahoo Finance may block server requests; add ALPHA_VANTAGE_API_KEY in Vercel as a free backup).',
+        : 'Could not load free metrics from Yahoo / ETFDB / Alpha Vantage. If this persists on Vercel, set ALPHA_VANTAGE_API_KEY as backup.',
     });
   }
   return out;
@@ -202,14 +202,14 @@ export async function GET() {
       updatedAt,
       dataSource: 'yahoo_finance' as const,
       granularityNote:
-        'Live ratios: Yahoo Finance when reachable, else Alpha Vantage OVERVIEW if ALPHA_VANTAGE_API_KEY is set (recommended on Vercel — Yahoo often blocks servers). Historical P/E tables need a paid FMP plan.',
+        'Live ratios: Yahoo Finance when reachable, else ETFDB public valuation pages, else Alpha Vantage OVERVIEW if ALPHA_VANTAGE_API_KEY is set. Historical P/E tables need a paid FMP plan.',
       fmpPaymentRequired: false,
       fmpBillingHint: null,
       yahooFallback: true,
       yahooNote:
         fmp.fmpPaymentRequired || !fmp.anyData
-          ? 'FMP Key Metrics are not available on your current FMP tier (or returned no data). Using free Yahoo Finance and/or Alpha Vantage (set ALPHA_VANTAGE_API_KEY in Vercel if Yahoo blocks this host). Upgrade FMP later for quarterly history and period tables.'
-          : 'Using free Yahoo / Alpha Vantage for ETF valuation snapshots.',
+          ? 'FMP Key Metrics are not available on your current FMP tier (or returned no data). Using free Yahoo, ETFDB, and/or Alpha Vantage (set ALPHA_VANTAGE_API_KEY in Vercel if Yahoo is blocked). Upgrade FMP later for quarterly history and period tables.'
+          : 'Using free Yahoo / ETFDB / Alpha Vantage for ETF valuation snapshots.',
       hasHistoricalMultiples,
       indices: yahooIndices,
       anyData,
@@ -227,12 +227,12 @@ export async function GET() {
     updatedAt,
     dataSource: 'yahoo_finance' as const,
     granularityNote:
-      'Live ratios from Yahoo Finance and/or Alpha Vantage (add free ALPHA_VANTAGE_API_KEY if Yahoo blocks servers). Optional FMP_API_KEY for quarterly P/E history and period tables.',
+      'Live ratios from Yahoo, ETFDB, and/or Alpha Vantage (add free ALPHA_VANTAGE_API_KEY if Yahoo is blocked). Optional FMP_API_KEY for quarterly P/E history and period tables.',
     fmpPaymentRequired: false,
     fmpBillingHint: null,
     yahooFallback: true,
     yahooNote:
-      'No FMP_API_KEY — using free Yahoo Finance + optional Alpha Vantage (ALPHA_VANTAGE_API_KEY) for ETF metrics. Add FMP later for historical multiples tables.',
+      'No FMP_API_KEY — using free Yahoo / ETFDB plus optional Alpha Vantage (ALPHA_VANTAGE_API_KEY) for ETF metrics. Add FMP later for historical multiples tables.',
     hasHistoricalMultiples,
     indices: yahooIndices,
     anyData,

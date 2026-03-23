@@ -213,12 +213,12 @@ export default function ValuationPage() {
 
       {!loading && data?.configured && data.yahooFallback && data.yahooNote && (
         <div className="mb-8 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-4 text-sm text-sky-950 dark:border-sky-500/35 dark:bg-sky-950/30 dark:text-sky-100">
-          <p className="font-semibold">Free data mode (Yahoo Finance)</p>
+          <p className="font-semibold">Free data mode (Yahoo / ETFDB / Alpha Vantage)</p>
           <p className="mt-2 leading-relaxed opacity-95">{data.yahooNote}</p>
           <p className="mt-2 text-xs opacity-90">
-            Yahoo and/or Alpha Vantage supply live-style ETF ratios. If Yahoo blocks this server, add{' '}
-            <strong>ALPHA_VANTAGE_API_KEY</strong> in Vercel. Historical multiple series and period-% tables need upgraded
-            FMP.
+            Yahoo, ETFDB, and/or Alpha Vantage supply live-style ETF ratios. If Yahoo is blocked on this server, ETFDB
+            can still provide P/E + dividend yield, and Alpha Vantage can fill additional ratios when{' '}
+            <strong>ALPHA_VANTAGE_API_KEY</strong> is set in Vercel.
           </p>
         </div>
       )}
@@ -229,8 +229,8 @@ export default function ValuationPage() {
           <p className="mt-2">
             Yahoo Finance often blocks automated requests from hosting providers (e.g. Vercel). Add a free{' '}
             <strong>ALPHA_VANTAGE_API_KEY</strong> in Vercel → Environment Variables (same key used elsewhere on this site)
-            — the valuation API will use Alpha Vantage OVERVIEW as a backup. You can upgrade FMP later for historical
-            tables.
+            — the valuation API uses Alpha Vantage as backup, and ETFDB for P/E + dividend yield. You can upgrade FMP
+            later for historical tables.
           </p>
         </div>
       )}
