@@ -173,7 +173,13 @@ export default function ValuationPage() {
           <p className="mt-2 text-xs text-zinc-500">
             Last updated: {new Date(data.updatedAt).toLocaleString()}
             {data.configured && data.dataSource
-              ? ` · Source: ${data.dataSource === 'yahoo_finance' ? 'Yahoo Finance (free)' : data.dataSource}`
+              ? ` · Source: ${
+                  data.dataSource === 'yahoo_finance'
+                    ? 'Yahoo / ETFDB / Alpha Vantage (free)'
+                    : data.dataSource === 'static_baseline'
+                      ? 'Static baseline snapshot'
+                      : data.dataSource
+                }`
               : null}
           </p>
         )}
