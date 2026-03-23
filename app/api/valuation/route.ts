@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { VALUATION_INDICES } from '../../../data/valuation-indices';
 import { STATIC_VALUATION_BASELINE } from '../../../data/valuation-static';
 import { fetchFreeEtfValuationSnapshot } from '../../../lib/free-valuation-snapshot';
+import { isEmptySnapshot } from '../../../lib/yahoo-valuation';
 import {
   computePeriodChanges,
   explainFmpResponseError,
@@ -20,6 +21,8 @@ import { fetchSp500PeHistoryFromFred } from '../../../lib/valuation-pe-history';
 /** Avoid static generation / prerender during `next build` (FRED + FMP can exceed the ~60s route budget on Vercel). */
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+/** Allow enough time to merge Yahoo + ETFDB + Alpha Vantage + FRED on cold starts (raise on Vercel Pro if needed). */
+export const maxDuration = 60;
 
 type IndexBlock = {
   symbol: string;
@@ -142,16 +145,93 @@ async function buildIndicesFromFmp(apiKey: string): Promise<{
   return { indices, anyData, fmpPaymentRequired };
 }
 
-async function buildIndicesFromYahoo(): Promise<IndexBlock[]> {
-  const out: IndexBlock[] = [];
+/** Stagger symbols to reduce Alpha Vantage free-tier bursts and Yahoo rate limits. */
+async function fetchFreeSnapshotsSequential(): Promise<(TtmSnapshot | null)[]> {
+  const snaps: (TtmSnapshot | null)[] = [];
   for (let i = 0; i < VALUATION_INDICES.length; i++) {
-    const meta = VALUATION_INDICES[i];
-    if (i > 0) await new Promise((r) => setTimeout(r, 200));
-    const ttm = await fetchFreeEtfValuationSnapshot(meta.symbol);
+    if (i > 0) await new Promise((r) => setTimeout(r, 450));
+    snaps.push(await fetchFreeEtfValuationSnapshot(VALUATION_INDICES[i].symbol));
+  }
+  return snaps;
+}
+
+function mergeTtmPreferFmpThenFree(fmp: TtmSnapshot | null, free: TtmSnapshot | null): TtmSnapshot | null {
+  if (isEmptySnapshot(fmp) && isEmptySnapshot(free)) return null;
+  if (isEmptySnapshot(fmp)) return free;
+  if (isEmptySnapshot(free)) return fmp;
+  const f = fmp!;
+  const r = free!;
+  const peRatio = f.peRatio ?? r.peRatio;
+  const merged: TtmSnapshot = {
+    peRatio: f.peRatio ?? r.peRatio,
+    forwardPe: f.forwardPe ?? r.forwardPe,
+    pbRatio: f.pbRatio ?? r.pbRatio,
+    dividendYieldPct: f.dividendYieldPct ?? r.dividendYieldPct,
+    earningsYieldPct: null,
+    priceToSalesRatio: f.priceToSalesRatio ?? r.priceToSalesRatio,
+    enterpriseValueMultiple: f.enterpriseValueMultiple ?? r.enterpriseValueMultiple,
+    pegRatio: f.pegRatio ?? r.pegRatio,
+    date: f.date ?? r.date ?? new Date().toISOString().slice(0, 10),
+  };
+  merged.earningsYieldPct =
+    peRatio != null && peRatio > 0 ? 100 / peRatio : f.earningsYieldPct ?? r.earningsYieldPct ?? null;
+  return merged;
+}
+
+/** When FMP returns quarterly rows but no TTM, surface the latest quarter as the card snapshot. */
+function enrichTtmFromQuarterlyHistoryIfNeeded(ttm: TtmSnapshot | null, history: MetricPoint[]): TtmSnapshot | null {
+  if (!isEmptySnapshot(ttm) || history.length === 0) return ttm;
+  const last = history[history.length - 1];
+  const peRatio = last.peRatio;
+  return {
+    peRatio: last.peRatio,
+    pbRatio: last.pbRatio,
+    dividendYieldPct: last.dividendYieldPct,
+    earningsYieldPct:
+      last.earningsYieldPct ?? (peRatio != null && peRatio > 0 ? 100 / peRatio : null),
+    priceToSalesRatio: last.priceToSalesRatio,
+    enterpriseValueMultiple: null,
+    pegRatio: null,
+    forwardPe: null,
+    date: last.date,
+  };
+}
+
+function buildHybridIndicesFromFmpAndFree(
+  fmpBlocks: IndexBlock[],
+  freeSnaps: (TtmSnapshot | null)[],
+): IndexBlock[] {
+  return fmpBlocks.map((block, i) => {
+    const free = freeSnaps[i] ?? null;
+    let ttm = mergeTtmPreferFmpThenFree(block.ttm, free);
+    ttm = enrichTtmFromQuarterlyHistoryIfNeeded(ttm, block.history);
+    const history = block.history;
+    const latest = mergeLatestQuarterlyWithTtm(history, ttm);
+    const periods = computePeriodChanges(history, latest);
+    const hasSomething =
+      (ttm && !isEmptySnapshot(ttm)) || history.length > 0 || (free && !isEmptySnapshot(free));
+    const fmpError = hasSomething
+      ? null
+      : block.fmpError ??
+        'Could not load live metrics from Financial Modeling Prep or free providers (Yahoo / ETFDB / Alpha Vantage).';
+    return {
+      ...block,
+      ttm,
+      history,
+      periods,
+      fmpError,
+    };
+  });
+}
+
+async function buildIndicesFromYahoo(): Promise<IndexBlock[]> {
+  const freeSnaps = await fetchFreeSnapshotsSequential();
+  return VALUATION_INDICES.map((meta, i) => {
+    const ttm = freeSnaps[i] ?? null;
     const history: MetricPoint[] = [];
     const latest = mergeLatestQuarterlyWithTtm(history, ttm);
     const periods = computePeriodChanges(history, latest);
-    out.push({
+    return {
       symbol: meta.symbol,
       name: meta.name,
       etfName: meta.etfName,
@@ -159,12 +239,43 @@ async function buildIndicesFromYahoo(): Promise<IndexBlock[]> {
       ttm,
       history,
       periods,
-      fmpError: ttm
-        ? null
-        : 'Could not load free metrics from Yahoo / ETFDB / Alpha Vantage at this time.',
-    });
+      fmpError: ttm && !isEmptySnapshot(ttm) ? null : 'Could not load free metrics from Yahoo / ETFDB / Alpha Vantage at this time.',
+    };
+  });
+}
+
+function buildLiveDataHints(input: {
+  dataSource: string;
+  hasHistoricalMultiples: boolean;
+  hasHistoricalPe: boolean;
+  fmpKeyConfigured: boolean;
+}): string[] {
+  const hints: string[] = [];
+  if (input.dataSource === 'static_baseline') {
+    hints.push(
+      'Static fallback is active. For live ratios as of each request, set FINANCIAL_MODELING_PREP_API_KEY (plan that includes ETF key-metrics) and/or ALPHA_VANTAGE_API_KEY in your deployment env, and ensure outbound requests to Yahoo/FRED are not blocked.',
+    );
   }
-  return out;
+  if (!input.fmpKeyConfigured && input.dataSource !== 'static_baseline') {
+    hints.push(
+      'Adding FINANCIAL_MODELING_PREP_API_KEY (with ETF key-metrics enabled on your plan) is the most reliable way to keep snapshots and quarterly P/E trends aligned with a single fundamentals vendor.',
+    );
+  }
+  if (
+    input.fmpKeyConfigured &&
+    input.dataSource !== 'financialmodelingprep.com/stable' &&
+    !input.hasHistoricalMultiples
+  ) {
+    hints.push(
+      'True per-ETF quarterly P/E history (and the most reliable trend charts) need Financial Modeling Prep key-metrics on a subscription that includes those endpoints.',
+    );
+  }
+  if (!input.hasHistoricalPe) {
+    hints.push(
+      'Long-run market P/E chart uses FRED when reachable (public CSV or FRED_API_KEY). If the chart is empty, check network access to fred.stlouisfed.org.',
+    );
+  }
+  return hints;
 }
 
 function buildIndicesFromStaticBaseline(): IndexBlock[] {
@@ -245,6 +356,12 @@ function buildTimePlaceholderResponse() {
     hasHistoricalPe: false,
     historicalPe: null,
     historicalPeDisclaimer: HISTORICAL_PE_EMPTY_DISCLAIMER,
+    liveDataHints: buildLiveDataHints({
+      dataSource: 'static_baseline',
+      hasHistoricalMultiples: false,
+      hasHistoricalPe: false,
+      fmpKeyConfigured: Boolean(getFmpKey()),
+    }),
     indices: indicesForResponse,
     anyData,
   });
@@ -266,6 +383,7 @@ export async function GET() {
     if (fmpWorks) {
       const hasHistoricalMultiples = fmp.indices.some((i) => i.history.length > 0);
       const pe = await buildHistoricalPeJson();
+      const hasHistoricalPe = pe.historicalPe != null && pe.historicalPe.points.length > 0;
       return NextResponse.json({
         ok: true,
         configured: true,
@@ -279,22 +397,36 @@ export async function GET() {
         yahooNote: null,
         snapshotNote: null,
         hasHistoricalMultiples,
-        hasHistoricalPe: pe.historicalPe != null && pe.historicalPe.points.length > 0,
+        hasHistoricalPe,
+        liveDataHints: buildLiveDataHints({
+          dataSource: 'financialmodelingprep.com/stable',
+          hasHistoricalMultiples,
+          hasHistoricalPe,
+          fmpKeyConfigured: true,
+        }),
         ...pe,
         indices: fmp.indices,
         anyData: fmp.anyData,
       });
     }
 
-    /** 402 / empty → free Yahoo Finance snapshots */
-    const yahooIndices = await buildIndicesFromYahoo();
-    let anyData = yahooIndices.some((i) => i.ttm != null || i.history.length > 0);
-    const indicesForResponse = anyData ? yahooIndices : buildIndicesFromStaticBaseline();
+    /** 402 / empty / partial → merge FMP blocks with Yahoo + ETFDB + Alpha Vantage (live gaps filled). */
+    const freeSnaps = await fetchFreeSnapshotsSequential();
+    const hybridIndices = buildHybridIndicesFromFmpAndFree(fmp.indices, freeSnaps);
+    let anyData = hybridIndices.some((i) => i.ttm != null || i.history.length > 0);
+    const indicesForResponse = anyData ? hybridIndices : buildIndicesFromStaticBaseline();
     if (!anyData) anyData = indicesForResponse.some((i) => i.ttm != null);
-    const hasHistoricalMultiples = yahooIndices.some((i) => i.history.length > 0);
-    const dataSource =
-      anyData && indicesForResponse === yahooIndices ? ('yahoo_finance' as const) : ('static_baseline' as const);
+    const hasHistoricalMultiples = hybridIndices.some((i) => i.history.length > 0);
+    const fmpContributedAnything = fmp.indices.some(
+      (i) => i.history.length > 0 || (i.ttm != null && !isEmptySnapshot(i.ttm)),
+    );
+    const dataSource = !anyData
+      ? ('static_baseline' as const)
+      : fmpContributedAnything
+        ? ('blended' as const)
+        : ('yahoo_finance' as const);
     const pe = await buildHistoricalPeJson();
+    const hasHistoricalPe = pe.historicalPe != null && pe.historicalPe.points.length > 0;
 
     return NextResponse.json({
       ok: true,
@@ -302,22 +434,32 @@ export async function GET() {
       updatedAt,
       dataSource,
       granularityNote:
-        'Live ratios: Yahoo Finance when reachable, else ETFDB public valuation pages, else Alpha Vantage OVERVIEW. FRED supplies long-run S&P 500 P/E history when reachable.',
+        dataSource === 'blended'
+          ? 'Blended: Financial Modeling Prep fundamentals where your plan allows, plus live-style ratios from Yahoo / ETFDB / Alpha Vantage to fill gaps. FRED supplies long-run S&P 500 P/E when reachable.'
+          : 'Live ratios: Yahoo Finance when reachable, else ETFDB public valuation pages, else Alpha Vantage OVERVIEW. FRED supplies long-run S&P 500 P/E history when reachable.',
       fmpPaymentRequired: false,
       fmpBillingHint: null,
       yahooFallback: true,
       yahooNote:
         fmp.fmpPaymentRequired || !fmp.anyData
-          ? anyData && indicesForResponse === yahooIndices
-            ? 'Primary fundamentals provider is currently unavailable. Using free Yahoo, ETFDB, and/or Alpha Vantage sources for live-style snapshots.'
-            : 'FMP and free live providers were unavailable from this host, so we loaded built-in baseline valuation snapshots to keep the page usable.'
+          ? dataSource === 'blended'
+            ? 'FMP did not return a full dataset on this plan or request. We merged any FMP history/TTM with Yahoo, ETFDB, and Alpha Vantage for the freshest available snapshot.'
+            : anyData && dataSource === 'yahoo_finance'
+              ? 'Primary fundamentals provider is currently unavailable. Using merged Yahoo, ETFDB, and/or Alpha Vantage sources for live-style snapshots.'
+              : 'FMP and free live providers were unavailable from this host, so we loaded built-in baseline valuation snapshots to keep the page usable.'
           : 'Using free Yahoo / ETFDB / Alpha Vantage for ETF valuation snapshots.',
       snapshotNote:
         dataSource === 'static_baseline'
           ? 'Reference snapshot: approximate values while live feeds are unavailable.'
           : null,
       hasHistoricalMultiples,
-      hasHistoricalPe: pe.historicalPe != null && pe.historicalPe.points.length > 0,
+      hasHistoricalPe,
+      liveDataHints: buildLiveDataHints({
+        dataSource,
+        hasHistoricalMultiples,
+        hasHistoricalPe,
+        fmpKeyConfigured: true,
+      }),
       ...pe,
       indices: indicesForResponse,
       anyData,
@@ -333,6 +475,7 @@ export async function GET() {
   const dataSource =
     anyData && indicesForResponse === yahooIndices ? ('yahoo_finance' as const) : ('static_baseline' as const);
   const pe = await buildHistoricalPeJson();
+  const hasHistoricalPe = pe.historicalPe != null && pe.historicalPe.points.length > 0;
 
   return NextResponse.json({
     ok: true,
@@ -346,14 +489,20 @@ export async function GET() {
     yahooFallback: true,
     yahooNote:
       anyData && indicesForResponse === yahooIndices
-        ? 'Using free Yahoo / ETFDB / Alpha Vantage sources for ETF valuation snapshots.'
+        ? 'Using merged Yahoo, ETFDB, and Alpha Vantage (when configured) for live-style ETF snapshots.'
         : 'Live providers were unavailable from this host; built-in baseline valuation snapshots are shown.',
     snapshotNote:
       dataSource === 'static_baseline'
         ? 'Reference snapshot: approximate values while live feeds are unavailable.'
         : null,
     hasHistoricalMultiples,
-    hasHistoricalPe: pe.historicalPe != null && pe.historicalPe.points.length > 0,
+    hasHistoricalPe,
+    liveDataHints: buildLiveDataHints({
+      dataSource,
+      hasHistoricalMultiples,
+      hasHistoricalPe,
+      fmpKeyConfigured: false,
+    }),
     ...pe,
     indices: indicesForResponse,
     anyData,

@@ -102,6 +102,7 @@ export const DASHBOARD_GUIDE_SECTIONS: GuideSection[] = [
       'Compare P/E and P/B across large-cap (SPY), growth/tech-heavy (QQQ), Dow (DIA), and small caps (IWM) to see where the market is paying up for earnings.',
       'Read period % changes as expansion vs compression of multiples — often as important as price direction when earnings are volatile.',
       'Pair with Rates & Fed Policy: higher real yields typically pressure duration and high-multiple baskets unless growth accelerates.',
+      'For authoritative live ratios and true per-ETF quarterly P/E history (not just a static fallback), deploy with FINANCIAL_MODELING_PREP_API_KEY on a plan that includes ETF key-metrics. Add ALPHA_VANTAGE_API_KEY when Yahoo is flaky from your host; FRED_API_KEY is optional if the public FRED CSV export is blocked.',
     ],
     indicesAndMarkets: [
       'Index futures (ES/NQ/YM/RTY) react to macro and positioning; underlying cash multiples explain part of “how much is priced in” for future earnings.',

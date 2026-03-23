@@ -87,6 +87,8 @@ type ValuationPayload = {
   historicalPe?: HistoricalPeBlock | null;
   historicalPeDisclaimer?: string;
   snapshotNote?: string | null;
+  /** How to get fully authoritative live + historical data */
+  liveDataHints?: string[];
   fmpPaymentRequired?: boolean;
   fmpBillingHint?: string | null;
   yahooFallback?: boolean;
@@ -253,6 +255,8 @@ export default function ValuationPage() {
               ? ` · Source: ${
                   data.dataSource === 'yahoo_finance'
                     ? 'Yahoo / ETFDB / Alpha Vantage (free)'
+                    : data.dataSource === 'blended'
+                      ? 'FMP + Yahoo / ETFDB / Alpha Vantage (merged)'
                     : data.dataSource === 'static_baseline'
                       ? 'Static baseline snapshot'
                       : data.dataSource
@@ -261,6 +265,17 @@ export default function ValuationPage() {
           </p>
         )}
       </header>
+
+      {!loading && data?.configured && data.liveDataHints && data.liveDataHints.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/25 dark:text-amber-100">
+          <p className="font-semibold">Live data &amp; chart accuracy</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-relaxed opacity-95">
+            {data.liveDataHints.map((h, i) => (
+              <li key={i}>{h}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {loading && (
         <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400">
@@ -289,7 +304,18 @@ export default function ValuationPage() {
         </div>
       )}
 
-      {!loading && data?.configured && data.yahooFallback && data.yahooNote && data.dataSource !== 'static_baseline' && (
+      {!loading && data?.configured && data.yahooFallback && data.yahooNote && data.dataSource === 'blended' && (
+        <div className="mb-8 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-4 text-sm text-violet-950 dark:border-violet-500/35 dark:bg-violet-950/35 dark:text-violet-100">
+          <p className="font-semibold">Blended fundamentals (FMP + free providers)</p>
+          <p className="mt-2 leading-relaxed opacity-95">{data.yahooNote}</p>
+          <p className="mt-2 text-xs opacity-90">
+            Snapshots merge the best available fields from your FMP plan (when any data returns) with Yahoo / ETFDB /
+            Alpha Vantage so numbers stay as current as the upstream feeds allow.
+          </p>
+        </div>
+      )}
+
+      {!loading && data?.configured && data.yahooFallback && data.yahooNote && data.dataSource !== 'static_baseline' && data.dataSource !== 'blended' && (
         <div className="mb-8 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-4 text-sm text-sky-950 dark:border-sky-500/35 dark:bg-sky-950/30 dark:text-sky-100">
           <p className="font-semibold">Free data mode (Yahoo / ETFDB / Alpha Vantage)</p>
           <p className="mt-2 leading-relaxed opacity-95">{data.yahooNote}</p>
@@ -332,6 +358,8 @@ export default function ValuationPage() {
             Current snapshot
             {data.dataSource === 'static_baseline' ? (
               <span className="ml-2 text-sm font-normal text-zinc-500">(reference snapshot · not live)</span>
+            ) : data.dataSource === 'blended' ? (
+              <span className="ml-2 text-sm font-normal text-zinc-500">(FMP + free providers · merged for freshest snapshot)</span>
             ) : data.yahooFallback ? (
               <span className="ml-2 text-sm font-normal text-zinc-500">(free provider mix · trailing / forward where shown)</span>
             ) : (

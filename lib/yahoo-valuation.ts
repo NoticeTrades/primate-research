@@ -5,6 +5,19 @@
 
 import type { TtmSnapshot } from './valuation-fmp';
 
+const YAHOO_FETCH_MS = 14_000;
+
+function yahooSignal(): AbortSignal | undefined {
+  try {
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+      return AbortSignal.timeout(YAHOO_FETCH_MS);
+    }
+  } catch {
+    /* ignore */
+  }
+  return undefined;
+}
+
 const YAHOO_HEADERS: Record<string, string> = {
   Accept: 'application/json',
   'User-Agent':
@@ -55,15 +68,18 @@ export function isEmptySnapshot(t: TtmSnapshot | null): boolean {
 }
 
 /** v10 quoteSummary — richer when Yahoo allows it. */
-async function fetchQuoteSummarySnapshot(symbol: string): Promise<TtmSnapshot | null> {
+async function fetchQuoteSummarySnapshot(symbol: string, host: 'query1' | 'query2'): Promise<TtmSnapshot | null> {
   const sym = symbol.trim().toUpperCase();
   const modules = 'summaryDetail,defaultKeyStatistics,financialData';
-  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=${modules}`;
+  const base = host === 'query1' ? 'query1.finance.yahoo.com' : 'query2.finance.yahoo.com';
+  const url = `https://${base}/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=${modules}`;
 
   try {
+    const signal = yahooSignal();
     const res = await fetch(url, {
       headers: withReferer(sym),
       cache: 'no-store',
+      ...(signal ? { signal } : {}),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as {
@@ -177,9 +193,11 @@ async function fetchV7QuoteSnapshot(symbol: string, host: 'query1' | 'query2'): 
   const url = `https://${base}/v7/finance/quote?symbols=${encodeURIComponent(sym)}`;
 
   try {
+    const signal = yahooSignal();
     const res = await fetch(url, {
       headers: withReferer(sym),
       cache: 'no-store',
+      ...(signal ? { signal } : {}),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as { quoteResponse?: { result?: Array<Record<string, unknown>> } };
@@ -210,21 +228,19 @@ function mergeSnapshots(a: TtmSnapshot | null, b: TtmSnapshot | null): TtmSnapsh
   };
 }
 
-/**
- * Fetch live valuation-style ratios for an ETF/stock ticker.
- * Tries quoteSummary + v7 quote (query1 & query2) and merges results.
- */
-export async function fetchYahooEtfValuationSnapshot(symbol: string): Promise<TtmSnapshot | null> {
+async function fetchYahooEtfValuationSnapshotOnce(symbol: string): Promise<TtmSnapshot | null> {
   const sym = symbol.trim().toUpperCase();
   if (!sym) return null;
 
-  const [fromSummary, fromV7q1, fromV7q2] = await Promise.all([
-    fetchQuoteSummarySnapshot(sym),
+  const [fromSummary1, fromSummary2, fromV7q1, fromV7q2] = await Promise.all([
+    fetchQuoteSummarySnapshot(sym, 'query1'),
+    fetchQuoteSummarySnapshot(sym, 'query2'),
     fetchV7QuoteSnapshot(sym, 'query1'),
     fetchV7QuoteSnapshot(sym, 'query2'),
   ]);
 
-  let merged = mergeSnapshots(fromSummary, fromV7q1);
+  let merged = mergeSnapshots(fromSummary1, fromSummary2);
+  merged = mergeSnapshots(merged, fromV7q1);
   merged = mergeSnapshots(merged, fromV7q2);
 
   if (merged && !isEmptySnapshot(merged)) return merged;
@@ -232,6 +248,7 @@ export async function fetchYahooEtfValuationSnapshot(symbol: string): Promise<Tt
   /** Last resort: simpler User-Agent (some edge networks behave differently). */
   try {
     const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(sym)}`;
+    const signal = yahooSignal();
     const res = await fetch(url, {
       headers: {
         Accept: 'application/json',
@@ -239,6 +256,7 @@ export async function fetchYahooEtfValuationSnapshot(symbol: string): Promise<Tt
         Referer: `https://finance.yahoo.com/quote/${encodeURIComponent(sym)}`,
       },
       cache: 'no-store',
+      ...(signal ? { signal } : {}),
     });
     if (res.ok) {
       const json = (await res.json()) as { quoteResponse?: { result?: Array<Record<string, unknown>> } };
@@ -253,4 +271,19 @@ export async function fetchYahooEtfValuationSnapshot(symbol: string): Promise<Tt
   }
 
   return merged && !isEmptySnapshot(merged) ? merged : null;
+}
+
+/**
+ * Fetch live valuation-style ratios for an ETF/stock ticker.
+ * Retries once — Yahoo is flaky from serverless/datacenter IPs.
+ */
+export async function fetchYahooEtfValuationSnapshot(symbol: string): Promise<TtmSnapshot | null> {
+  const sym = symbol.trim().toUpperCase();
+  if (!sym) return null;
+
+  const first = await fetchYahooEtfValuationSnapshotOnce(sym);
+  if (first && !isEmptySnapshot(first)) return first;
+
+  await new Promise((r) => setTimeout(r, 400));
+  return fetchYahooEtfValuationSnapshotOnce(sym);
 }
