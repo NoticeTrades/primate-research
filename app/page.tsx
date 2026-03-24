@@ -154,7 +154,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-950 relative">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/50 to-zinc-950 relative">
       <StructuredData data={organizationSchema} />
       <StructuredData data={websiteSchema} />
       <CursorGlow />

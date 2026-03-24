@@ -86,9 +86,22 @@ export const metadata: Metadata = {
     google: 'xFaGHhZAwJxx574URchIbRMaNKHbRQjCfBlnC0Cipfs',
   },
   icons: {
-    icon: '/icon?v=20260324-3',
-    shortcut: '/primate-logo.png?v=20260324-3',
-    apple: '/apple-icon?v=20260324-3',
+    icon: [
+      { url: '/favicon.ico?v=20260324-4', sizes: 'any' },
+      {
+        url: '/favicon_192x192.png?v=20260324-4',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+    ],
+    shortcut: '/favicon.ico?v=20260324-4',
+    apple: [
+      {
+        url: '/favicon_512x512.png?v=20260324-4',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
   },
 };
 
