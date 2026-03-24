@@ -24,15 +24,15 @@ export default async function AppleIcon() {
           alignItems: 'center',
           justifyContent: 'center',
           background: '#ffffff',
-          borderRadius: '36px',
+          borderRadius: '42px',
         }}
       >
         <img
           src={logoBase64}
-          width={170}
-          height={170}
+          width={164}
+          height={164}
           style={{ 
-            objectFit: 'cover',
+            objectFit: 'contain',
           }}
         />
       </div>

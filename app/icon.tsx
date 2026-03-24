@@ -24,15 +24,15 @@ export default async function Icon() {
           alignItems: 'center',
           justifyContent: 'center',
           background: '#ffffff',
-          borderRadius: '8px',
+          borderRadius: '12px',
         }}
       >
         <img
           src={logoBase64}
-          width={46}
-          height={46}
+          width={44}
+          height={44}
           style={{ 
-            objectFit: 'cover',
+            objectFit: 'contain',
           }}
         />
       </div>

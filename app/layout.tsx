@@ -86,9 +86,9 @@ export const metadata: Metadata = {
     google: 'xFaGHhZAwJxx574URchIbRMaNKHbRQjCfBlnC0Cipfs',
   },
   icons: {
-    icon: '/primate-logo.png?v=20260324-2',
-    shortcut: '/primate-logo.png?v=20260324-2',
-    apple: '/primate-logo.png?v=20260324-2',
+    icon: '/icon?v=20260324-3',
+    shortcut: '/primate-logo.png?v=20260324-3',
+    apple: '/apple-icon?v=20260324-3',
   },
 };
 
