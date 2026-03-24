@@ -29,6 +29,16 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* Hide scrollbar for market ticker */
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -197,4 +207,48 @@ body {
 .tradingview-widget-container {
   background: #131722;
   border-radius: 0 0 1rem 1rem;
+}
+
+/* Homepage interaction helpers */
+@keyframes home-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes aura-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.08); }
+}
+
+.home-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+
+.home-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.blue-aura {
+  position: absolute;
+  pointer-events: none;
+  filter: blur(60px);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.45) 0%, rgba(37, 99, 235, 0.08) 50%, transparent 75%);
+  animation: aura-pulse 8s ease-in-out infinite;
+}
+
+.profile-aura {
+  position: absolute;
+  inset: -14px;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(16px);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.5) 0%, rgba(59, 130, 246, 0.2) 45%, transparent 75%);
+  animation: aura-pulse 6.5s ease-in-out infinite;
+}
+
+.profile-float {
+  animation: home-float 5s ease-in-out infinite;
 }

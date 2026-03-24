@@ -32,6 +32,8 @@ export default function Home() {
   const router = useRouter();
   const [researchOpacity, setResearchOpacity] = useState(0);
   const [latestContent, setLatestContent] = useState<LatestContent | null>(null);
+  const [videosVisible, setVideosVisible] = useState(false);
+  const [aboutVisible, setAboutVisible] = useState(false);
 
   useEffect(() => {
     fetch('/api/latest-content', { cache: 'no-store' })
@@ -40,6 +42,31 @@ export default function Home() {
         if (data?.type && data?.title) setLatestContent(data);
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const setupObserver = (
+      id: string,
+      setVisible: (value: boolean) => void,
+      threshold = 0.16
+    ) => {
+      const node = document.getElementById(id);
+      if (!node) return () => {};
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) setVisible(true);
+        },
+        { threshold }
+      );
+      observer.observe(node);
+      return () => observer.disconnect();
+    };
+
+    const cleanups = [
+      setupObserver('videos', setVideosVisible, 0.15),
+      setupObserver('about', setAboutVisible, 0.12),
+    ];
+    return () => cleanups.forEach((c) => c());
   }, []);
 
   const handleLatestClick = () => {
@@ -313,8 +340,10 @@ export default function Home() {
         className="py-24 px-6 bg-black dark:bg-zinc-950 relative transition-opacity duration-700"
         style={{ opacity: researchOpacity }}
       >
+        <div className="blue-aura left-[4%] top-[10%] h-56 w-56 md:h-72 md:w-72" />
+        <div className="blue-aura right-[8%] top-[26%] h-48 w-48 md:h-64 md:w-64" />
         <div className="max-w-7xl mx-auto">
-          <div className="mb-16">
+          <div className="mb-16 home-reveal is-visible">
             <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-4">
               Featured Research
             </h2>
@@ -333,8 +362,10 @@ export default function Home() {
       {/* Videos Section */}
       <section
         id="videos"
-        className="py-24 px-6 bg-black dark:bg-zinc-950"
+        className={`py-24 px-6 bg-black dark:bg-zinc-950 relative home-reveal ${videosVisible ? 'is-visible' : ''}`}
       >
+        <div className="blue-aura left-[10%] top-[12%] h-56 w-56 md:h-80 md:w-80" />
+        <div className="blue-aura right-[12%] top-[44%] h-52 w-52 md:h-72 md:w-72" />
         <div className="max-w-7xl mx-auto">
           <div className="mb-16">
             <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-4">
@@ -356,7 +387,7 @@ export default function Home() {
       {/* About Section */}
       <section
         id="about"
-        className="py-24 px-6 bg-white dark:bg-zinc-950"
+        className={`py-24 px-6 bg-white dark:bg-zinc-950 home-reveal ${aboutVisible ? 'is-visible' : ''}`}
       >
         <div className="max-w-5xl mx-auto">
           <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-16">
@@ -366,7 +397,10 @@ export default function Home() {
           {/* Nick Thomas Section */}
           <div className="mb-20">
             <div className="flex flex-col md:flex-row gap-8 items-start mb-8">
-              <ProfilePicture />
+              <div className="relative profile-float">
+                <div className="profile-aura" />
+                <ProfilePicture />
+              </div>
               <div className="flex-1">
                 <h3 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
                   Nick Thomas
