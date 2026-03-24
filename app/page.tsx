@@ -14,6 +14,7 @@ import DiscordSign from './components/DiscordSign';
 import YouTubeLiveIndicator from './components/YouTubeLiveIndicator';
 import StructuredData from './components/StructuredData';
 import BreakingNewsAlert from './components/BreakingNewsAlert';
+import StaggerGrid from './components/StaggerGrid';
 
 type LatestContent = {
   type: 'report' | 'video' | null;
@@ -290,11 +291,17 @@ export default function Home() {
               Select published calls and video updates across equities, crypto, and markets—with key outcomes and links to full reports.
             </p>
           </div>
-          <div className="rounded-3xl border border-blue-500/20 bg-gradient-to-br from-blue-500/8 via-blue-400/5 to-transparent p-4 sm:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {featuredCalls.map((call, index) => (
-                <SpotlightCall key={index} {...call} />
-              ))}
+          <div className="relative rounded-3xl group">
+            <div
+              className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/20 via-blue-500/10 to-blue-600/20 rounded-3xl blur-lg opacity-50 pointer-events-none group-hover:opacity-70 transition-opacity duration-500"
+              aria-hidden
+            />
+            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/90 backdrop-blur-sm p-4 sm:p-6">
+              <StaggerGrid className="grid grid-cols-1 lg:grid-cols-3 gap-8" staggerMs={120}>
+                {featuredCalls.map((call, index) => (
+                  <SpotlightCall key={index} {...call} />
+                ))}
+              </StaggerGrid>
             </div>
           </div>
         </div>
@@ -315,11 +322,17 @@ export default function Home() {
               current market conditions, trends, and investment opportunities.
             </p>
           </div>
-          <div className="rounded-3xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 via-blue-400/5 to-transparent p-4 sm:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {videos.map((video, index) => (
-                <VideoCard key={index} {...video} />
-              ))}
+          <div className="relative rounded-3xl group">
+            <div
+              className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/20 via-blue-500/10 to-blue-600/20 rounded-3xl blur-lg opacity-50 pointer-events-none group-hover:opacity-70 transition-opacity duration-500"
+              aria-hidden
+            />
+            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/90 backdrop-blur-sm p-4 sm:p-6">
+              <StaggerGrid className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" staggerMs={120}>
+                {videos.map((video, index) => (
+                  <VideoCard key={index} {...video} />
+                ))}
+              </StaggerGrid>
             </div>
           </div>
         </div>
