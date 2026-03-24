@@ -155,7 +155,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/28 to-zinc-950 relative">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/36 to-zinc-950 relative">
       <StructuredData data={organizationSchema} />
       <StructuredData data={websiteSchema} />
       <CursorGlow />
@@ -293,7 +293,7 @@ export default function Home() {
           </div>
           <div className="relative rounded-3xl group">
             <div
-              className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/[0.07] via-blue-500/[0.035] to-blue-600/[0.07] rounded-3xl blur-xl opacity-[0.35] pointer-events-none group-hover:opacity-[0.48] transition-opacity duration-500"
+              className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/[0.10] via-blue-500/[0.05] to-blue-600/[0.10] rounded-3xl blur-xl opacity-[0.42] pointer-events-none group-hover:opacity-[0.55] transition-opacity duration-500"
               aria-hidden
             />
             <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-sm p-4 sm:p-6">
@@ -328,7 +328,7 @@ export default function Home() {
           </div>
           <div className="relative rounded-3xl group">
             <div
-              className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/[0.07] via-blue-500/[0.035] to-blue-600/[0.07] rounded-3xl blur-xl opacity-[0.35] pointer-events-none group-hover:opacity-[0.48] transition-opacity duration-500"
+              className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/[0.10] via-blue-500/[0.05] to-blue-600/[0.10] rounded-3xl blur-xl opacity-[0.42] pointer-events-none group-hover:opacity-[0.55] transition-opacity duration-500"
               aria-hidden
             />
             <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-sm p-4 sm:p-6">
