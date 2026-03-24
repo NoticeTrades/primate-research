@@ -14,7 +14,7 @@ import DiscordSign from './components/DiscordSign';
 import YouTubeLiveIndicator from './components/YouTubeLiveIndicator';
 import StructuredData from './components/StructuredData';
 import BreakingNewsAlert from './components/BreakingNewsAlert';
-import StaggerGrid from './components/StaggerGrid';
+import ScrollRevealGrid from './components/ScrollRevealGrid';
 
 type LatestContent = {
   type: 'report' | 'video' | null;
@@ -325,15 +325,11 @@ export default function Home() {
               aria-hidden
             />
             <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-sm p-4 sm:p-6">
-              <StaggerGrid
-                className="grid grid-cols-1 lg:grid-cols-3 gap-8"
-                staggerMs={320}
-                durationMs={1200}
-              >
+              <ScrollRevealGrid className="grid grid-cols-1 lg:grid-cols-3 gap-8" durationMs={750}>
                 {featuredCalls.map((call, index) => (
                   <SpotlightCall key={index} {...call} />
                 ))}
-              </StaggerGrid>
+              </ScrollRevealGrid>
             </div>
           </div>
         </div>
@@ -360,15 +356,11 @@ export default function Home() {
               aria-hidden
             />
             <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-sm p-4 sm:p-6">
-              <StaggerGrid
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-                staggerMs={320}
-                durationMs={1200}
-              >
+              <ScrollRevealGrid className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" durationMs={750}>
                 {videos.map((video, index) => (
                   <VideoCard key={index} {...video} />
                 ))}
-              </StaggerGrid>
+              </ScrollRevealGrid>
             </div>
           </div>
         </div>
@@ -380,13 +372,11 @@ export default function Home() {
         className="py-24 px-6 relative"
       >
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-4">
-            About
-          </h2>
-          <div
-            className="border-b border-zinc-200 dark:border-zinc-800 mb-12"
-            aria-hidden
-          />
+          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12">
+            <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-16">
+              About
+            </h2>
+          </div>
 
           {/* Nick Thomas Section */}
           <div className="mb-20">
