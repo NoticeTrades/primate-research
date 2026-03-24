@@ -4,7 +4,10 @@ import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
 
 type StaggerGridProps = {
   className?: string;
+  /** Delay between each child starting its animation (larger = more “one by one”). */
   staggerMs?: number;
+  /** How long each item’s motion takes once it starts. */
+  durationMs?: number;
   children: ReactNode;
 };
 
@@ -14,7 +17,8 @@ type StaggerGridProps = {
  */
 export default function StaggerGrid({
   className = '',
-  staggerMs = 115,
+  staggerMs = 260,
+  durationMs = 1100,
   children,
 }: StaggerGridProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -57,7 +61,7 @@ export default function StaggerGrid({
               ? undefined
               : {
                   transitionProperty: 'opacity, transform',
-                  transitionDuration: '720ms',
+                  transitionDuration: `${durationMs}ms`,
                   transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
                   transitionDelay: visible ? `${i * staggerMs}ms` : '0ms',
                 }
