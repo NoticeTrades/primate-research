@@ -48,9 +48,66 @@ const YAHOO_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (compatible; PrimateResearch/1.0)',
 } as const;
 
-function asNumberArray(v: unknown): number[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
+/** One daily bar after Yahoo alignment (timestamp + close share the same index). */
+type ChartPoint = { t: number; close: number };
+
+type ChartFetch = {
+  points: ChartPoint[];
+  /** Last trade from chart meta (often fresher than last daily close for active futures). */
+  regularMarketPrice?: number;
+};
+
+function nyDateKey(tsSec: number): string {
+  return new Date(tsSec * 1000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
+/** Yahoo sometimes emits two rows for the same NY session; keep the latest bar for that date. */
+function dedupeDailyByNyDate(points: ChartPoint[]): ChartPoint[] {
+  const byDay = new Map<string, ChartPoint>();
+  for (const p of points) {
+    const key = nyDateKey(p.t);
+    const prev = byDay.get(key);
+    if (!prev || p.t >= prev.t) byDay.set(key, p);
+  }
+  return [...byDay.values()].sort((a, b) => a.t - b.t);
+}
+
+/**
+ * Build daily points with timestamps aligned to closes (do NOT drop nulls into a separate array —
+ * that breaks trading-day offsets vs Yahoo).
+ */
+function parseChartResult0(result: Record<string, unknown> | undefined): ChartFetch {
+  if (!result) return { points: [] };
+  const ts = result.timestamp as number[] | undefined;
+  const closeRaw = (result.indicators as { quote?: Array<{ close?: unknown }> } | undefined)?.quote?.[0]
+    ?.close as unknown[] | undefined;
+  const meta = result.meta as { regularMarketPrice?: number } | undefined;
+
+  const raw: ChartPoint[] = [];
+  if (Array.isArray(ts) && Array.isArray(closeRaw)) {
+    for (let i = 0; i < ts.length; i++) {
+      const c = closeRaw[i];
+      if (typeof c === 'number' && Number.isFinite(c) && c > 0) {
+        raw.push({ t: ts[i], close: c });
+      }
+    }
+  }
+
+  const points = dedupeDailyByNyDate(raw);
+  const rmp = meta?.regularMarketPrice;
+  return {
+    points,
+    regularMarketPrice:
+      typeof rmp === 'number' && Number.isFinite(rmp) && rmp > 0 ? rmp : undefined,
+  };
+}
+
+async function fetchDailyChartData(yahoo: string, range: string): Promise<ChartFetch> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?interval=1d&range=${range}`;
+  const res = await fetch(url, { cache: 'no-store', headers: YAHOO_HEADERS });
+  if (!res.ok) return { points: [] };
+  const body = (await res.json()) as { chart?: { result?: Array<Record<string, unknown>> } };
+  return parseChartResult0(body?.chart?.result?.[0]);
 }
 
 /**
@@ -135,11 +192,8 @@ async function fetchLiveDailyChangeFrom5m(yahoo: string): Promise<{ price: numbe
 }
 
 async function fetchDailyCloses(yahoo: string, range: string): Promise<number[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?interval=1d&range=${range}`;
-  const res = await fetch(url, { cache: 'no-store', headers: YAHOO_HEADERS });
-  if (!res.ok) return [];
-  const body = (await res.json()) as { chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: unknown }> } }> } };
-  return asNumberArray(body?.chart?.result?.[0]?.indicators?.quote?.[0]?.close);
+  const { points } = await fetchDailyChartData(yahoo, range);
+  return points.map((p) => p.close);
 }
 
 async function fetchItem1D(item: { symbol: string; yahoo: string; name: string; category: string }): Promise<OverviewItem | null> {
@@ -178,24 +232,26 @@ async function fetchItem(item: { symbol: string; yahoo: string; name: string; ca
 
   const range = RANGE_FOR_TIMEFRAME[timeframe] || RANGE_FOR_TIMEFRAME['1D'];
   const lookback = LOOKBACK_DAYS[timeframe] || LOOKBACK_DAYS['1D'];
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.yahoo)}?interval=1d&range=${range}`;
-  const res = await fetch(url, {
-    cache: 'no-store',
-    headers: YAHOO_HEADERS,
-  });
-  if (!res.ok) return null;
-  const body = (await res.json()) as { chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: unknown }> } }> } };
-  const closes = asNumberArray(body?.chart?.result?.[0]?.indicators?.quote?.[0]?.close);
-  if (closes.length < 2) return null;
+  const { points, regularMarketPrice } = await fetchDailyChartData(item.yahoo, range);
+  if (points.length < 2) return null;
 
-  const current = closes[closes.length - 1];
+  const lastBar = points[points.length - 1];
+  /** Futures: prefer meta last price when present so weekly % matches live quotes vs stale daily close. */
+  const useLive =
+    CME_LIVE_SESSION_SYMBOLS.has(item.symbol) &&
+    typeof regularMarketPrice === 'number' &&
+    Number.isFinite(regularMarketPrice) &&
+    regularMarketPrice > 0;
+  const current = useLive ? regularMarketPrice! : lastBar.close;
+
   const ref =
     timeframe === 'YTD'
-      ? closes[0]
+      ? points[0].close
       : (() => {
-          const refIndex = Math.max(0, closes.length - 1 - lookback);
-          return closes[refIndex];
+          const refIdx = Math.max(0, points.length - 1 - lookback);
+          return points[refIdx].close;
         })();
+
   if (!(current > 0) || !(ref > 0)) return null;
 
   return {
