@@ -32,7 +32,7 @@ export default async function AppleIcon() {
           width={170}
           height={170}
           style={{ 
-            objectFit: 'contain',
+            objectFit: 'cover',
           }}
         />
       </div>

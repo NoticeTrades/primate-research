@@ -32,7 +32,7 @@ export default async function Icon() {
           width={46}
           height={46}
           style={{ 
-            objectFit: 'contain',
+            objectFit: 'cover',
           }}
         />
       </div>
