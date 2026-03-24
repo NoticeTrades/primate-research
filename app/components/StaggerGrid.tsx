@@ -1,6 +1,6 @@
 'use client';
 
-import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Children, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 type StaggerGridProps = {
   className?: string;
@@ -25,7 +25,7 @@ export default function StaggerGrid({
   const [visible, setVisible] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setReducedMotion(true);
@@ -34,11 +34,22 @@ export default function StaggerGrid({
     }
     const el = ref.current;
     if (!el) return;
+
+    // Sync check before paint: avoids flash of empty cards when this grid is already on screen (e.g. refresh mid-page).
+    const vh = window.innerHeight;
+    const rect = el.getBoundingClientRect();
+    const margin = vh * 0.06;
+    const alreadyVisible = rect.top < vh - margin && rect.bottom > margin;
+    if (alreadyVisible) {
+      setVisible(true);
+      return;
+    }
+
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setVisible(true);
       },
-      { threshold: 0.07, rootMargin: '0px 0px -7% 0px' }
+      { threshold: 0.05, rootMargin: '0px 0px 8% 0px' }
     );
     io.observe(el);
     return () => io.disconnect();

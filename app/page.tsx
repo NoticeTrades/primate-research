@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from './components/Navigation';
 import MarketTicker from './components/MarketTicker';
@@ -31,6 +31,28 @@ type LatestContent = {
 export default function Home() {
   const router = useRouter();
   const [latestContent, setLatestContent] = useState<LatestContent | null>(null);
+  const [pageEntered, setPageEntered] = useState(false);
+  const [pageEnterInstant, setPageEnterInstant] = useState(false);
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setPageEnterInstant(true);
+      setPageEntered(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pageEnterInstant) return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setPageEntered(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [pageEnterInstant]);
 
   useEffect(() => {
     fetch('/api/latest-content', { cache: 'no-store' })
@@ -155,7 +177,13 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/36 to-zinc-950 relative">
+    <div
+      className={`min-h-screen bg-gradient-to-b from-zinc-950 via-blue-950/36 to-zinc-950 relative ${
+        pageEnterInstant ? '' : 'transition-opacity duration-[950ms] ease-out'
+      } ${pageEntered ? 'opacity-100' : 'opacity-0'} ${
+        !pageEntered && !pageEnterInstant ? 'pointer-events-none' : ''
+      }`}
+    >
       <StructuredData data={organizationSchema} />
       <StructuredData data={websiteSchema} />
       <CursorGlow />
@@ -352,10 +380,14 @@ export default function Home() {
         className="py-24 px-6 relative"
       >
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-16">
+          <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-4">
             About
           </h2>
-          
+          <div
+            className="border-b border-zinc-200 dark:border-zinc-800 mb-12"
+            aria-hidden
+          />
+
           {/* Nick Thomas Section */}
           <div className="mb-20">
             <div className="flex flex-col md:flex-row gap-8 items-start mb-8">
