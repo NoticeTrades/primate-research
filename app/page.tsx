@@ -7,7 +7,6 @@ import MarketTicker from './components/MarketTicker';
 import VideoCard from './components/VideoCard';
 import ScrollButton from './components/ScrollButton';
 import SpotlightCall from './components/SpotlightCall';
-import ScrollFade from './components/ScrollFade';
 import ProfilePicture from './components/ProfilePicture';
 import CursorGlow from './components/CursorGlow';
 import CursorHover from './components/CursorHover';
@@ -161,7 +160,6 @@ export default function Home() {
       <CursorGlow />
       <CursorHover />
       <DiscordSign />
-      <ScrollFade />
       <BreakingNewsAlert />
       <Navigation />
       <div className="fixed top-[72px] left-0 right-0 z-40">
@@ -283,8 +281,6 @@ export default function Home() {
         id="research"
         className="py-24 px-6 relative"
       >
-        <div className="blue-aura left-[4%] top-[10%] h-56 w-56 md:h-72 md:w-72" />
-        <div className="blue-aura right-[8%] top-[26%] h-48 w-48 md:h-64 md:w-64" />
         <div className="max-w-7xl mx-auto">
           <div className="mb-16">
             <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-4">
@@ -294,10 +290,12 @@ export default function Home() {
               Select published calls and video updates across equities, crypto, and markets—with key outcomes and links to full reports.
             </p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {featuredCalls.map((call, index) => (
-              <SpotlightCall key={index} {...call} />
-            ))}
+          <div className="rounded-3xl border border-blue-500/20 bg-gradient-to-br from-blue-500/8 via-blue-400/5 to-transparent p-4 sm:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {featuredCalls.map((call, index) => (
+                <SpotlightCall key={index} {...call} />
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -307,8 +305,6 @@ export default function Home() {
         id="videos"
         className="py-24 px-6 relative"
       >
-        <div className="blue-aura left-[10%] top-[12%] h-56 w-56 md:h-80 md:w-80" />
-        <div className="blue-aura right-[12%] top-[44%] h-52 w-52 md:h-72 md:w-72" />
         <div className="max-w-7xl mx-auto">
           <div className="mb-16">
             <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-4">
@@ -319,10 +315,12 @@ export default function Home() {
               current market conditions, trends, and investment opportunities.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {videos.map((video, index) => (
-              <VideoCard key={index} {...video} />
-            ))}
+          <div className="rounded-3xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 via-blue-400/5 to-transparent p-4 sm:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {videos.map((video, index) => (
+                <VideoCard key={index} {...video} />
+              ))}
+            </div>
           </div>
         </div>
       </section>

@@ -2,12 +2,22 @@
 
 import { useState, useEffect, Fragment, ReactNode } from 'react';
 import Link from 'next/link';
-import { isChatTicker, getTickerHref, getTickerDisplayName } from '@/lib/chatTickers';
+import { getTickerHref, getTickerDisplayName } from '@/lib/chatTickers';
 
 /** Match words that could be tickers (2–6 letters, or $TICKER). */
 const TICKER_WORD_REGEX = /\$[A-Za-z]{1,6}\b|\b[A-Za-z]{2,6}\b/g;
 
 type Segment = { type: 'text'; value: string } | { type: 'ticker'; value: string };
+
+/** Keep report pills focused on major markets + popular stocks only. */
+const REPORT_TICKERS = new Set<string>([
+  // Core indices / macro / crypto used in reports
+  'NQ', 'ES', 'YM', 'RTY', 'DXY', 'CL', 'GC', 'SI', 'BTC', 'ETH',
+  // Popular large-cap / tech names
+  'AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'GOOG', 'TSLA', 'NFLX', 'AMD',
+  // Other popular names frequently referenced
+  'PLTR', 'COIN', 'MSTR', 'SMCI', 'AVGO', 'QCOM',
+]);
 
 const TECH_NAME_TO_TICKER: Array<{ name: string; symbol: string }> = [
   { name: 'microsoft', symbol: 'MSFT' },
@@ -52,7 +62,7 @@ function parseSegments(text: string): Segment[] {
   while ((tm = tickerRe.exec(text)) !== null) {
     const raw = tm[0];
     const ticker = raw.replace(/^\$/, '').toUpperCase();
-    if (!isChatTicker(ticker)) continue;
+    if (!REPORT_TICKERS.has(ticker)) continue;
     const start = tm.index;
     const end = tm.index + raw.length;
     if (overlaps(start, end, used)) continue;
@@ -120,27 +130,34 @@ function ReportTickerPill({ symbol }: { symbol: string }) {
   const hoverTitle = data != null ? `${name} (${sym}) price: ${formatPrice(data.price)}` : `${name} (${sym})`;
 
   return (
-    <Link
-      href={href}
-      title={hoverTitle}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-sm font-medium no-underline transition-colors ${bg} ${border} ${hover}`}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      {name !== sym ? (
-        <>
-          <span className="text-zinc-100">{name}</span>
-          <span className="text-zinc-500">({sym})</span>
-        </>
-      ) : (
-        <span className="text-zinc-100">{sym}</span>
+    <span className="group relative inline-flex">
+      <Link
+        href={href}
+        title={hoverTitle}
+        className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-sm font-medium no-underline transition-colors ${bg} ${border} ${hover}`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {name !== sym ? (
+          <>
+            <span className="text-zinc-100">{name}</span>
+            <span className="text-zinc-500">({sym})</span>
+          </>
+        ) : (
+          <span className="text-zinc-100">{sym}</span>
+        )}
+        {data != null ? (
+          <span className={`tabular-nums font-semibold ${accent}`}>{formatPct(data.changePercent)}</span>
+        ) : (
+          <span className="text-zinc-500">…</span>
+        )}
+      </Link>
+      {data != null && (
+        <span className="pointer-events-none absolute -top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-md border border-zinc-700 bg-zinc-900/95 px-2 py-1 text-xs text-zinc-200 opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+          {name} ({sym}) · {formatPrice(data.price)}
+        </span>
       )}
-      {data != null ? (
-        <span className={`tabular-nums font-semibold ${accent}`}>{formatPct(data.changePercent)}</span>
-      ) : (
-        <span className="text-zinc-500">…</span>
-      )}
-    </Link>
+    </span>
   );
 }
 
