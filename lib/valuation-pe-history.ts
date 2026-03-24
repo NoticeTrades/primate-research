@@ -118,6 +118,19 @@ export async function fetchSp500PeHistoryFromFred(): Promise<HistoricalPePayload
 /** Sparse monthly anchors so charts still render if FRED is unreachable. Not live. */
 function getEmbeddedSp500PeFallback(): { date: string; pe: number }[] {
   const anchors: { y: number; m: number; pe: number }[] = [
+    { y: 1990, m: 1, pe: 15.3 },
+    { y: 1991, m: 7, pe: 16.8 },
+    { y: 1993, m: 1, pe: 17.4 },
+    { y: 1995, m: 1, pe: 18.1 },
+    { y: 1997, m: 7, pe: 24.0 },
+    { y: 1999, m: 12, pe: 29.5 },
+    { y: 2001, m: 9, pe: 25.8 },
+    { y: 2003, m: 3, pe: 18.7 },
+    { y: 2005, m: 7, pe: 19.4 },
+    { y: 2007, m: 10, pe: 20.6 },
+    { y: 2009, m: 3, pe: 14.2 },
+    { y: 2011, m: 10, pe: 13.5 },
+    { y: 2013, m: 12, pe: 17.8 },
     { y: 2015, m: 1, pe: 20.0 },
     { y: 2015, m: 7, pe: 21.5 },
     { y: 2016, m: 1, pe: 18.2 },

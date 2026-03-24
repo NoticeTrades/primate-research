@@ -30,10 +30,7 @@ type LatestContent = {
 
 export default function Home() {
   const router = useRouter();
-  const [researchOpacity, setResearchOpacity] = useState(0);
   const [latestContent, setLatestContent] = useState<LatestContent | null>(null);
-  const [videosVisible, setVideosVisible] = useState(false);
-  const [aboutVisible, setAboutVisible] = useState(false);
 
   useEffect(() => {
     fetch('/api/latest-content', { cache: 'no-store' })
@@ -42,31 +39,6 @@ export default function Home() {
         if (data?.type && data?.title) setLatestContent(data);
       })
       .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const setupObserver = (
-      id: string,
-      setVisible: (value: boolean) => void,
-      threshold = 0.16
-    ) => {
-      const node = document.getElementById(id);
-      if (!node) return () => {};
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setVisible(true);
-        },
-        { threshold }
-      );
-      observer.observe(node);
-      return () => observer.disconnect();
-    };
-
-    const cleanups = [
-      setupObserver('videos', setVideosVisible, 0.15),
-      setupObserver('about', setAboutVisible, 0.12),
-    ];
-    return () => cleanups.forEach((c) => c());
   }, []);
 
   const handleLatestClick = () => {
@@ -153,34 +125,6 @@ export default function Home() {
     },
     // Add more videos by copying the format above
   ];
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const researchSection = document.getElementById('research');
-      
-      if (researchSection) {
-        const sectionTop = researchSection.offsetTop;
-        const sectionStart = sectionTop - windowHeight * 0.8; // Start fading in before reaching section
-        
-        if (scrollPosition < sectionStart) {
-          setResearchOpacity(0);
-        } else if (scrollPosition > sectionTop - windowHeight * 0.3) {
-          setResearchOpacity(1);
-        } else {
-          const fadeRange = windowHeight * 0.5;
-          const scrollProgress = scrollPosition - sectionStart;
-          const newOpacity = scrollProgress / fadeRange;
-          setResearchOpacity(Math.max(0, Math.min(1, newOpacity)));
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initial call
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Structured data for SEO
   const organizationSchema = {
@@ -337,13 +281,12 @@ export default function Home() {
       {/* Featured calls / Research Section */}
       <section
         id="research"
-        className="py-24 px-6 bg-black dark:bg-zinc-950 relative transition-opacity duration-700"
-        style={{ opacity: researchOpacity }}
+        className="py-24 px-6 relative"
       >
         <div className="blue-aura left-[4%] top-[10%] h-56 w-56 md:h-72 md:w-72" />
         <div className="blue-aura right-[8%] top-[26%] h-48 w-48 md:h-64 md:w-64" />
         <div className="max-w-7xl mx-auto">
-          <div className="mb-16 home-reveal is-visible">
+          <div className="mb-16">
             <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-4">
               Featured Research
             </h2>
@@ -362,7 +305,7 @@ export default function Home() {
       {/* Videos Section */}
       <section
         id="videos"
-        className={`py-24 px-6 bg-black dark:bg-zinc-950 relative home-reveal ${videosVisible ? 'is-visible' : ''}`}
+        className="py-24 px-6 relative"
       >
         <div className="blue-aura left-[10%] top-[12%] h-56 w-56 md:h-80 md:w-80" />
         <div className="blue-aura right-[12%] top-[44%] h-52 w-52 md:h-72 md:w-72" />
@@ -387,7 +330,7 @@ export default function Home() {
       {/* About Section */}
       <section
         id="about"
-        className={`py-24 px-6 bg-white dark:bg-zinc-950 home-reveal ${aboutVisible ? 'is-visible' : ''}`}
+        className="py-24 px-6 relative"
       >
         <div className="max-w-5xl mx-auto">
           <h2 className="text-5xl font-bold text-black dark:text-zinc-50 mb-16">

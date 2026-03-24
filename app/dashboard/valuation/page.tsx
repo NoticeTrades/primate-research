@@ -121,14 +121,14 @@ function formatMonthDay(d: string) {
   return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-type PeRange = '5y' | '10y' | '20y' | 'max';
+type PeRange = '5y' | '10y' | '20y' | '30y' | 'max';
 
 function filterPeByRange(points: { date: string; pe: number }[], range: PeRange): { date: string; pe: number }[] {
   if (range === 'max' || points.length === 0) return points;
   const last = points[points.length - 1]?.date;
   if (!last) return points;
   const end = new Date(last);
-  const years = range === '5y' ? 5 : range === '10y' ? 10 : 20;
+  const years = range === '5y' ? 5 : range === '10y' ? 10 : range === '20y' ? 20 : 30;
   const start = new Date(end);
   start.setFullYear(start.getFullYear() - years);
   return points.filter((p) => new Date(p.date) >= start);
@@ -141,7 +141,7 @@ export default function ValuationPage() {
   const [chartSymbol, setChartSymbol] = useState<string>('SPY');
   const [peRange, setPeRange] = useState<PeRange>('10y');
   const [peModalSymbol, setPeModalSymbol] = useState<string | null>(null);
-  const [peModalRange, setPeModalRange] = useState<PeRange>('5y');
+  const [peModalRange, setPeModalRange] = useState<PeRange>('max');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -450,10 +450,10 @@ export default function ValuationPage() {
 
       {/* P/E history modal */}
       {!loading && peModalSymbol && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-zinc-900/60" onClick={() => setPeModalSymbol(null)} />
-          <div className="relative mx-auto mt-16 max-w-4xl px-4">
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-950/80">
+          <div className="relative z-10 w-full max-w-4xl">
+            <div className="max-h-[90vh] overflow-y-auto rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-950/80">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
@@ -479,6 +479,7 @@ export default function ValuationPage() {
                       <option value="5y">5 years</option>
                       <option value="10y">10 years</option>
                       <option value="20y">20 years</option>
+                      <option value="30y">30 years</option>
                       <option value="max">Max</option>
                     </select>
                   </label>
@@ -604,6 +605,7 @@ export default function ValuationPage() {
                   <option value="5y">5 years</option>
                   <option value="10y">10 years</option>
                   <option value="20y">20 years</option>
+                  <option value="30y">30 years</option>
                   <option value="max">Max</option>
                 </select>
               </label>

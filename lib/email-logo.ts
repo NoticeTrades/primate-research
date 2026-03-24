@@ -5,12 +5,12 @@
  * don't invert the image — the white-on-blue logo stays correct.
  */
 export function getEmailLogoHtml(siteUrl: string): string {
-  const logoUrl = `${siteUrl.replace(/\/$/, '')}/primate-logo.png`;
+  const logoUrl = `${siteUrl.replace(/\/$/, '')}/primate-logo.png?v=20260324`;
   return `
     <div style="text-align: center; margin-bottom: 32px;">
-      <!-- color-scheme: light forces this block to render in light mode so the white-on-blue logo is not inverted in dark mode -->
-      <div style="display: inline-block; background-color: #2563eb; padding: 10px; border-radius: 8px; color-scheme: light; -webkit-text-size-adjust: 100%;">
-        <img src="${logoUrl}" alt="Primate Research" width="40" height="40" style="display: block; border: 0; outline: none;" />
+      <!-- Keep light color-scheme to avoid dark-mode image inversion in some mail clients -->
+      <div style="display: inline-block; color-scheme: light; -webkit-text-size-adjust: 100%;">
+        <img src="${logoUrl}" alt="Primate Trading" width="40" height="40" style="display: block; border: 0; outline: none;" />
       </div>
     </div>
   `;
