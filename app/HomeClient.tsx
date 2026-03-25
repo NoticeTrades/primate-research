@@ -303,19 +303,21 @@ export default function HomeClient({ initialLatestContent }: HomeClientProps) {
               Select published calls and video updates across equities, crypto, and markets—with key outcomes and links to full reports.
             </p>
           </div>
-          <div className="relative rounded-3xl group">
-            <div
-              className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/[0.10] via-blue-500/[0.05] to-blue-600/[0.10] rounded-3xl blur-xl opacity-[0.42] pointer-events-none group-hover:opacity-[0.55] transition-opacity duration-500"
-              aria-hidden
-            />
-            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-sm p-4 sm:p-6">
-              <ScrollRevealGrid className="grid grid-cols-1 lg:grid-cols-3 gap-8" durationMs={1200}>
-                {featuredCalls.map((call, index) => (
-                  <SpotlightCall key={index} {...call} />
-                ))}
-              </ScrollRevealGrid>
+          <ScrollRevealGrid className="w-full" durationMs={1200}>
+            <div className="relative rounded-3xl group">
+              <div
+                className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/[0.10] via-blue-500/[0.05] to-blue-600/[0.10] rounded-3xl blur-xl opacity-[0.42] pointer-events-none group-hover:opacity-[0.55] transition-opacity duration-500"
+                aria-hidden
+              />
+              <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-sm p-4 sm:p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {featuredCalls.map((call, index) => (
+                    <SpotlightCall key={index} {...call} />
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </ScrollRevealGrid>
         </div>
       </section>
 
@@ -334,26 +336,28 @@ export default function HomeClient({ initialLatestContent }: HomeClientProps) {
               current market conditions, trends, and investment opportunities.
             </p>
           </div>
-          <div className="relative rounded-3xl group">
-            <div
-              className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/[0.10] via-blue-500/[0.05] to-blue-600/[0.10] rounded-3xl blur-xl opacity-[0.42] pointer-events-none group-hover:opacity-[0.55] transition-opacity duration-500"
-              aria-hidden
-            />
-            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-sm p-4 sm:p-6">
-              <ScrollRevealGrid className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" durationMs={1200}>
-                {videos.map((video, index) => (
-                  <VideoCard key={index} {...video} />
-                ))}
-              </ScrollRevealGrid>
+          <ScrollRevealGrid className="w-full" durationMs={1200}>
+            <div className="relative rounded-3xl group">
+              <div
+                className="absolute -inset-0.5 bg-gradient-to-r from-blue-600/[0.10] via-blue-500/[0.05] to-blue-600/[0.10] rounded-3xl blur-xl opacity-[0.42] pointer-events-none group-hover:opacity-[0.55] transition-opacity duration-500"
+                aria-hidden
+              />
+              <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/95 backdrop-blur-sm p-4 sm:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {videos.map((video, index) => (
+                    <VideoCard key={index} {...video} />
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </ScrollRevealGrid>
         </div>
       </section>
 
       {/* About Section */}
       <section
         id="about"
-        className="pt-40 pb-24 px-6 relative"
+        className="pt-28 pb-24 px-6 relative"
       >
         <div className="max-w-5xl mx-auto">
           <div className="border-t border-zinc-200 dark:border-zinc-800 pt-12">

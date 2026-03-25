@@ -24,7 +24,8 @@ function isEnoughVisible(el: HTMLElement): boolean {
 }
 
 /**
- * When the grid scrolls far enough into view, all children animate in together.
+ * When this block scrolls far enough into view, it fades/slides in as one unit.
+ * Wrap the full card frame (glow + panel + grid) so backgrounds stay in sync with the animation.
  * Respects prefers-reduced-motion.
  */
 export default function ScrollRevealGrid({
