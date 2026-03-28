@@ -21,7 +21,7 @@ export async function GET(
 
     const sql = getDb();
     const charts = await sql`
-      SELECT id, symbol, chart_url, title, chart_date, sort_order, created_at
+      SELECT id, symbol, chart_url, title, chart_date, sort_order, notes, created_at
       FROM index_charts
       WHERE symbol = ${sym}
       ORDER BY chart_date DESC, sort_order ASC, created_at DESC

@@ -52,6 +52,7 @@ type IndexChart = {
   title: string | null;
   chart_date: string;
   sort_order: number;
+  notes: string | null;
   created_at: string;
 };
 
@@ -659,6 +660,16 @@ export default function DashboardIndexCard({
                               unoptimized
                             />
                           </div>
+                          {chart.notes?.trim() ? (
+                            <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950/40">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+                                Analysis / notes
+                              </p>
+                              <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                                {chart.notes}
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
                       ))}
                     </div>

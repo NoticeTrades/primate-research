@@ -28,6 +28,7 @@ type IndexChart = {
   title: string | null;
   chart_date: string;
   sort_order: number;
+  notes: string | null;
   created_at: string;
 };
 

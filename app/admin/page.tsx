@@ -81,17 +81,35 @@ export default function AdminPage() {
   // Index charts state
   type ChartSymbol = 'ES' | 'NQ' | 'YM' | 'RTY' | 'CL' | 'DXY' | 'FTSE' | 'GER40' | 'DAX';
   const chartSymbols: ChartSymbol[] = ['ES', 'NQ', 'YM', 'RTY', 'CL', 'DXY', 'FTSE', 'GER40', 'DAX'];
-  const [indexCharts, setIndexCharts] = useState<{ id: number; symbol: string; chart_url: string; title: string | null; chart_date: string; created_at: string }[]>([]);
+  const [indexCharts, setIndexCharts] = useState<
+    {
+      id: number;
+      symbol: string;
+      chart_url: string;
+      title: string | null;
+      chart_date: string;
+      notes: string | null;
+      created_at: string;
+    }[]
+  >([]);
   const [indexChartsLoading, setIndexChartsLoading] = useState(false);
   const [indexChartsLoaded, setIndexChartsLoaded] = useState(false);
   const [chartFilterSymbol, setChartFilterSymbol] = useState<ChartSymbol | ''>('');
   const [chartUploadSymbol, setChartUploadSymbol] = useState<ChartSymbol>('ES');
   const [chartUploadTitle, setChartUploadTitle] = useState('');
   const [chartUploadDate, setChartUploadDate] = useState('');
+  const [chartUploadNotes, setChartUploadNotes] = useState('');
   const [chartFile, setChartFile] = useState<File | null>(null);
   const [chartUploadStatus, setChartUploadStatus] = useState('');
   const [chartUploading, setChartUploading] = useState(false);
   const [deletingChartId, setDeletingChartId] = useState<number | null>(null);
+  const [editingChartId, setEditingChartId] = useState<number | null>(null);
+  const [editChartTitle, setEditChartTitle] = useState('');
+  const [editChartDate, setEditChartDate] = useState('');
+  const [editChartNotes, setEditChartNotes] = useState('');
+  const [editChartReplaceFile, setEditChartReplaceFile] = useState<File | null>(null);
+  const [editChartSaving, setEditChartSaving] = useState(false);
+  const [editChartReplaceUploading, setEditChartReplaceUploading] = useState(false);
 
   // Live trades state
   const [liveTrades, setLiveTrades] = useState<{ id: number; symbol: string; side: string; quantity: number; entryPrice: number; exitQuantity: number; exitPrice: number | null; chartUrl: string | null; notes: string | null; stopLoss: number | null; takeProfit: number | null; status: string }[]>([]);
@@ -475,6 +493,7 @@ export default function AdminPage() {
       form.append('file', chartFile);
       if (chartUploadTitle.trim()) form.append('title', chartUploadTitle.trim());
       if (chartUploadDate) form.append('chart_date', chartUploadDate);
+      if (chartUploadNotes.trim()) form.append('notes', chartUploadNotes.trim());
       const res = await fetch('/api/admin/index-charts', { method: 'POST', body: form });
       const data = await res.json();
       if (res.ok) {
@@ -482,6 +501,7 @@ export default function AdminPage() {
         setChartFile(null);
         setChartUploadTitle('');
         setChartUploadDate('');
+        setChartUploadNotes('');
         const input = document.getElementById('index-chart-file') as HTMLInputElement;
         if (input) input.value = '';
         await fetchIndexCharts();
@@ -510,6 +530,92 @@ export default function AdminPage() {
       setChartUploadStatus('Delete failed');
     } finally {
       setDeletingChartId(null);
+    }
+  };
+
+  const openEditIndexChart = (c: {
+    id: number;
+    title: string | null;
+    chart_date: string;
+    notes: string | null;
+  }) => {
+    setEditingChartId(c.id);
+    setEditChartTitle(c.title || '');
+    const d = c.chart_date ? String(c.chart_date).slice(0, 10) : '';
+    setEditChartDate(d);
+    setEditChartNotes(c.notes || '');
+    setEditChartReplaceFile(null);
+    setChartUploadStatus('');
+  };
+
+  const cancelEditIndexChart = () => {
+    setEditingChartId(null);
+    setEditChartTitle('');
+    setEditChartDate('');
+    setEditChartNotes('');
+    setEditChartReplaceFile(null);
+  };
+
+  const handleSaveIndexChartMeta = async () => {
+    if (editingChartId == null) return;
+    setEditChartSaving(true);
+    setChartUploadStatus('');
+    try {
+      const res = await fetch('/api/admin/index-charts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret,
+          id: editingChartId,
+          title: editChartTitle.trim() || null,
+          chart_date: editChartDate.trim() || null,
+          notes: editChartNotes.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setChartUploadStatus('✅ Chart text fields updated.');
+        await fetchIndexCharts();
+      } else {
+        setChartUploadStatus(data.error || 'Update failed');
+      }
+    } catch (e: any) {
+      setChartUploadStatus(e?.message || 'Update failed');
+    } finally {
+      setEditChartSaving(false);
+    }
+  };
+
+  const handleReplaceIndexChartImage = async () => {
+    if (editingChartId == null || !editChartReplaceFile) {
+      setChartUploadStatus('Select a new image file to replace the chart.');
+      return;
+    }
+    setEditChartReplaceUploading(true);
+    setChartUploadStatus('');
+    try {
+      const form = new FormData();
+      form.append('secret', secret);
+      form.append('replace_chart_id', String(editingChartId));
+      form.append('file', editChartReplaceFile);
+      form.append('title', editChartTitle);
+      form.append('chart_date', editChartDate);
+      form.append('notes', editChartNotes);
+      const res = await fetch('/api/admin/index-charts', { method: 'POST', body: form });
+      const data = await res.json();
+      if (res.ok) {
+        setChartUploadStatus('✅ Chart image replaced.');
+        setEditChartReplaceFile(null);
+        const input = document.getElementById('index-chart-replace-file') as HTMLInputElement;
+        if (input) input.value = '';
+        await fetchIndexCharts();
+      } else {
+        setChartUploadStatus(data.error || 'Replace failed');
+      }
+    } catch (e: any) {
+      setChartUploadStatus(e?.message || 'Replace failed');
+    } finally {
+      setEditChartReplaceUploading(false);
     }
   };
 
@@ -1981,6 +2087,16 @@ export default function AdminPage() {
                       className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
                     />
                   </div>
+                  <div className="w-full min-w-[min(100%,20rem)]">
+                    <label className="block text-xs text-zinc-500 mb-1">Notes / analysis (optional)</label>
+                    <textarea
+                      value={chartUploadNotes}
+                      onChange={(e) => setChartUploadNotes(e.target.value)}
+                      rows={3}
+                      placeholder="Context for traders: levels, bias, what to watch…"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm resize-y min-h-[4.5rem]"
+                    />
+                  </div>
                   <div>
                     <label className="block text-xs text-zinc-500 mb-1">Image (PNG, JPEG, WebP, GIF, max 10MB)</label>
                     <input
@@ -2010,22 +2126,112 @@ export default function AdminPage() {
               ) : indexCharts.length === 0 ? (
                 <p className="text-zinc-500 text-sm">No charts yet. Upload one above; it will show on the matching asset index page.</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <p className="text-xs text-zinc-500">{indexCharts.length} chart(s)</p>
                   {indexCharts.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 font-mono text-xs shrink-0">{c.symbol}</span>
-                        <span className="text-sm text-zinc-300 truncate">{c.title || 'Untitled'}</span>
-                        <span className="text-xs text-zinc-500 shrink-0">{new Date(c.chart_date).toLocaleDateString()}</span>
+                    <div key={c.id} className="rounded-lg bg-zinc-800/50 border border-zinc-700 overflow-hidden">
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 font-mono text-xs shrink-0">
+                            {c.symbol}
+                          </span>
+                          <span className="text-sm text-zinc-300 truncate">{c.title || 'Untitled'}</span>
+                          <span className="text-xs text-zinc-500 shrink-0">
+                            {new Date(c.chart_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              editingChartId === c.id ? cancelEditIndexChart() : openEditIndexChart(c)
+                            }
+                            className="px-3 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-semibold"
+                          >
+                            {editingChartId === c.id ? 'Close' : 'Edit'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteIndexChart(c.id)}
+                            disabled={deletingChartId === c.id}
+                            className="text-red-400 hover:text-red-300 text-sm font-medium"
+                          >
+                            {deletingChartId === c.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleDeleteIndexChart(c.id)}
-                        disabled={deletingChartId === c.id}
-                        className="text-red-400 hover:text-red-300 text-sm font-medium shrink-0"
-                      >
-                        {deletingChartId === c.id ? 'Deleting...' : 'Delete'}
-                      </button>
+                      {c.notes?.trim() && editingChartId !== c.id && (
+                        <div className="px-3 pb-3 pt-0">
+                          <p className="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Notes</p>
+                          <p className="text-xs text-zinc-400 whitespace-pre-wrap line-clamp-3">{c.notes}</p>
+                        </div>
+                      )}
+                      {editingChartId === c.id && (
+                        <div className="border-t border-zinc-700 p-4 space-y-3 bg-zinc-900/40">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label className="block text-xs text-zinc-500 mb-1">Title</label>
+                              <input
+                                type="text"
+                                value={editChartTitle}
+                                onChange={(e) => setEditChartTitle(e.target.value)}
+                                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-zinc-500 mb-1">Chart date</label>
+                              <input
+                                type="date"
+                                value={editChartDate}
+                                onChange={(e) => setEditChartDate(e.target.value)}
+                                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-zinc-500 mb-1">Notes / analysis</label>
+                            <textarea
+                              value={editChartNotes}
+                              onChange={(e) => setEditChartNotes(e.target.value)}
+                              rows={5}
+                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-sm resize-y"
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={handleSaveIndexChartMeta}
+                              disabled={editChartSaving}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg"
+                            >
+                              {editChartSaving ? 'Saving…' : 'Save text'}
+                            </button>
+                          </div>
+                          <div className="pt-2 border-t border-zinc-700/80">
+                            <p className="text-xs text-zinc-500 mb-2">Replace image (uploads new file to blob storage)</p>
+                            <div className="flex flex-wrap gap-3 items-end">
+                              <input
+                                id="index-chart-replace-file"
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                onChange={(e) => setEditChartReplaceFile(e.target.files?.[0] || null)}
+                                className="block text-sm text-zinc-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-zinc-600 file:text-white file:text-sm"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleReplaceIndexChartImage}
+                                disabled={editChartReplaceUploading || !editChartReplaceFile}
+                                className="px-4 py-2 bg-amber-600/90 hover:bg-amber-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg"
+                              >
+                                {editChartReplaceUploading ? 'Uploading…' : 'Replace image'}
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-zinc-600 mt-2">
+                              Title, date, and notes above are applied together when you replace the image.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

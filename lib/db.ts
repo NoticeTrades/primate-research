@@ -410,7 +410,10 @@ export async function initDb() {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_index_charts_symbol_date ON index_charts(symbol, chart_date DESC)
   `;
-  
+  await sql`
+    ALTER TABLE index_charts ADD COLUMN IF NOT EXISTS notes TEXT
+  `;
+
   // Insert default market structure data if it doesn't exist
   const defaultStructures = [
     { symbol: 'ES', daily: 'Mixed', weekly: 'Consolidating', monthly: null },

@@ -20,6 +20,11 @@ const NAV_ITEMS = [
     description: 'Guide: tools, markets & indices',
   },
   { href: '/dashboard', label: 'Dashboard', description: 'Indices, sectors & live trades' },
+  {
+    href: '/dashboard/chart-notes',
+    label: 'Daily Chart Notes / Analysis',
+    description: 'Daily chart images & written analysis by index',
+  },
   { href: '/dashboard/inflation', label: 'Inflation (CPI)', description: 'CPI history & YoY trend' },
   {
     href: '/dashboard/fed-policy',
