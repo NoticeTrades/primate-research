@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCompare } from '../contexts/CompareContext';
 
 type Trade = {
@@ -237,7 +238,14 @@ export default function DashboardIndexCard({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <Link
+                href={`/dashboard/chart-notes?symbol=${encodeURIComponent(symbol)}`}
+                className="rounded-lg border border-zinc-600 bg-zinc-800/50 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition-colors hover:bg-zinc-800 hover:border-zinc-500"
+                title="Open social-style chart feed for this index"
+              >
+                Chart feed
+              </Link>
               <button
                 type="button"
                 onClick={() => openCompare(symbol)}

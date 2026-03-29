@@ -414,6 +414,46 @@ export async function initDb() {
     ALTER TABLE index_charts ADD COLUMN IF NOT EXISTS notes TEXT
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS index_chart_likes (
+      id SERIAL PRIMARY KEY,
+      chart_id INTEGER NOT NULL REFERENCES index_charts(id) ON DELETE CASCADE,
+      user_email TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(chart_id, user_email)
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_index_chart_likes_chart ON index_chart_likes(chart_id)
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS index_chart_saves (
+      id SERIAL PRIMARY KEY,
+      chart_id INTEGER NOT NULL REFERENCES index_charts(id) ON DELETE CASCADE,
+      user_email TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(chart_id, user_email)
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_index_chart_saves_chart ON index_chart_saves(chart_id)
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS index_chart_comments (
+      id SERIAL PRIMARY KEY,
+      chart_id INTEGER NOT NULL REFERENCES index_charts(id) ON DELETE CASCADE,
+      user_email TEXT NOT NULL,
+      username TEXT NOT NULL,
+      comment_text TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_index_chart_comments_chart ON index_chart_comments(chart_id)
+  `;
+
   // Insert default market structure data if it doesn't exist
   const defaultStructures = [
     { symbol: 'ES', daily: 'Mixed', weekly: 'Consolidating', monthly: null },
