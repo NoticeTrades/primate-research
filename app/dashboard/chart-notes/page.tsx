@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import DashboardSidebar from '../../components/DashboardSidebar';
 import ChartFeedCard, { type ChartFeedItem } from '../../components/ChartFeedCard';
 
@@ -18,34 +18,35 @@ const INDEX_PICKS: { symbol: string; label: string }[] = [
   { symbol: 'DAX', label: 'DAX Index' },
 ];
 
-const DEFAULT_SYMBOL = 'NQ';
-
 type SortMode = 'latest' | 'popular';
 
 function ChartNotesFeedInner() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const urlSymbol = searchParams.get('symbol')?.toUpperCase() || '';
+  const rawSymbol = searchParams.get('symbol')?.toUpperCase() || '';
+  const symbol =
+    rawSymbol && INDEX_PICKS.some((p) => p.symbol === rawSymbol) ? rawSymbol : null;
 
-  const [symbol, setSymbol] = useState(() => {
-    if (urlSymbol && INDEX_PICKS.some((p) => p.symbol === urlSymbol)) return urlSymbol;
-    return DEFAULT_SYMBOL;
-  });
+  const setIndexFilter = (next: string | null) => {
+    if (next) {
+      router.replace(`${pathname}?symbol=${encodeURIComponent(next)}`);
+    } else {
+      router.replace(pathname);
+    }
+  };
+
   const [sort, setSort] = useState<SortMode>('latest');
   const [charts, setCharts] = useState<ChartFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (urlSymbol && INDEX_PICKS.some((p) => p.symbol === urlSymbol)) {
-      setSymbol(urlSymbol);
-    }
-  }, [urlSymbol]);
-
-  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError('');
-    const q = new URLSearchParams({ symbol, sort });
+    const q = new URLSearchParams({ sort });
+    if (symbol) q.set('symbol', symbol);
     fetch(`/api/index-charts/feed?${q.toString()}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((body) => {
@@ -71,27 +72,42 @@ function ChartNotesFeedInner() {
     };
   }, [symbol, sort]);
 
-  const pick = useMemo(() => INDEX_PICKS.find((p) => p.symbol === symbol), [symbol]);
+  const pick = useMemo(
+    () => (symbol ? INDEX_PICKS.find((p) => p.symbol === symbol) : undefined),
+    [symbol],
+  );
 
   return (
     <div className="max-w-2xl mx-auto w-full">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-zinc-50 sm:text-3xl">Daily Chart Feed</h1>
         <p className="mt-2 text-sm text-zinc-400">
-          Like, save, and discuss daily chart posts — sorted by{' '}
-          <span className="text-zinc-300">latest</span> or{' '}
-          <span className="text-zinc-300">popular</span> (likes + comments + saves).
+          Like, save, and discuss chart posts from every index.{' '}
+          <span className="text-zinc-300">Latest</span> is newest posts first;{' '}
+          <span className="text-zinc-300">Popular</span> is most liked. Filter by index when you
+          want one market only.
         </p>
       </header>
 
       <section className="mb-5 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 shadow-xl">
-        <p className="text-xs text-zinc-500 mb-2">Index</p>
+        <p className="text-xs text-zinc-500 mb-2">Index (optional)</p>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setIndexFilter(null)}
+            className={`rounded-xl border px-3 py-2 text-left text-sm font-medium transition ${
+              symbol === null
+                ? 'border-blue-500/50 bg-blue-500/15 text-blue-100'
+                : 'border-zinc-700 bg-zinc-950/50 text-zinc-200 hover:border-blue-500/35'
+            }`}
+          >
+            All indices
+          </button>
           {INDEX_PICKS.map((p) => (
             <button
               key={p.symbol}
               type="button"
-              onClick={() => setSymbol(p.symbol)}
+              onClick={() => setIndexFilter(p.symbol)}
               className={`rounded-xl border px-3 py-2 text-left text-sm font-medium transition ${
                 symbol === p.symbol
                   ? 'border-blue-500/50 bg-blue-500/15 text-blue-100'
@@ -102,7 +118,11 @@ function ChartNotesFeedInner() {
             </button>
           ))}
         </div>
-        {pick && <p className="mt-2 text-xs text-zinc-500">{pick.label}</p>}
+        {pick ? (
+          <p className="mt-2 text-xs text-zinc-500">{pick.label}</p>
+        ) : (
+          <p className="mt-2 text-xs text-zinc-500">Showing posts across all tracked indices.</p>
+        )}
       </section>
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
@@ -121,12 +141,14 @@ function ChartNotesFeedInner() {
             {s === 'latest' ? 'Latest' : 'Popular'}
           </button>
         ))}
-        <Link
-          href={`/indices/${symbol}`}
-          className="ml-auto text-xs text-blue-400 hover:text-blue-300 font-medium"
-        >
-          Full {symbol} data →
-        </Link>
+        {symbol ? (
+          <Link
+            href={`/indices/${symbol}`}
+            className="ml-auto text-xs text-blue-400 hover:text-blue-300 font-medium"
+          >
+            Full {symbol} data →
+          </Link>
+        ) : null}
       </div>
 
       {loading ? (
@@ -139,7 +161,9 @@ function ChartNotesFeedInner() {
         <p className="text-sm text-red-400">{error}</p>
       ) : charts.length === 0 ? (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">
-          <p className="text-zinc-400 text-sm">No charts for {symbol} yet.</p>
+          <p className="text-zinc-400 text-sm">
+            {symbol ? `No charts for ${symbol} yet.` : 'No chart posts yet.'}
+          </p>
           <p className="text-zinc-500 text-xs mt-2">When the desk posts a chart, it will show up here.</p>
         </div>
       ) : (

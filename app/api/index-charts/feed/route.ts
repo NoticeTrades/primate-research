@@ -18,9 +18,11 @@ function toIntMap(rows: { chart_id: number; cnt: number }[]): Map<number, number
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const sym = searchParams.get('symbol')?.toUpperCase() || '';
+    const rawSym = searchParams.get('symbol')?.trim() ?? '';
+    const sym = rawSym.toUpperCase();
     const sort = (searchParams.get('sort') || 'latest').toLowerCase() as SortMode;
-    if (!sym || !VALID_SYMBOLS.includes(sym)) {
+    const allIndices = !sym || sym === 'ALL';
+    if (!allIndices && !VALID_SYMBOLS.includes(sym)) {
       return NextResponse.json({ error: 'Invalid symbol' }, { status: 400 });
     }
     if (sort !== 'latest' && sort !== 'popular') {
@@ -31,12 +33,19 @@ export async function GET(request: Request) {
     const userEmail = cookieStore.get('user_email')?.value ?? null;
 
     const sql = getDb();
-    const charts = await sql`
-      SELECT id, symbol, chart_url, title, chart_date, sort_order, notes, created_at
-      FROM index_charts
-      WHERE symbol = ${sym}
-      ORDER BY chart_date DESC, sort_order ASC, created_at DESC
-    `;
+    const charts = allIndices
+      ? await sql`
+          SELECT id, symbol, chart_url, title, chart_date, sort_order, notes, created_at
+          FROM index_charts
+          WHERE symbol = ANY(${VALID_SYMBOLS})
+          ORDER BY created_at DESC, chart_date DESC, sort_order ASC, id DESC
+        `
+      : await sql`
+          SELECT id, symbol, chart_url, title, chart_date, sort_order, notes, created_at
+          FROM index_charts
+          WHERE symbol = ${sym}
+          ORDER BY created_at DESC, chart_date DESC, sort_order ASC, id DESC
+        `;
 
     const list = charts as {
       id: number;
@@ -100,13 +109,11 @@ export async function GET(request: Request) {
       const likeCount = likeMap.get(c.id) ?? 0;
       const saveCount = saveMap.get(c.id) ?? 0;
       const commentCount = commentMap.get(c.id) ?? 0;
-      const popularity = likeCount + commentCount + saveCount;
       return {
         ...c,
         likeCount,
         saveCount,
         commentCount,
-        popularity,
         userLiked: userLikedSet.has(c.id),
         userSaved: userSavedSet.has(c.id),
       };
@@ -114,17 +121,15 @@ export async function GET(request: Request) {
 
     if (sort === 'popular') {
       enriched.sort((a, b) => {
-        if (b.popularity !== a.popularity) return b.popularity - a.popularity;
-        const da = new Date(a.chart_date).getTime();
-        const db = new Date(b.chart_date).getTime();
-        if (db !== da) return db - da;
+        if (b.likeCount !== a.likeCount) return b.likeCount - a.likeCount;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
     }
 
     return NextResponse.json({
       sort,
-      charts: enriched.map(({ popularity: _p, ...rest }) => rest),
+      symbolFilter: allIndices ? null : sym,
+      charts: enriched,
     });
   } catch (error) {
     console.error('index-charts feed error:', error);

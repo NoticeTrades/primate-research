@@ -29,7 +29,7 @@ type CommentRow = {
   userRole: string;
 };
 
-function formatChartDate(d: string): string {
+function formatChartDay(d: string): string {
   try {
     return new Date(d).toLocaleDateString('en-US', {
       month: 'short',
@@ -38,6 +38,21 @@ function formatChartDate(d: string): string {
     });
   } catch {
     return d;
+  }
+}
+
+/** When the post was published (server timestamp). */
+function formatPostedAt(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
   }
 }
 
@@ -175,10 +190,16 @@ export default function ChartFeedCard({ chart }: { chart: ChartFeedItem }) {
             {chart.symbol}
           </span>
           <h2 className="font-semibold text-zinc-100 truncate text-sm sm:text-base">
-            {chart.title || `Chart — ${formatChartDate(chart.chart_date)}`}
+            {chart.title || `Chart — ${formatChartDay(chart.chart_date)}`}
           </h2>
         </div>
-        <time className="text-xs text-zinc-500 shrink-0">{formatChartDate(chart.chart_date)}</time>
+        <time
+          dateTime={chart.created_at}
+          className="text-xs text-zinc-500 shrink-0 text-right max-w-[11rem] sm:max-w-none"
+          title="Posted at"
+        >
+          {formatPostedAt(chart.created_at)}
+        </time>
       </div>
 
       <div className="relative w-full min-h-[180px] bg-black">
